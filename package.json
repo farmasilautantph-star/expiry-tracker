@@ -1,0 +1,40 @@
+{
+  "name": "expiry-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "migrate": "npx ts-node --project tsconfig.scripts.json scripts/migrate.ts",
+    "seed": "npx ts-node --project tsconfig.scripts.json scripts/seed.ts",
+    "check-db": "npx ts-node --project tsconfig.scripts.json scripts/check-db.ts",
+    "expiry-check": "npx ts-node --project tsconfig.scripts.json scripts/expiry-check.ts",
+    "preflight": "npx ts-node --project tsconfig.scripts.json scripts/preflight.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "date-fns": "^3.6.0",
+    "jose": "^6.2.3",
+    "next": "14.2.35",
+    "nodemailer": "^6.9.13",
+    "react": "^18",
+    "react-dom": "^18",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22",
+    "@types/nodemailer": "^6.4.14",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.0.1",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
+  }
+}

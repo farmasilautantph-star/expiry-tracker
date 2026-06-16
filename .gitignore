@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment (NEVER commit these)
+.env.local
+.env.*.local
+
+# Database (local data — do not commit)
+db/*.db
+db/*.db-shm
+db/*.db-wal
+
+# Migration reports
+migrate/reports/
+
+# Build
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
