@@ -13,7 +13,18 @@
       "Bash(npx tsc *)",
       "Bash(npx ts-node *)",
       "Bash(npx next *)",
-      "Bash(python -m json.tool)"
+      "Bash(python -m json.tool)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'success={d[\\\\\"success\\\\\"]} count={len\\(d[\\\\\"data\\\\\"]\\)}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); pics=list\\(set\\(e['pic_name'] for e in d['data']\\)\\); print\\(f'count={len\\(d[\\\\\"data\\\\\"]\\)} pics={pics}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'count={len\\(d[\\\\\"data\\\\\"]\\)} first={d[\\\\\"data\\\\\"][0][\\\\\"description\\\\\"] if d[\\\\\"data\\\\\"] else None}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'ok={d[\\\\\"success\\\\\"]} role={d[\\\\\"data\\\\\"][\\\\\"role\\\\\"]}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'ok={d[\\\\\"success\\\\\"]} count={len\\(d[\\\\\"data\\\\\"]\\)}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); pics=list\\(set\\(e['pic_name'] for e in d['data']\\)\\); print\\(f'ok={d[\\\\\"success\\\\\"]} count={len\\(d[\\\\\"data\\\\\"]\\)} pics={pics}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'ok={d[\\\\\"success\\\\\"]} count={len\\(d[\\\\\"data\\\\\"]\\)} first={d[\\\\\"data\\\\\"][0][\\\\\"description\\\\\"][:40] if d[\\\\\"data\\\\\"] else None}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'success={d[\\\\\"success\\\\\"]} error={d[\\\\\"error\\\\\"]}'\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'ok={d[\\\\\"success\\\\\"]} {d[\\\\\"data\\\\\"]}'\\)\")",
+      "Bash(curl -s -c /tmp/v2.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"manager\",\"password\":\"manager123\"}')",
+      "Bash(curl -s -c /tmp/v2s.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"nadiah\",\"password\":\"staff123\"}')"
     ]
   }
 }
