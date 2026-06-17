@@ -2,11 +2,22 @@
 
 import type { ReturnFilters } from "@/hooks/useReturns";
 
-const CATEGORIES = ["MOM & BABY", "FS", "OTC", "Poison B", "Poison C", "PET CARE", "HS"] as const;
+const CATEGORIES = [
+  "MOM & BABY",
+  "FS",
+  "OTC",
+  "Poison B",
+  "Poison C",
+  "PET CARE",
+  "HS",
+] as const;
 
 interface Props {
   filters: ReturnFilters;
-  setFilter: <K extends keyof ReturnFilters>(key: K, value: ReturnFilters[K]) => void;
+  setFilter: <K extends keyof ReturnFilters>(
+    key: K,
+    value: ReturnFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   isManager: boolean;
@@ -54,7 +65,9 @@ export default function ReturnsFilters({
       >
         <option value="">All Months</option>
         {MONTH_OPTIONS.map((ym) => (
-          <option key={ym} value={ym}>{monthLabel(ym)}</option>
+          <option key={ym} value={ym}>
+            {monthLabel(ym)}
+          </option>
         ))}
       </select>
 
@@ -77,7 +90,11 @@ export default function ReturnsFilters({
         className={SELECT}
       >
         <option value="">All Categories</option>
-        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        {CATEGORIES.map((c) => (
+          <option key={c} value={c}>
+            {c}
+          </option>
+        ))}
       </select>
 
       {/* PIC — manager only */}
@@ -88,7 +105,11 @@ export default function ReturnsFilters({
           className={SELECT}
         >
           <option value="">All PICs</option>
-          {picOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+          {picOptions.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
         </select>
       )}
 
@@ -96,10 +117,16 @@ export default function ReturnsFilters({
       <div className="relative flex-1 min-w-[200px] max-w-xs">
         <svg
           className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
         </svg>
         <input
           type="text"
@@ -113,8 +140,18 @@ export default function ReturnsFilters({
             onClick={() => setFilter("search", "")}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         )}

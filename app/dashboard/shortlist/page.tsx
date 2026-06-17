@@ -29,14 +29,16 @@ export default function ShortListPage() {
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update entry");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to update entry");
     await refresh();
   }
 
   async function handleDelete(id: number): Promise<void> {
     const res = await fetch(`/api/expiry/${id}`, { method: "DELETE" });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to delete entry");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to delete entry");
     await refresh();
   }
 
@@ -47,7 +49,8 @@ export default function ShortListPage() {
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to create offer");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to create offer");
     await refresh();
   }
 
@@ -71,9 +74,18 @@ export default function ShortListPage() {
             title="Export — coming in Phase 10"
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-800 border border-gray-700 text-gray-500 text-sm font-medium cursor-not-allowed"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+              />
             </svg>
             Export
           </button>

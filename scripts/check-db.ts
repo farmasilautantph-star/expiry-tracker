@@ -8,7 +8,7 @@ const DB_PATH = process.env.DB_PATH
 
 if (!fs.existsSync(DB_PATH)) {
   console.error("❌ DB file not found:", DB_PATH);
-  console.error('   Run `npm run migrate` then `npm run seed` first.');
+  console.error("   Run `npm run migrate` then `npm run seed` first.");
   process.exit(1);
 }
 
@@ -19,11 +19,45 @@ let errors = 0;
 
 // ── Required tables ───────────────────────────────────────────────────────────
 const REQUIRED_TABLES: Record<string, string[]> = {
-  users:       ["id", "username", "password_hash", "role", "pic_name", "created_at"],
-  expiry_logs: ["id", "barcode", "description", "category", "expiry_date", "pic_id", "pic_name", "logged_at", "quantity"],
-  offers:      ["id", "description", "barcode", "uom", "quantity", "has_alert", "created_at", "created_by",
-                "stock_id", "category", "notes", "expiry_log_id", "outlet_name", "offer_status", "updated_at"],
-  history_log: ["id", "action", "module", "record_id", "pic_id", "pic_name", "description", "timestamp"],
+  users: ["id", "username", "password_hash", "role", "pic_name", "created_at"],
+  expiry_logs: [
+    "id",
+    "barcode",
+    "description",
+    "category",
+    "expiry_date",
+    "pic_id",
+    "pic_name",
+    "logged_at",
+    "quantity",
+  ],
+  offers: [
+    "id",
+    "description",
+    "barcode",
+    "uom",
+    "quantity",
+    "has_alert",
+    "created_at",
+    "created_by",
+    "stock_id",
+    "category",
+    "notes",
+    "expiry_log_id",
+    "outlet_name",
+    "offer_status",
+    "updated_at",
+  ],
+  history_log: [
+    "id",
+    "action",
+    "module",
+    "record_id",
+    "pic_id",
+    "pic_name",
+    "description",
+    "timestamp",
+  ],
 };
 
 type TableInfoRow = { name: string };
@@ -40,14 +74,22 @@ for (const [table, requiredCols] of Object.entries(REQUIRED_TABLES)) {
     continue;
   }
 
-  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as unknown as Array<{ name: string }>;
+  const cols = db
+    .prepare(`PRAGMA table_info(${table})`)
+    .all() as unknown as Array<{ name: string }>;
   const colNames = new Set(cols.map((c) => c.name));
   const missing = requiredCols.filter((c) => !colNames.has(c));
 
-  const rowCount = (db.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as unknown as CountRow).count;
+  const rowCount = (
+    db
+      .prepare(`SELECT COUNT(*) as count FROM ${table}`)
+      .get() as unknown as CountRow
+  ).count;
 
   if (missing.length > 0) {
-    console.error(`❌ Table: ${table.padEnd(12)} (${rowCount} rows) — missing columns: ${missing.join(", ")}`);
+    console.error(
+      `❌ Table: ${table.padEnd(12)} (${rowCount} rows) — missing columns: ${missing.join(", ")}`,
+    );
     errors++;
   } else {
     console.log(`✅ Table: ${table.padEnd(12)} (${rowCount} rows)`);
@@ -67,7 +109,9 @@ function checkDates(table: string, col: string) {
   const bad = rows.filter((r) => !ISO_RE.test(String(r.val)));
   if (bad.length > 0) {
     const ids = bad.map((r) => r.id).join(", ");
-    console.warn(`⚠️  Date format: ${table}.${col} — ${bad.length} bad value(s) (IDs: ${ids})`);
+    console.warn(
+      `⚠️  Date format: ${table}.${col} — ${bad.length} bad value(s) (IDs: ${ids})`,
+    );
     warnings++;
   } else {
     console.log(`✅ Date format: ${table}.${col} — OK`);
@@ -87,7 +131,9 @@ function checkNulls(table: string, col: string) {
 
   if (rows.length > 0) {
     const ids = rows.map((r) => r.id).join(", ");
-    console.warn(`⚠️  Null check: ${table}.${col} — ${rows.length} null/empty value(s) (IDs: ${ids})`);
+    console.warn(
+      `⚠️  Null check: ${table}.${col} — ${rows.length} null/empty value(s) (IDs: ${ids})`,
+    );
     warnings++;
   } else {
     console.log(`✅ Null check: ${table}.${col} — OK`);
@@ -103,12 +149,16 @@ checkNulls("users", "role");
 type OrphanRow = { id: number };
 
 const orphanedExpiry = db
-  .prepare("SELECT id FROM expiry_logs WHERE pic_id NOT IN (SELECT id FROM users)")
+  .prepare(
+    "SELECT id FROM expiry_logs WHERE pic_id NOT IN (SELECT id FROM users)",
+  )
   .all() as unknown as OrphanRow[];
 
 if (orphanedExpiry.length > 0) {
   const ids = orphanedExpiry.map((r) => r.id).join(", ");
-  console.warn(`⚠️  FK check: expiry_logs.pic_id — ${orphanedExpiry.length} orphaned row(s) (IDs: ${ids})`);
+  console.warn(
+    `⚠️  FK check: expiry_logs.pic_id — ${orphanedExpiry.length} orphaned row(s) (IDs: ${ids})`,
+  );
   warnings++;
 } else {
   console.log("✅ FK check: expiry_logs.pic_id → users.id — OK");

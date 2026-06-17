@@ -32,15 +32,28 @@ const INPUT =
 const INPUT_RO =
   "w-full px-3.5 py-2.5 rounded-lg bg-gray-800/40 border border-gray-700 text-gray-400 text-sm cursor-not-allowed";
 
-function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+function Label({
+  children,
+  required,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
     <label className="block text-xs font-medium text-gray-400 mb-1.5">
-      {children}{required && <span className="text-red-400 ml-0.5">*</span>}
+      {children}
+      {required && <span className="text-red-400 ml-0.5">*</span>}
     </label>
   );
 }
 
-export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onSubmit }: Props) {
+export default function ExpiryForm({
+  isOpen,
+  onClose,
+  editingEntry,
+  picName,
+  onSubmit,
+}: Props) {
   const [form, setForm] = useState<ExpiryFormData>(EMPTY);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -57,16 +70,18 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
     if (!isOpen) return;
     if (editingEntry) {
       setForm({
-        stock_id:      editingEntry.stock_id ?? "",
-        barcode:       editingEntry.barcode ?? "",
-        description:   editingEntry.description ?? "",
-        category:      editingEntry.category ?? "",
-        uom:           editingEntry.uom ?? "",
-        quantity:      editingEntry.quantity ?? 1,
-        expiry_date:   editingEntry.expiry_date.split("T")[0],
-        return_status: (editingEntry.return_status as ExpiryFormData["return_status"]) || "pending",
+        stock_id: editingEntry.stock_id ?? "",
+        barcode: editingEntry.barcode ?? "",
+        description: editingEntry.description ?? "",
+        category: editingEntry.category ?? "",
+        uom: editingEntry.uom ?? "",
+        quantity: editingEntry.quantity ?? 1,
+        expiry_date: editingEntry.expiry_date.split("T")[0],
+        return_status:
+          (editingEntry.return_status as ExpiryFormData["return_status"]) ||
+          "pending",
         return_by_date: editingEntry.return_by_date?.split("T")[0] ?? "",
-        notes:         editingEntry.notes ?? "",
+        notes: editingEntry.notes ?? "",
       });
     } else {
       setForm(EMPTY);
@@ -79,7 +94,10 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
   // Close dropdown on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
         setResults([]);
         setActiveField(null);
       }
@@ -90,7 +108,10 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
 
   if (!isOpen) return null;
 
-  function set<K extends keyof ExpiryFormData>(field: K, value: ExpiryFormData[K]) {
+  function set<K extends keyof ExpiryFormData>(
+    field: K,
+    value: ExpiryFormData[K],
+  ) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
@@ -105,7 +126,9 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const res = await fetch(`/api/products/search?q=${encodeURIComponent(value)}`);
+        const res = await fetch(
+          `/api/products/search?q=${encodeURIComponent(value)}`,
+        );
         const data = await res.json();
         if (data.success) setResults(data.data);
       } catch {
@@ -124,11 +147,11 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
   function selectProduct(p: ProductResult) {
     setForm((prev) => ({
       ...prev,
-      stock_id:    p.stock_id    ?? "",
-      barcode:     p.barcode     ?? "",
+      stock_id: p.stock_id ?? "",
+      barcode: p.barcode ?? "",
       description: p.description ?? "",
-      category:    p.category_id ?? "",
-      uom:         p.uom         ?? "",
+      category: p.category_id ?? "",
+      uom: p.uom ?? "",
     }));
     setResults([]);
     setActiveField(null);
@@ -137,13 +160,31 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.barcode.trim())    { setError("Barcode is required."); return; }
-    if (!form.description.trim()){ setError("Description is required."); return; }
-    if (!form.category.trim())   { setError("Category is required — select a product from the search results."); return; }
-    if (!form.expiry_date)       { setError("Expiry date is required."); return; }
-    if ((form.quantity ?? 1) < 1){ setError("Quantity must be at least 1."); return; }
+    if (!form.barcode.trim()) {
+      setError("Barcode is required.");
+      return;
+    }
+    if (!form.description.trim()) {
+      setError("Description is required.");
+      return;
+    }
+    if (!form.category.trim()) {
+      setError(
+        "Category is required — select a product from the search results.",
+      );
+      return;
+    }
+    if (!form.expiry_date) {
+      setError("Expiry date is required.");
+      return;
+    }
+    if ((form.quantity ?? 1) < 1) {
+      setError("Quantity must be at least 1.");
+      return;
+    }
     if (form.return_status === "pending" && !form.return_by_date) {
-      setError("Return By Date is required for returnable items."); return;
+      setError("Return By Date is required for returnable items.");
+      return;
     }
 
     setSubmitting(true);
@@ -178,12 +219,20 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
                   {p.stock_id}
                 </span>
               )}
-              <span className="text-sm text-white truncate">{p.description}</span>
+              <span className="text-sm text-white truncate">
+                {p.description}
+              </span>
             </div>
             <div className="flex items-center gap-3 mt-0.5">
-              {p.barcode && <span className="text-xs text-gray-400 font-mono">{p.barcode}</span>}
+              {p.barcode && (
+                <span className="text-xs text-gray-400 font-mono">
+                  {p.barcode}
+                </span>
+              )}
               {p.uom && <span className="text-xs text-gray-500">{p.uom}</span>}
-              {p.category_id && <span className="text-xs text-gray-500">{p.category_id}</span>}
+              {p.category_id && (
+                <span className="text-xs text-gray-500">{p.category_id}</span>
+              )}
             </div>
           </button>
         ))}
@@ -194,7 +243,10 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
       {/* Modal */}
       <div className="relative w-full max-w-lg bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-h-[90vh] flex flex-col">
@@ -207,18 +259,32 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
             onClick={onClose}
             className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
         {/* Scrollable body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-5 space-y-4 flex-1">
+        <form
+          onSubmit={handleSubmit}
+          className="overflow-y-auto px-6 py-5 space-y-4 flex-1"
+        >
           {/* Search hint */}
           {!editingEntry && (
             <p className="text-xs text-gray-500 bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2">
-              💡 Type in Stock ID, Barcode, or Description to search products and auto-fill fields.
+              💡 Type in Stock ID, Barcode, or Description to search products
+              and auto-fill fields.
             </p>
           )}
 
@@ -229,7 +295,10 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
           </div>
 
           {/* Stock ID */}
-          <div ref={activeField === "stock_id" ? dropdownRef : undefined} className="relative">
+          <div
+            ref={activeField === "stock_id" ? dropdownRef : undefined}
+            className="relative"
+          >
             <Label>Stock ID</Label>
             <input
               type="text"
@@ -242,7 +311,10 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
           </div>
 
           {/* Barcode */}
-          <div ref={activeField === "barcode" ? dropdownRef : undefined} className="relative">
+          <div
+            ref={activeField === "barcode" ? dropdownRef : undefined}
+            className="relative"
+          >
             <Label required>Barcode</Label>
             <input
               type="text"
@@ -255,7 +327,10 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
           </div>
 
           {/* Description */}
-          <div ref={activeField === "description" ? dropdownRef : undefined} className="relative">
+          <div
+            ref={activeField === "description" ? dropdownRef : undefined}
+            className="relative"
+          >
             <Label required>Description</Label>
             <input
               type="text"
@@ -298,7 +373,9 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
               type="number"
               min={1}
               value={form.quantity ?? 1}
-              onChange={(e) => set("quantity", Math.max(1, Math.round(Number(e.target.value))))}
+              onChange={(e) =>
+                set("quantity", Math.max(1, Math.round(Number(e.target.value))))
+              }
               className={INPUT}
             />
           </div>
@@ -365,8 +442,16 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="w-4 h-4 shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
               {error}
             </div>
@@ -386,7 +471,11 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
               disabled={submitting}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors"
             >
-              {submitting ? "Saving…" : editingEntry ? "Save Changes" : "Log Entry"}
+              {submitting
+                ? "Saving…"
+                : editingEntry
+                  ? "Save Changes"
+                  : "Log Entry"}
             </button>
           </div>
         </form>

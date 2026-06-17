@@ -9,13 +9,19 @@ interface ExpiryRow {
 export async function GET(req: NextRequest) {
   const token = getTokenFromRequest(req);
   if (!token) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   try {
     await verifyToken(token);
   } catch {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const db = getDb();
@@ -52,5 +58,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, data: { expired, critical, warning, safe } });
+  return NextResponse.json({
+    success: true,
+    data: { expired, critical, warning, safe },
+  });
 }

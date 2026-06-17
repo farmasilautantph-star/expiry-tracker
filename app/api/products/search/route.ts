@@ -14,12 +14,18 @@ interface ProductRow {
 export async function GET(req: NextRequest) {
   const token = getTokenFromRequest(req);
   if (!token) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
   try {
     await verifyToken(token);
   } catch {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const { searchParams } = new URL(req.url);
@@ -37,7 +43,7 @@ export async function GET(req: NextRequest) {
       `SELECT id, stock_id, barcode, description, uom, category_id
        FROM products
        WHERE stock_id LIKE ? OR barcode LIKE ? OR description LIKE ?
-       LIMIT 10`
+       LIMIT 10`,
     )
     .all(like, like, like) as unknown as ProductRow[];
 

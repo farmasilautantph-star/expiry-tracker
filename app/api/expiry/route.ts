@@ -32,16 +32,23 @@ async function auth(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const user = await auth(req);
   if (!user) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const db = getDb();
 
   const rows =
     user.role === "manager"
-      ? (db.prepare("SELECT * FROM expiry_logs ORDER BY expiry_date ASC").all() as unknown as ExpiryRow[])
+      ? (db
+          .prepare("SELECT * FROM expiry_logs ORDER BY expiry_date ASC")
+          .all() as unknown as ExpiryRow[])
       : (db
-          .prepare("SELECT * FROM expiry_logs WHERE pic_id = ? ORDER BY expiry_date ASC")
+          .prepare(
+            "SELECT * FROM expiry_logs WHERE pic_id = ? ORDER BY expiry_date ASC",
+          )
           .all(user.userId) as unknown as ExpiryRow[]);
 
   return NextResponse.json({ success: true, data: rows });
@@ -50,23 +57,42 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await auth(req);
   if (!user) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const body = await req.json().catch(() => null);
-  const { barcode, description, category, expiry_date, notes, stock_id, uom, quantity, return_status, return_by_date } =
-    body ?? {};
+  const {
+    barcode,
+    description,
+    category,
+    expiry_date,
+    notes,
+    stock_id,
+    uom,
+    quantity,
+    return_status,
+    return_by_date,
+  } = body ?? {};
 
   if (!barcode || !description || !category || !expiry_date) {
     return NextResponse.json(
-      { success: false, error: "barcode, description, category, and expiry_date are required" },
-      { status: 400 }
+      {
+        success: false,
+        error: "barcode, description, category, and expiry_date are required",
+      },
+      { status: 400 },
     );
   }
 
   const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
   const validReturnStatus = ["pending", "non-returnable", "returned"];
-  const rs = return_status && validReturnStatus.includes(return_status) ? return_status : null;
+  const rs =
+    return_status && validReturnStatus.includes(return_status)
+      ? return_status
+      : null;
 
   const db = getDb();
   const logged_at = new Date().toISOString();
@@ -76,7 +102,7 @@ export async function POST(req: NextRequest) {
       `INSERT INTO expiry_logs
         (barcode, description, category, expiry_date, pic_id, pic_name, logged_at, notes,
          stock_id, uom, quantity, return_status, return_by_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       barcode.trim(),
@@ -91,13 +117,13 @@ export async function POST(req: NextRequest) {
       uom?.trim() || null,
       qty,
       rs,
-      rs === "pending" ? (return_by_date || null) : null
+      rs === "pending" ? return_by_date || null : null,
     );
 
   const newId = Number(result.lastInsertRowid);
 
   db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
   ).run(
     "CREATE",
     "expiry",
@@ -105,7 +131,7 @@ export async function POST(req: NextRequest) {
     user.userId,
     user.picName,
     `Logged expiry: ${description.trim()} (${expiry_date}) qty=${qty}`,
-    logged_at
+    logged_at,
   );
 
   const entry = db

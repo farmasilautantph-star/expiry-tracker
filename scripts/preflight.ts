@@ -29,14 +29,16 @@ function checkEnvFiles(): boolean {
   // Check staged files for .env.local
   let stagedFiles: string[] = [];
   try {
-    const out = execSync("git diff --cached --name-only", { stdio: "pipe" }).toString();
+    const out = execSync("git diff --cached --name-only", {
+      stdio: "pipe",
+    }).toString();
     stagedFiles = out.split("\n").filter(Boolean);
   } catch {
     // Not a git repo or no staged files — treat as safe
   }
 
   const dangerous = stagedFiles.filter((f) =>
-    /\.env(\.local|\.production|\.staging)?$/.test(f)
+    /\.env(\.local|\.production|\.staging)?$/.test(f),
   );
 
   // Also check if .env.local exists and is accidentally tracked
@@ -68,7 +70,10 @@ console.log("\n── Preflight Checks ─────────────�
 run("[1/5] TypeScript check...   ", "npx tsc --noEmit");
 run("[2/5] ESLint...             ", "npx next lint");
 run("[3/5] Build check...        ", "npx next build");
-run("[4/5] DB integrity...       ", "npx ts-node --project tsconfig.scripts.json scripts/check-db.ts");
+run(
+  "[4/5] DB integrity...       ",
+  "npx ts-node --project tsconfig.scripts.json scripts/check-db.ts",
+);
 checkEnvFiles();
 
 console.log("\n──────────────────────────────────────────────────────");

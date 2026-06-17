@@ -46,7 +46,12 @@ const EMPTY_FILTERS: ReturnFilters = {
   pic: "",
   search: "",
 };
-const EMPTY_COUNTS: ReturnCounts = { pending: 0, overdue: 0, returned: 0, total: 0 };
+const EMPTY_COUNTS: ReturnCounts = {
+  pending: 0,
+  overdue: 0,
+  returned: 0,
+  total: 0,
+};
 
 interface UseReturnsReturn {
   entries: ReturnEntry[];
@@ -54,7 +59,10 @@ interface UseReturnsReturn {
   isLoading: boolean;
   error: string | null;
   filters: ReturnFilters;
-  setFilter: <K extends keyof ReturnFilters>(key: K, value: ReturnFilters[K]) => void;
+  setFilter: <K extends keyof ReturnFilters>(
+    key: K,
+    value: ReturnFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   markReturned: (id: number) => Promise<void>;
@@ -74,11 +82,11 @@ export function useReturns(): UseReturnsReturn {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (f.month)    params.set("month",    f.month);
-      if (f.status)   params.set("status",   f.status);
+      if (f.month) params.set("month", f.month);
+      if (f.status) params.set("status", f.status);
       if (f.category) params.set("category", f.category);
-      if (f.pic)      params.set("pic",      f.pic);
-      if (f.search)   params.set("search",   f.search);
+      if (f.pic) params.set("pic", f.pic);
+      if (f.search) params.set("search", f.search);
 
       const res = await fetch(`/api/returns?${params}`);
       if (!res.ok) throw new Error("Failed to fetch returns");
@@ -94,17 +102,26 @@ export function useReturns(): UseReturnsReturn {
     }
   }, []);
 
-  useEffect(() => { fetchData(filters); }, [fetchData, filters]);
+  useEffect(() => {
+    fetchData(filters);
+  }, [fetchData, filters]);
 
-  function setFilter<K extends keyof ReturnFilters>(key: K, value: ReturnFilters[K]) {
+  function setFilter<K extends keyof ReturnFilters>(
+    key: K,
+    value: ReturnFilters[K],
+  ) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
-  function clearFilters() { setFilters(EMPTY_FILTERS); }
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+  }
 
   const activeFilterCount = useMemo(
-    () => Object.entries(filters).filter(([k, v]) => k !== "month" && Boolean(v)).length,
-    [filters]
+    () =>
+      Object.entries(filters).filter(([k, v]) => k !== "month" && Boolean(v))
+        .length,
+    [filters],
   );
 
   async function markReturned(id: number): Promise<void> {
@@ -114,7 +131,8 @@ export function useReturns(): UseReturnsReturn {
       body: JSON.stringify({ return_status: "returned" }),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to mark as returned");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to mark as returned");
     await fetchData(filters);
   }
 
@@ -125,7 +143,8 @@ export function useReturns(): UseReturnsReturn {
       body: JSON.stringify({ return_by_date: date }),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update return date");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to update return date");
     await fetchData(filters);
   }
 

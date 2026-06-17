@@ -3,14 +3,22 @@
 import OffersFilters from "./OffersFilters";
 import OffersSummary from "./OffersSummary";
 import OffersTable from "./OffersTable";
-import type { OfferEntry, OfferFilters, OfferCounts, OfferFormData } from "@/hooks/useOffers";
+import type {
+  OfferEntry,
+  OfferFilters,
+  OfferCounts,
+  OfferFormData,
+} from "@/hooks/useOffers";
 
 interface Props {
   entries: OfferEntry[];
   counts: OfferCounts;
   isLoading: boolean;
   filters: OfferFilters;
-  setFilter: <K extends keyof OfferFilters>(key: K, value: OfferFilters[K]) => void;
+  setFilter: <K extends keyof OfferFilters>(
+    key: K,
+    value: OfferFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   onUpdate: (id: number, data: Partial<OfferFormData>) => Promise<void>;

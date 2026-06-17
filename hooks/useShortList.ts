@@ -19,7 +19,12 @@ export interface ShortListEntry {
   return_by_date: string | null;
   days_left: number;
   urgency: "expired" | "critical" | "warning" | "safe";
-  offer_status: "not-offered" | "offered" | "accepted" | "rejected" | "completed";
+  offer_status:
+    | "not-offered"
+    | "offered"
+    | "accepted"
+    | "rejected"
+    | "completed";
   offer_id: number | null;
   total_offered: number;
 }
@@ -48,7 +53,13 @@ const EMPTY_FILTERS: ShortListFilters = {
   return_status: "",
 };
 
-const EMPTY_COUNTS: ShortListCounts = { expired: 0, critical: 0, warning: 0, safe: 0, total: 0 };
+const EMPTY_COUNTS: ShortListCounts = {
+  expired: 0,
+  critical: 0,
+  warning: 0,
+  safe: 0,
+  total: 0,
+};
 
 interface UseShortListReturn {
   entries: ShortListEntry[];
@@ -56,7 +67,10 @@ interface UseShortListReturn {
   isLoading: boolean;
   error: string | null;
   filters: ShortListFilters;
-  setFilter: <K extends keyof ShortListFilters>(key: K, value: ShortListFilters[K]) => void;
+  setFilter: <K extends keyof ShortListFilters>(
+    key: K,
+    value: ShortListFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   refresh: () => Promise<void>;
@@ -74,10 +88,10 @@ export function useShortList(): UseShortListReturn {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (f.search)   params.set("search",   f.search);
+      if (f.search) params.set("search", f.search);
       if (f.category) params.set("category", f.category);
-      if (f.status)   params.set("status",   f.status);
-      if (f.pic)      params.set("pic",      f.pic);
+      if (f.status) params.set("status", f.status);
+      if (f.pic) params.set("pic", f.pic);
 
       const url = `/api/shortlist${params.toString() ? `?${params}` : ""}`;
       const res = await fetch(url);
@@ -87,13 +101,20 @@ export function useShortList(): UseShortListReturn {
 
       let data: ShortListEntry[] = json.data;
       if (f.return_status) {
-        data = f.return_status === "none"
-          ? data.filter((e) => !e.return_status)
-          : data.filter((e) => e.return_status === f.return_status);
+        data =
+          f.return_status === "none"
+            ? data.filter((e) => !e.return_status)
+            : data.filter((e) => e.return_status === f.return_status);
       }
 
       setEntries(data);
-      const c = { expired: 0, critical: 0, warning: 0, safe: 0, total: data.length };
+      const c = {
+        expired: 0,
+        critical: 0,
+        warning: 0,
+        safe: 0,
+        total: data.length,
+      };
       for (const e of data) {
         const u = e.urgency as keyof typeof c;
         if (u in c) (c[u] as number)++;
@@ -106,13 +127,20 @@ export function useShortList(): UseShortListReturn {
     }
   }, []);
 
-  useEffect(() => { fetchData(filters); }, [fetchData, filters]);
+  useEffect(() => {
+    fetchData(filters);
+  }, [fetchData, filters]);
 
-  function setFilter<K extends keyof ShortListFilters>(key: K, value: ShortListFilters[K]) {
+  function setFilter<K extends keyof ShortListFilters>(
+    key: K,
+    value: ShortListFilters[K],
+  ) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
-  function clearFilters() { setFilters(EMPTY_FILTERS); }
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+  }
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 

@@ -42,14 +42,22 @@ const EMPTY_FILTERS: HistoryFilters = {
   search: "",
 };
 
-const EMPTY_COUNTS: HistoryCounts = { total: 0, creates: 0, updates: 0, deletes: 0 };
+const EMPTY_COUNTS: HistoryCounts = {
+  total: 0,
+  creates: 0,
+  updates: 0,
+  deletes: 0,
+};
 
 interface UseHistoryReturn {
   entries: HistoryEntry[];
   isLoading: boolean;
   error: string | null;
   filters: HistoryFilters;
-  setFilter: <K extends keyof HistoryFilters>(key: K, value: HistoryFilters[K]) => void;
+  setFilter: <K extends keyof HistoryFilters>(
+    key: K,
+    value: HistoryFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   counts: HistoryCounts;
@@ -80,10 +88,10 @@ export function useHistory(): UseHistoryReturn {
       const params = new URLSearchParams();
       if (f.module) params.set("module", f.module);
       if (f.action) params.set("action", f.action);
-      if (f.pic)    params.set("pic",    f.pic);
-      if (f.month)  params.set("month",  f.month);
+      if (f.pic) params.set("pic", f.pic);
+      if (f.month) params.set("month", f.month);
       if (f.search) params.set("search", f.search);
-      params.set("page",  String(p));
+      params.set("page", String(p));
       params.set("limit", "50");
 
       const res = await fetch(`/api/history?${params}`);
@@ -103,9 +111,14 @@ export function useHistory(): UseHistoryReturn {
     }
   }, []);
 
-  useEffect(() => { fetchData(filters, page); }, [fetchData, filters, page, tick]);
+  useEffect(() => {
+    fetchData(filters, page);
+  }, [fetchData, filters, page, tick]);
 
-  function setFilter<K extends keyof HistoryFilters>(key: K, value: HistoryFilters[K]) {
+  function setFilter<K extends keyof HistoryFilters>(
+    key: K,
+    value: HistoryFilters[K],
+  ) {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPage(1);
   }
@@ -116,8 +129,10 @@ export function useHistory(): UseHistoryReturn {
   }
 
   const activeFilterCount = useMemo(
-    () => Object.entries(filters).filter(([k, v]) => k !== "month" && Boolean(v)).length,
-    [filters]
+    () =>
+      Object.entries(filters).filter(([k, v]) => k !== "month" && Boolean(v))
+        .length,
+    [filters],
   );
 
   return {

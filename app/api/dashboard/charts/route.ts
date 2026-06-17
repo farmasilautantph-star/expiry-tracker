@@ -31,17 +31,37 @@ interface UrgentRow {
   pic_name: string;
 }
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export async function GET(req: NextRequest) {
   const token = getTokenFromRequest(req);
-  if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  if (!token)
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
 
   let user;
   try {
     user = await verifyToken(token);
   } catch {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const isManager = user.role === "manager";
@@ -51,7 +71,9 @@ export async function GET(req: NextRequest) {
   const db = getDb();
 
   // Category breakdown — expiry status per category
-  const categoryRows = db.prepare(`
+  const categoryRows = db
+    .prepare(
+      `
     SELECT
       category,
       SUM(CASE WHEN date(expiry_date) < date('now') THEN 1 ELSE 0 END) AS expired,
@@ -67,10 +89,14 @@ export async function GET(req: NextRequest) {
     WHERE 1=1 ${picFilter}
     GROUP BY category
     ORDER BY category ASC
-  `).all(...picBinding) as unknown as CategoryRow[];
+  `,
+    )
+    .all(...picBinding) as unknown as CategoryRow[];
 
   // Expiry timeline — items expiring each month for next 6 months
-  const timelineRows = db.prepare(`
+  const timelineRows = db
+    .prepare(
+      `
     SELECT
       strftime('%m', expiry_date) AS month_key,
       strftime('%Y', expiry_date) AS year,
@@ -81,7 +107,9 @@ export async function GET(req: NextRequest) {
       ${picFilter}
     GROUP BY strftime('%Y-%m', expiry_date)
     ORDER BY expiry_date ASC
-  `).all(...picBinding) as unknown as TimelineRow[];
+  `,
+    )
+    .all(...picBinding) as unknown as TimelineRow[];
 
   const expiryTimeline = timelineRows.map((r) => ({
     month: `${MONTH_NAMES[parseInt(r.month_key, 10) - 1]} ${r.year}`,
@@ -89,7 +117,9 @@ export async function GET(req: NextRequest) {
   }));
 
   // Return status — from returns table
-  const returnStatusRow = db.prepare(`
+  const returnStatusRow = db
+    .prepare(
+      `
     SELECT
       SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS returned,
       SUM(CASE WHEN status = 'pending'
@@ -101,16 +131,20 @@ export async function GET(req: NextRequest) {
                THEN 1 ELSE 0 END) AS overdue
     FROM returns
     WHERE 1=1 ${picFilter}
-  `).get(...picBinding) as unknown as ReturnStatusRow;
+  `,
+    )
+    .get(...picBinding) as unknown as ReturnStatusRow;
 
   const returnStatus = {
-    pending:  returnStatusRow.pending  ?? 0,
+    pending: returnStatusRow.pending ?? 0,
     returned: returnStatusRow.returned ?? 0,
-    overdue:  returnStatusRow.overdue  ?? 0,
+    overdue: returnStatusRow.overdue ?? 0,
   };
 
   // Top urgent items — expired + critical + warning, max 10
-  const urgentRows = db.prepare(`
+  const urgentRows = db
+    .prepare(
+      `
     SELECT
       id,
       description,
@@ -123,16 +157,19 @@ export async function GET(req: NextRequest) {
       ${picFilter}
     ORDER BY expiry_date ASC
     LIMIT 10
-  `).all(...picBinding) as unknown as UrgentRow[];
+  `,
+    )
+    .all(...picBinding) as unknown as UrgentRow[];
 
   const topUrgentItems = urgentRows.map((r) => ({
-    id:          r.id,
+    id: r.id,
     description: r.description,
-    category:    r.category,
+    category: r.category,
     expiry_date: r.expiry_date,
-    days_left:   r.days_left,
-    urgency:     r.days_left <= 0 ? "expired" : r.days_left <= 7 ? "critical" : "warning",
-    pic_name:    r.pic_name,
+    days_left: r.days_left,
+    urgency:
+      r.days_left <= 0 ? "expired" : r.days_left <= 7 ? "critical" : "warning",
+    pic_name: r.pic_name,
   }));
 
   return NextResponse.json({

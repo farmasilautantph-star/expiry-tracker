@@ -19,7 +19,9 @@ function Pill({
   isLoading: boolean;
 }) {
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${color}`}>
+    <div
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${color}`}
+    >
       <span className="text-xs font-medium opacity-80">{label}</span>
       {isLoading ? (
         <span className="w-5 h-4 rounded bg-current opacity-20 animate-pulse" />
@@ -52,9 +54,18 @@ export default function ReturnsSummary({ counts, isLoading }: Props) {
         isLoading={isLoading}
       />
       <div className="ml-auto flex items-center gap-1.5 text-xs text-gray-500 self-center pr-1">
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+          />
         </svg>
         {isLoading ? "…" : `${counts.total} total`}
       </div>

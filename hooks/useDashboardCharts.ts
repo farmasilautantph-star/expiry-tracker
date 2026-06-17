@@ -60,9 +60,9 @@ export function useDashboardCharts(): UseDashboardChartsReturn {
       if (!json.success) throw new Error(json.error ?? "Unknown error");
       setChartData({
         categoryBreakdown: json.categoryBreakdown,
-        expiryTimeline:    json.expiryTimeline,
-        returnStatus:      json.returnStatus,
-        topUrgentItems:    json.topUrgentItems,
+        expiryTimeline: json.expiryTimeline,
+        returnStatus: json.returnStatus,
+        topUrgentItems: json.topUrgentItems,
       });
       setError(null);
     } catch (err) {

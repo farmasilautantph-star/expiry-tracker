@@ -29,12 +29,20 @@ interface RawRow extends ExpiryRow {
 export interface ShortListEntry extends ExpiryRow {
   days_left: number;
   urgency: Urgency;
-  offer_status: "not-offered" | "offered" | "accepted" | "rejected" | "completed";
+  offer_status:
+    | "not-offered"
+    | "offered"
+    | "accepted"
+    | "rejected"
+    | "completed";
   offer_id: number | null;
   total_offered: number;
 }
 
-function calcUrgency(expiryDate: string): { days_left: number; urgency: Urgency } {
+function calcUrgency(expiryDate: string): {
+  days_left: number;
+  urgency: Urgency;
+} {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const d = new Date(expiryDate);
@@ -52,20 +60,27 @@ function calcUrgency(expiryDate: string): { days_left: number; urgency: Urgency 
 
 export async function GET(req: NextRequest) {
   const token = getTokenFromRequest(req);
-  if (!token) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+  if (!token)
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
 
   let user;
   try {
     user = await verifyToken(token);
   } catch {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const { searchParams } = new URL(req.url);
-  const category     = searchParams.get("category")?.trim() ?? "";
-  const pic          = searchParams.get("pic")?.trim()      ?? "";
-  const statusFilter = searchParams.get("status")?.trim()   ?? "";
-  const search       = searchParams.get("search")?.trim()   ?? "";
+  const category = searchParams.get("category")?.trim() ?? "";
+  const pic = searchParams.get("pic")?.trim() ?? "";
+  const statusFilter = searchParams.get("status")?.trim() ?? "";
+  const search = searchParams.get("search")?.trim() ?? "";
 
   const db = getDb();
 
@@ -88,12 +103,13 @@ export async function GET(req: NextRequest) {
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(el.description) LIKE LOWER(?) OR LOWER(el.barcode) LIKE LOWER(?) OR LOWER(COALESCE(el.stock_id,'')) LIKE LOWER(?))"
+      "(LOWER(el.description) LIKE LOWER(?) OR LOWER(el.barcode) LIKE LOWER(?) OR LOWER(COALESCE(el.stock_id,'')) LIKE LOWER(?))",
     );
     bindings.push(like, like, like);
   }
 
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const where =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Subquery gets latest offer status and total offered quantity per row
   const sql = `
@@ -111,16 +127,26 @@ export async function GET(req: NextRequest) {
   let entries: ShortListEntry[] = rows.map((row) => ({
     ...row,
     ...calcUrgency(row.expiry_date),
-    offer_status: (row.offer_status as ShortListEntry["offer_status"]) ?? "not-offered",
+    offer_status:
+      (row.offer_status as ShortListEntry["offer_status"]) ?? "not-offered",
     offer_id: row.offer_id ?? null,
     total_offered: row.total_offered ?? 0,
   }));
 
-  if (statusFilter && ["expired", "critical", "warning", "safe"].includes(statusFilter)) {
+  if (
+    statusFilter &&
+    ["expired", "critical", "warning", "safe"].includes(statusFilter)
+  ) {
     entries = entries.filter((e) => e.urgency === statusFilter);
   }
 
-  const counts = { expired: 0, critical: 0, warning: 0, safe: 0, total: entries.length };
+  const counts = {
+    expired: 0,
+    critical: 0,
+    warning: 0,
+    safe: 0,
+    total: entries.length,
+  };
   for (const e of entries) counts[e.urgency]++;
 
   return NextResponse.json({ success: true, data: entries, counts });

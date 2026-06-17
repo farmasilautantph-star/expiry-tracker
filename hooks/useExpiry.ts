@@ -71,7 +71,9 @@ export function useExpiry(): UseExpiryReturn {
     }
   }, []);
 
-  useEffect(() => { fetchEntries(); }, [fetchEntries]);
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
 
   async function addEntry(data: ExpiryFormData): Promise<void> {
     const res = await fetch("/api/expiry", {
@@ -80,7 +82,8 @@ export function useExpiry(): UseExpiryReturn {
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to add entry");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to add entry");
     await fetchEntries();
   }
 
@@ -91,14 +94,16 @@ export function useExpiry(): UseExpiryReturn {
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update entry");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to update entry");
     await fetchEntries();
   }
 
   async function deleteEntry(id: number): Promise<void> {
     const res = await fetch(`/api/expiry/${id}`, { method: "DELETE" });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to delete entry");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to delete entry");
     await fetchEntries();
   }
 

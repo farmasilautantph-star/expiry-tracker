@@ -25,7 +25,8 @@ async function authManager(req: NextRequest) {
   if (!token) return { user: null, error: "Unauthorized", status: 401 };
   try {
     const user = await verifyToken(token);
-    if (user.role !== "manager") return { user: null, error: "Forbidden", status: 403 };
+    if (user.role !== "manager")
+      return { user: null, error: "Forbidden", status: 403 };
     return { user, error: null, status: 200 };
   } catch {
     return { user: null, error: "Unauthorized", status: 401 };
@@ -37,12 +38,12 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ success: false, error }, { status });
 
   const { searchParams } = new URL(req.url);
-  const search       = searchParams.get("search")?.trim()         ?? "";
-  const category     = searchParams.get("category")?.trim()       ?? "";
-  const offerSt      = searchParams.get("status")?.trim()         ?? "";
-  const hasAlert     = searchParams.get("has_alert")?.trim()      ?? "";
-  const month        = searchParams.get("month")?.trim()          ?? "";
-  const expiryLogId  = searchParams.get("expiry_log_id")?.trim()  ?? "";
+  const search = searchParams.get("search")?.trim() ?? "";
+  const category = searchParams.get("category")?.trim() ?? "";
+  const offerSt = searchParams.get("status")?.trim() ?? "";
+  const hasAlert = searchParams.get("has_alert")?.trim() ?? "";
+  const month = searchParams.get("month")?.trim() ?? "";
+  const expiryLogId = searchParams.get("expiry_log_id")?.trim() ?? "";
 
   const db = getDb();
   const conditions: string[] = [];
@@ -53,10 +54,17 @@ export async function GET(req: NextRequest) {
     bindings.push(Number(expiryLogId));
   }
 
-  if (category) { conditions.push("category = ?"); bindings.push(category); }
+  if (category) {
+    conditions.push("category = ?");
+    bindings.push(category);
+  }
 
-  if (offerSt && ["offered", "accepted", "rejected", "completed"].includes(offerSt)) {
-    conditions.push("offer_status = ?"); bindings.push(offerSt);
+  if (
+    offerSt &&
+    ["offered", "accepted", "rejected", "completed"].includes(offerSt)
+  ) {
+    conditions.push("offer_status = ?");
+    bindings.push(offerSt);
   }
 
   if (hasAlert === "true" || hasAlert === "1") {
@@ -73,17 +81,24 @@ export async function GET(req: NextRequest) {
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(outlet_name,'')) LIKE LOWER(?))"
+      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(outlet_name,'')) LIKE LOWER(?))",
     );
     bindings.push(like, like, like);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const rows = db.prepare(`SELECT * FROM offers ${where} ORDER BY created_at DESC`)
+  const rows = db
+    .prepare(`SELECT * FROM offers ${where} ORDER BY created_at DESC`)
     .all(...bindings) as unknown as OfferRow[];
 
   // Counts by status
-  const counts = { offered: 0, accepted: 0, rejected: 0, completed: 0, total: rows.length };
+  const counts = {
+    offered: 0,
+    accepted: 0,
+    rejected: 0,
+    completed: 0,
+    total: rows.length,
+  };
   for (const r of rows) {
     if (r.offer_status in counts) (counts[r.offer_status] as number)++;
   }
@@ -97,19 +112,34 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const {
-    expiry_log_id, stock_id, barcode, description, category, uom,
-    quantity, outlet_name, offer_status, has_alert, notes,
+    expiry_log_id,
+    stock_id,
+    barcode,
+    description,
+    category,
+    uom,
+    quantity,
+    outlet_name,
+    offer_status,
+    has_alert,
+    notes,
   } = body ?? {};
 
   if (!barcode || !description || !outlet_name) {
     return NextResponse.json(
-      { success: false, error: "barcode, description, and outlet_name are required" },
-      { status: 400 }
+      {
+        success: false,
+        error: "barcode, description, and outlet_name are required",
+      },
+      { status: 400 },
     );
   }
 
   const validStatus = ["offered", "accepted", "rejected", "completed"];
-  const oStatus = offer_status && validStatus.includes(offer_status) ? offer_status : "offered";
+  const oStatus =
+    offer_status && validStatus.includes(offer_status)
+      ? offer_status
+      : "offered";
   const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
   const now = new Date().toISOString();
 
@@ -117,48 +147,64 @@ export async function POST(req: NextRequest) {
 
   // Validate against expiry_logs.quantity when linked to a log entry
   if (expiry_log_id) {
-    const logRow = db.prepare("SELECT quantity FROM expiry_logs WHERE id = ?")
+    const logRow = db
+      .prepare("SELECT quantity FROM expiry_logs WHERE id = ?")
       .get(expiry_log_id) as { quantity: number } | undefined;
     if (logRow) {
-      const sumRow = db.prepare("SELECT COALESCE(SUM(quantity), 0) AS total FROM offers WHERE expiry_log_id = ?")
+      const sumRow = db
+        .prepare(
+          "SELECT COALESCE(SUM(quantity), 0) AS total FROM offers WHERE expiry_log_id = ?",
+        )
         .get(expiry_log_id) as { total: number };
       const remaining = logRow.quantity - (sumRow.total ?? 0);
       if (qty > remaining) {
         return NextResponse.json(
-          { success: false, error: `Cannot offer more than ${remaining} available unit${remaining === 1 ? "" : "s"} (${logRow.quantity} logged, ${sumRow.total} already offered)` },
-          { status: 400 }
+          {
+            success: false,
+            error: `Cannot offer more than ${remaining} available unit${remaining === 1 ? "" : "s"} (${logRow.quantity} logged, ${sumRow.total} already offered)`,
+          },
+          { status: 400 },
         );
       }
     }
   }
-  const result = db.prepare(
-    `INSERT INTO offers
+  const result = db
+    .prepare(
+      `INSERT INTO offers
       (expiry_log_id, stock_id, barcode, description, category, uom, quantity,
        outlet_name, offer_status, has_alert, notes, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    expiry_log_id ?? null,
-    stock_id?.trim() || null,
-    barcode.trim(),
-    description.trim(),
-    category?.trim() || null,
-    uom?.trim() || null,
-    qty,
-    outlet_name.trim(),
-    oStatus,
-    has_alert ? 1 : 0,
-    notes?.trim() || null,
-    user.userId,
-    now,
-    now,
-  );
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    )
+    .run(
+      expiry_log_id ?? null,
+      stock_id?.trim() || null,
+      barcode.trim(),
+      description.trim(),
+      category?.trim() || null,
+      uom?.trim() || null,
+      qty,
+      outlet_name.trim(),
+      oStatus,
+      has_alert ? 1 : 0,
+      notes?.trim() || null,
+      user.userId,
+      now,
+      now,
+    );
 
   const newId = Number(result.lastInsertRowid);
 
   db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).run("CREATE", "offers", newId, user.userId, user.picName,
-    `Offered ${description.trim()} to ${outlet_name.trim()}`, now);
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+  ).run(
+    "CREATE",
+    "offers",
+    newId,
+    user.userId,
+    user.picName,
+    `Offered ${description.trim()} to ${outlet_name.trim()}`,
+    now,
+  );
 
   const entry = db.prepare("SELECT * FROM offers WHERE id = ?").get(newId);
   return NextResponse.json({ success: true, data: entry }, { status: 201 });

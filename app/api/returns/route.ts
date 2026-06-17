@@ -32,15 +32,18 @@ async function auth(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const user = await auth(req);
   if (!user) {
-    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { success: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const { searchParams } = new URL(req.url);
-  const month        = searchParams.get("month")?.trim()    ?? "";
-  const statusFilter = searchParams.get("status")?.trim()   ?? "";
-  const category     = searchParams.get("category")?.trim() ?? "";
-  const pic          = searchParams.get("pic")?.trim()      ?? "";
-  const search       = searchParams.get("search")?.trim()   ?? "";
+  const month = searchParams.get("month")?.trim() ?? "";
+  const statusFilter = searchParams.get("status")?.trim() ?? "";
+  const category = searchParams.get("category")?.trim() ?? "";
+  const pic = searchParams.get("pic")?.trim() ?? "";
+  const search = searchParams.get("search")?.trim() ?? "";
 
   const db = getDb();
   const today = new Date().toISOString().split("T")[0];
@@ -81,7 +84,7 @@ export async function GET(req: NextRequest) {
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER(?))"
+      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER(?))",
     );
     bindings.push(like, like, like);
   }
@@ -94,7 +97,10 @@ export async function GET(req: NextRequest) {
 
   const entries: ReturnRow[] = rows.map((r) => ({
     ...r,
-    overdue: r.return_status === "pending" && !!r.return_by_date && r.return_by_date < today,
+    overdue:
+      r.return_status === "pending" &&
+      !!r.return_by_date &&
+      r.return_by_date < today,
   }));
 
   const counts = { pending: 0, overdue: 0, returned: 0, total: entries.length };

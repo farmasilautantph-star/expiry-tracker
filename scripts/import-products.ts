@@ -15,7 +15,7 @@ function resolveFile(): string {
     if (fs.existsSync(p)) return p;
   }
   throw new Error(
-    `Excel file not found. Place the file at scripts/data/products.xlsx and retry.\nTried: ${candidates.join(", ")}`
+    `Excel file not found. Place the file at scripts/data/products.xlsx and retry.\nTried: ${candidates.join(", ")}`,
   );
 }
 
@@ -35,7 +35,9 @@ if (!fs.existsSync(DB_PATH)) {
 const workbook = XLSX.readFile(filePath);
 const sheetName = workbook.SheetNames[0];
 const sheet = workbook.Sheets[sheetName];
-const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null });
+const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+  defval: null,
+});
 
 console.log(`Sheet: "${sheetName}" — ${rows.length} raw rows`);
 
@@ -49,8 +51,13 @@ const sampleKeys = Object.keys(rows[0]);
 console.log(`Columns detected: ${sampleKeys.join(", ")}`);
 
 // Flexible column finder — case-insensitive, trims spaces
-function findKey(obj: Record<string, unknown>, ...candidates: string[]): string | null {
-  const lower = candidates.map((c) => c.toLowerCase().replace(/\s+/g, " ").trim());
+function findKey(
+  obj: Record<string, unknown>,
+  ...candidates: string[]
+): string | null {
+  const lower = candidates.map((c) =>
+    c.toLowerCase().replace(/\s+/g, " ").trim(),
+  );
   for (const k of Object.keys(obj)) {
     const norm = k.toLowerCase().replace(/\s+/g, " ").trim();
     if (lower.includes(norm)) return k;
@@ -59,11 +66,30 @@ function findKey(obj: Record<string, unknown>, ...candidates: string[]): string 
 }
 
 const first = rows[0];
-const COL_STOCK_ID    = findKey(first, "Stock ID", "StockID", "stock_id", "STOCK ID");
-const COL_BARCODE     = findKey(first, "Barcode", "BARCODE", "barcode");
-const COL_DESCRIPTION = findKey(first, "Description", "DESCRIPTION", "description", "Desc");
-const COL_UOM         = findKey(first, "UOM", "Uom", "uom", "Unit");
-const COL_CATEGORY_ID = findKey(first, "Category ID", "CategoryID", "category_id", "CATEGORY ID", "Cat ID");
+const COL_STOCK_ID = findKey(
+  first,
+  "Stock ID",
+  "StockID",
+  "stock_id",
+  "STOCK ID",
+);
+const COL_BARCODE = findKey(first, "Barcode", "BARCODE", "barcode");
+const COL_DESCRIPTION = findKey(
+  first,
+  "Description",
+  "DESCRIPTION",
+  "description",
+  "Desc",
+);
+const COL_UOM = findKey(first, "UOM", "Uom", "uom", "Unit");
+const COL_CATEGORY_ID = findKey(
+  first,
+  "Category ID",
+  "CategoryID",
+  "category_id",
+  "CATEGORY ID",
+  "Cat ID",
+);
 
 console.log(`\nColumn mapping:`);
 console.log(`  Stock ID    → "${COL_STOCK_ID}"`);
@@ -73,7 +99,9 @@ console.log(`  UOM         → "${COL_UOM}"`);
 console.log(`  Category ID → "${COL_CATEGORY_ID}"`);
 
 if (!COL_DESCRIPTION && !COL_BARCODE) {
-  console.error("\nCould not find Description or Barcode columns. Check column names above.");
+  console.error(
+    "\nCould not find Description or Barcode columns. Check column names above.",
+  );
   process.exit(1);
 }
 
@@ -84,7 +112,7 @@ db.exec("PRAGMA foreign_keys = ON");
 db.exec("DELETE FROM products");
 
 const insert = db.prepare(
-  "INSERT INTO products (stock_id, barcode, description, uom, category_id) VALUES (?, ?, ?, ?, ?)"
+  "INSERT INTO products (stock_id, barcode, description, uom, category_id) VALUES (?, ?, ?, ?, ?)",
 );
 
 const seenBarcodes = new Set<string>();
@@ -92,17 +120,25 @@ let imported = 0;
 let skipped = 0;
 
 for (const row of rows) {
-  const stockId    = COL_STOCK_ID    ? String(row[COL_STOCK_ID] ?? "").trim()    : "";
-  const barcode    = COL_BARCODE     ? String(row[COL_BARCODE] ?? "").trim()     : "";
-  const desc       = COL_DESCRIPTION ? String(row[COL_DESCRIPTION] ?? "").trim() : "";
-  const uom        = COL_UOM         ? String(row[COL_UOM] ?? "").trim()         : "";
-  const categoryId = COL_CATEGORY_ID ? String(row[COL_CATEGORY_ID] ?? "").trim() : "";
+  const stockId = COL_STOCK_ID ? String(row[COL_STOCK_ID] ?? "").trim() : "";
+  const barcode = COL_BARCODE ? String(row[COL_BARCODE] ?? "").trim() : "";
+  const desc = COL_DESCRIPTION ? String(row[COL_DESCRIPTION] ?? "").trim() : "";
+  const uom = COL_UOM ? String(row[COL_UOM] ?? "").trim() : "";
+  const categoryId = COL_CATEGORY_ID
+    ? String(row[COL_CATEGORY_ID] ?? "").trim()
+    : "";
 
   // Skip empty rows
-  if (!desc && !barcode && !stockId) { skipped++; continue; }
+  if (!desc && !barcode && !stockId) {
+    skipped++;
+    continue;
+  }
 
   // Skip duplicate barcodes (keep first)
-  if (barcode && seenBarcodes.has(barcode)) { skipped++; continue; }
+  if (barcode && seenBarcodes.has(barcode)) {
+    skipped++;
+    continue;
+  }
   if (barcode) seenBarcodes.add(barcode);
 
   insert.run(

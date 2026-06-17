@@ -36,7 +36,8 @@ async function detectDevServer(): Promise<number | null> {
         signal: AbortSignal.timeout(2000),
       });
       // A 200 or 401 means it's our Next.js server
-      if (res.status === 200 || res.status === 401 || res.status === 400) return port;
+      if (res.status === 200 || res.status === 401 || res.status === 400)
+        return port;
     } catch {
       // Connection refused or timeout — try next port
     }
@@ -75,20 +76,41 @@ async function smokeTestAPI(port: number): Promise<void> {
       }
       throw new Error(`/api/shortlist failed: ${slRes.status}`);
     }
-    const slJson = await slRes.json() as { success: boolean; data?: unknown[] };
-    if (!slJson.success) throw new Error(`/api/shortlist returned success=false`);
+    const slJson = (await slRes.json()) as {
+      success: boolean;
+      data?: unknown[];
+    };
+    if (!slJson.success)
+      throw new Error(`/api/shortlist returned success=false`);
 
     // Test expiry stats
     const statsRes = await fetch(`http://localhost:${port}/api/expiry/stats`, {
       headers: { Cookie: cookie },
     });
-    if (!statsRes.ok) throw new Error(`/api/expiry/stats failed: ${statsRes.status}`);
-    const statsJson = await statsRes.json() as { success: boolean; data?: { expired: number; critical: number; warning: number; safe: number } };
-    if (!statsJson.success) throw new Error(`/api/expiry/stats returned success=false`);
+    if (!statsRes.ok)
+      throw new Error(`/api/expiry/stats failed: ${statsRes.status}`);
+    const statsJson = (await statsRes.json()) as {
+      success: boolean;
+      data?: {
+        expired: number;
+        critical: number;
+        warning: number;
+        safe: number;
+      };
+    };
+    if (!statsJson.success)
+      throw new Error(`/api/expiry/stats returned success=false`);
 
     const total = slJson.data?.length ?? 0;
-    const { expired, critical, warning, safe } = statsJson.data ?? { expired: 0, critical: 0, warning: 0, safe: 0 };
-    console.log(`✅ Pass  (shortlist: ${total} entries | stats: ${expired}E ${critical}C ${warning}W ${safe}S)`);
+    const { expired, critical, warning, safe } = statsJson.data ?? {
+      expired: 0,
+      critical: 0,
+      warning: 0,
+      safe: 0,
+    };
+    console.log(
+      `✅ Pass  (shortlist: ${total} entries | stats: ${expired}E ${critical}C ${warning}W ${safe}S)`,
+    );
     passed++;
   } catch (err) {
     console.log("❌ Fail");
@@ -100,7 +122,10 @@ async function smokeTestAPI(port: number): Promise<void> {
 async function main() {
   console.log("\n── Verify ────────────────────────────────────────────\n");
 
-  run("[1/6] DB integrity...       ", "npx ts-node --project tsconfig.scripts.json scripts/check-db.ts");
+  run(
+    "[1/6] DB integrity...       ",
+    "npx ts-node --project tsconfig.scripts.json scripts/check-db.ts",
+  );
   run("[2/6] TypeScript check...   ", "npx tsc --noEmit");
   run("[3/6] ESLint...             ", "npx next lint");
 
@@ -116,7 +141,10 @@ async function main() {
   }
 
   run("[5/6] Build check...        ", "npx next build");
-  run("[6/6] Expiry check...       ", "npx ts-node --project tsconfig.scripts.json scripts/expiry-check.ts");
+  run(
+    "[6/6] Expiry check...       ",
+    "npx ts-node --project tsconfig.scripts.json scripts/expiry-check.ts",
+  );
 
   console.log("\n──────────────────────────────────────────────────────");
   if (failed === 0) {

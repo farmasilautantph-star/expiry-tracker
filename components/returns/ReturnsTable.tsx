@@ -44,18 +44,33 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
   if (!editing) {
     return (
       <div className="flex items-center gap-1 group">
-        <span className={entry.overdue ? "text-red-400 font-medium" : "text-gray-300"}>
+        <span
+          className={
+            entry.overdue ? "text-red-400 font-medium" : "text-gray-300"
+          }
+        >
           {formatDate(entry.return_by_date)}
-          {entry.overdue && <span className="ml-1 text-xs text-red-400">(overdue)</span>}
+          {entry.overdue && (
+            <span className="ml-1 text-xs text-red-400">(overdue)</span>
+          )}
         </span>
         <button
           onClick={() => setEditing(true)}
           className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-500 hover:text-blue-400 transition-all"
           title="Edit return date"
         >
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <svg
+            className="w-3 h-3"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+            />
           </svg>
         </button>
       </div>
@@ -75,21 +90,50 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
         onClick={async () => {
           if (!val) return;
           setSaving(true);
-          try { await onSave(entry.id, val); setEditing(false); }
-          catch { /* keep editing open */ }
-          finally { setSaving(false); }
+          try {
+            await onSave(entry.id, val);
+            setEditing(false);
+          } catch {
+            /* keep editing open */
+          } finally {
+            setSaving(false);
+          }
         }}
         disabled={saving}
         className="text-green-400 hover:text-green-300 disabled:opacity-50"
         title="Save"
       >
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
         </svg>
       </button>
-      <button onClick={() => setEditing(false)} className="text-gray-500 hover:text-gray-300" title="Cancel">
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      <button
+        onClick={() => setEditing(false)}
+        className="text-gray-500 hover:text-gray-300"
+        title="Cancel"
+      >
+        <svg
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M6 18L18 6M6 6l12 12"
+          />
         </svg>
       </button>
     </div>
@@ -120,8 +164,19 @@ export default function ReturnsTable({
       <div className="flex items-center justify-center py-16">
         <div className="flex items-center gap-3 text-gray-400">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
           </svg>
           <span className="text-sm">Loading…</span>
         </div>
@@ -132,11 +187,22 @@ export default function ReturnsTable({
   if (entries.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
-        <svg className="w-10 h-10 text-gray-700 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+        <svg
+          className="w-10 h-10 text-gray-700 mb-3"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
+          />
         </svg>
-        <p className="text-sm text-gray-500">No returns found for this period.</p>
+        <p className="text-sm text-gray-500">
+          No returns found for this period.
+        </p>
         <p className="text-xs text-gray-600 mt-1">
           Items appear here when logged as Returnable in Log New Expiry.
         </p>
@@ -174,9 +240,17 @@ export default function ReturnsTable({
                 {isManager ? (
                   <EditDateCell entry={entry} onSave={onUpdateReturnDate} />
                 ) : (
-                  <span className={entry.overdue ? "text-red-400 font-medium" : "text-gray-300"}>
+                  <span
+                    className={
+                      entry.overdue
+                        ? "text-red-400 font-medium"
+                        : "text-gray-300"
+                    }
+                  >
                     {formatDate(entry.return_by_date)}
-                    {entry.overdue && <span className="ml-1 text-xs">(overdue)</span>}
+                    {entry.overdue && (
+                      <span className="ml-1 text-xs">(overdue)</span>
+                    )}
                   </span>
                 )}
               </td>
@@ -188,32 +262,49 @@ export default function ReturnsTable({
                   {entry.pic_name}
                 </span>
               </td>
-              <td className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}>
+              <td
+                className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+              >
                 {entry.stock_id ?? "—"}
               </td>
-              <td className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}>
+              <td
+                className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+              >
                 {entry.barcode}
               </td>
               <td className={`${TD} max-w-[200px]`}>
                 <span
                   className="block truncate text-white"
-                  title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
+                  title={
+                    entry.description + (entry.notes ? ` — ${entry.notes}` : "")
+                  }
                 >
                   {entry.overdue && (
-                    <svg className="inline w-3.5 h-3.5 text-red-400 mr-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="inline w-3.5 h-3.5 text-red-400 mr-1 flex-shrink-0"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
                       <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
                     </svg>
                   )}
                   {entry.description}
                 </span>
                 {entry.notes && (
-                  <span className="block truncate text-xs text-gray-500 mt-0.5" title={entry.notes}>
+                  <span
+                    className="block truncate text-xs text-gray-500 mt-0.5"
+                    title={entry.notes}
+                  >
                     {entry.notes}
                   </span>
                 )}
               </td>
-              <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.category}</td>
-              <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>{entry.uom ?? "—"}</td>
+              <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                {entry.category}
+              </td>
+              <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                {entry.uom ?? "—"}
+              </td>
               <td className={`${TD} whitespace-nowrap`}>
                 <StatusBadge entry={entry} />
               </td>
@@ -225,8 +316,18 @@ export default function ReturnsTable({
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-green-400 hover:text-white hover:bg-green-600 border border-green-500/30 hover:border-green-600 transition-colors"
                       title="Mark as Returned"
                     >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                       Mark Returned
                     </button>

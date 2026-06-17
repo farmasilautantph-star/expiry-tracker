@@ -6,7 +6,11 @@ import ShortListFilters from "./ShortListFilters";
 import ShortListSummary from "./ShortListSummary";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
 import OfferForm from "@/components/offers/OfferForm";
-import type { ShortListEntry, ShortListFilters as Filters, ShortListCounts } from "@/hooks/useShortList";
+import type {
+  ShortListEntry,
+  ShortListFilters as Filters,
+  ShortListCounts,
+} from "@/hooks/useShortList";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 import type { OfferFormData } from "@/hooks/useOffers";
 
@@ -40,19 +44,25 @@ export default function ShortListModule({
   onAddOffer,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
-  const [offeringEntry, setOfferingEntry] = useState<ShortListEntry | null>(null);
+  const [offeringEntry, setOfferingEntry] = useState<ShortListEntry | null>(
+    null,
+  );
 
   const picOptions = useMemo(() => {
     const seen = new Set<string>();
     const names: string[] = [];
     for (const e of entries) {
-      if (!seen.has(e.pic_name)) { seen.add(e.pic_name); names.push(e.pic_name); }
+      if (!seen.has(e.pic_name)) {
+        seen.add(e.pic_name);
+        names.push(e.pic_name);
+      }
     }
     return names.sort();
   }, [entries]);
 
   async function handleDeleteRequest(entry: ShortListEntry) {
-    if (!confirm(`Delete "${entry.description}"?\n\nThis cannot be undone.`)) return;
+    if (!confirm(`Delete "${entry.description}"?\n\nThis cannot be undone.`))
+      return;
     await onDelete(entry.id);
   }
 
@@ -65,13 +75,13 @@ export default function ShortListModule({
   const offerSource = offeringEntry
     ? {
         expiry_log_id: offeringEntry.id,
-        stock_id:      offeringEntry.stock_id,
-        barcode:       offeringEntry.barcode,
-        description:   offeringEntry.description,
-        category:      offeringEntry.category,
-        uom:           offeringEntry.uom,
-        expiry_date:   offeringEntry.expiry_date,
-        quantity:      offeringEntry.quantity,
+        stock_id: offeringEntry.stock_id,
+        barcode: offeringEntry.barcode,
+        description: offeringEntry.description,
+        category: offeringEntry.category,
+        uom: offeringEntry.uom,
+        expiry_date: offeringEntry.expiry_date,
+        quantity: offeringEntry.quantity,
         total_offered: offeringEntry.total_offered,
       }
     : undefined;

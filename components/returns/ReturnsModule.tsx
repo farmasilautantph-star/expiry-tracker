@@ -4,7 +4,11 @@ import { useMemo } from "react";
 import ReturnsFilters from "./ReturnsFilters";
 import ReturnsSummary from "./ReturnsSummary";
 import ReturnsTable from "./ReturnsTable";
-import type { ReturnEntry, ReturnFilters, ReturnCounts } from "@/hooks/useReturns";
+import type {
+  ReturnEntry,
+  ReturnFilters,
+  ReturnCounts,
+} from "@/hooks/useReturns";
 
 interface Props {
   entries: ReturnEntry[];
@@ -12,7 +16,10 @@ interface Props {
   isLoading: boolean;
   isManager: boolean;
   filters: ReturnFilters;
-  setFilter: <K extends keyof ReturnFilters>(key: K, value: ReturnFilters[K]) => void;
+  setFilter: <K extends keyof ReturnFilters>(
+    key: K,
+    value: ReturnFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   onMarkReturned: (id: number) => Promise<void>;
@@ -35,7 +42,10 @@ export default function ReturnsModule({
     const seen = new Set<string>();
     const names: string[] = [];
     for (const e of entries) {
-      if (!seen.has(e.pic_name)) { seen.add(e.pic_name); names.push(e.pic_name); }
+      if (!seen.has(e.pic_name)) {
+        seen.add(e.pic_name);
+        names.push(e.pic_name);
+      }
     }
     return names.sort();
   }, [entries]);

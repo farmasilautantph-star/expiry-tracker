@@ -18,19 +18,21 @@ export async function POST(req: NextRequest) {
   if (!username || !password) {
     return NextResponse.json(
       { success: false, error: "Invalid credentials" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 
   const db = getDb();
   const user = db
-    .prepare("SELECT id, username, password_hash, role, pic_name FROM users WHERE username = ?")
+    .prepare(
+      "SELECT id, username, password_hash, role, pic_name FROM users WHERE username = ?",
+    )
     .get(username) as UserRow | undefined;
 
   if (!user || !comparePassword(password, user.password_hash)) {
     return NextResponse.json(
       { success: false, error: "Invalid credentials" },
-      { status: 401 }
+      { status: 401 },
     );
   }
 

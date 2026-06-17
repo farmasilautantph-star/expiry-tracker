@@ -50,8 +50,20 @@ export interface OfferFormData {
   notes?: string;
 }
 
-const EMPTY_FILTERS: OfferFilters = { search: "", category: "", status: "", has_alert: "", month: "" };
-const EMPTY_COUNTS: OfferCounts = { offered: 0, accepted: 0, rejected: 0, completed: 0, total: 0 };
+const EMPTY_FILTERS: OfferFilters = {
+  search: "",
+  category: "",
+  status: "",
+  has_alert: "",
+  month: "",
+};
+const EMPTY_COUNTS: OfferCounts = {
+  offered: 0,
+  accepted: 0,
+  rejected: 0,
+  completed: 0,
+  total: 0,
+};
 
 interface UseOffersReturn {
   entries: OfferEntry[];
@@ -59,7 +71,10 @@ interface UseOffersReturn {
   isLoading: boolean;
   error: string | null;
   filters: OfferFilters;
-  setFilter: <K extends keyof OfferFilters>(key: K, value: OfferFilters[K]) => void;
+  setFilter: <K extends keyof OfferFilters>(
+    key: K,
+    value: OfferFilters[K],
+  ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
   addOffer: (data: OfferFormData) => Promise<void>;
@@ -81,11 +96,11 @@ export function useOffers(): UseOffersReturn {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (f.search)    params.set("search",    f.search);
-      if (f.category)  params.set("category",  f.category);
-      if (f.status)    params.set("status",    f.status);
+      if (f.search) params.set("search", f.search);
+      if (f.category) params.set("category", f.category);
+      if (f.status) params.set("status", f.status);
       if (f.has_alert) params.set("has_alert", f.has_alert);
-      if (f.month)     params.set("month",     f.month);
+      if (f.month) params.set("month", f.month);
 
       const res = await fetch(`/api/offers?${params}`);
       if (!res.ok) throw new Error("Failed to fetch offers");
@@ -101,17 +116,24 @@ export function useOffers(): UseOffersReturn {
     }
   }, []);
 
-  useEffect(() => { fetchData(filters); }, [fetchData, filters]);
+  useEffect(() => {
+    fetchData(filters);
+  }, [fetchData, filters]);
 
-  function setFilter<K extends keyof OfferFilters>(key: K, value: OfferFilters[K]) {
+  function setFilter<K extends keyof OfferFilters>(
+    key: K,
+    value: OfferFilters[K],
+  ) {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
-  function clearFilters() { setFilters(EMPTY_FILTERS); }
+  function clearFilters() {
+    setFilters(EMPTY_FILTERS);
+  }
 
   const activeFilterCount = useMemo(
     () => Object.values(filters).filter(Boolean).length,
-    [filters]
+    [filters],
   );
 
   async function addOffer(data: OfferFormData): Promise<void> {
@@ -121,25 +143,31 @@ export function useOffers(): UseOffersReturn {
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to add offer");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to add offer");
     await fetchData(filters);
   }
 
-  async function updateOffer(id: number, data: Partial<OfferFormData>): Promise<void> {
+  async function updateOffer(
+    id: number,
+    data: Partial<OfferFormData>,
+  ): Promise<void> {
     const res = await fetch(`/api/offers/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update offer");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to update offer");
     await fetchData(filters);
   }
 
   async function deleteOffer(id: number): Promise<void> {
     const res = await fetch(`/api/offers/${id}`, { method: "DELETE" });
     const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to delete offer");
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to delete offer");
     await fetchData(filters);
   }
 
