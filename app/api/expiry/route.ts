@@ -14,6 +14,7 @@ interface ExpiryRow {
   notes: string | null;
   stock_id: string | null;
   uom: string | null;
+  quantity: number;
   return_status: string | null;
   return_by_date: string | null;
 }
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const { barcode, description, category, expiry_date, notes, stock_id, uom, return_status, return_by_date } =
+  const { barcode, description, category, expiry_date, notes, stock_id, uom, quantity, return_status, return_by_date } =
     body ?? {};
 
   if (!barcode || !description || !category || !expiry_date) {
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
   const validReturnStatus = ["pending", "non-returnable", "returned"];
   const rs = return_status && validReturnStatus.includes(return_status) ? return_status : null;
 
@@ -73,8 +75,8 @@ export async function POST(req: NextRequest) {
     .prepare(
       `INSERT INTO expiry_logs
         (barcode, description, category, expiry_date, pic_id, pic_name, logged_at, notes,
-         stock_id, uom, return_status, return_by_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         stock_id, uom, quantity, return_status, return_by_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       barcode.trim(),
@@ -87,6 +89,7 @@ export async function POST(req: NextRequest) {
       notes?.trim() || null,
       stock_id?.trim() || null,
       uom?.trim() || null,
+      qty,
       rs,
       rs === "pending" ? (return_by_date || null) : null
     );
@@ -101,7 +104,7 @@ export async function POST(req: NextRequest) {
     newId,
     user.userId,
     user.picName,
-    `Logged expiry: ${description.trim()} (${expiry_date})`,
+    `Logged expiry: ${description.trim()} (${expiry_date}) qty=${qty}`,
     logged_at
   );
 

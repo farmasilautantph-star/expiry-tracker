@@ -14,6 +14,7 @@ export interface ExpiryEntry {
   notes: string | null;
   stock_id: string | null;
   uom: string | null;
+  quantity: number;
   return_status: string | null;
   return_by_date: string | null;
 }
@@ -26,6 +27,7 @@ export interface ExpiryFormData {
   notes: string;
   stock_id: string;
   uom: string;
+  quantity: number;
   return_status: "pending" | "non-returnable" | "";
   return_by_date: string;
 }

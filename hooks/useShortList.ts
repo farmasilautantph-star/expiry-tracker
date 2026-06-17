@@ -14,12 +14,14 @@ export interface ShortListEntry {
   notes: string | null;
   stock_id: string | null;
   uom: string | null;
+  quantity: number;
   return_status: string | null;
   return_by_date: string | null;
   days_left: number;
   urgency: "expired" | "critical" | "warning" | "safe";
   offer_status: "not-offered" | "offered" | "accepted" | "rejected" | "completed";
   offer_id: number | null;
+  total_offered: number;
 }
 
 export interface ShortListFilters {

@@ -11,21 +11,22 @@ const BADGE: Record<Urgency, string> = {
   safe:     "bg-green-500/15 text-green-400 border border-green-500/25",
 };
 
-const OFFER_BADGE: Record<string, string> = {
-  "not-offered": "bg-gray-500/10 text-gray-500 border border-gray-500/20",
-  offered:       "bg-blue-500/15 text-blue-400 border border-blue-500/25",
-  accepted:      "bg-green-500/15 text-green-400 border border-green-500/25",
-  rejected:      "bg-red-500/15 text-red-400 border border-red-500/25",
-  completed:     "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
-};
+function OfferBadge({ entry }: { entry: ShortListEntry }) {
+  const { quantity, total_offered, offer_status } = entry;
+  if (offer_status === "not-offered") {
+    return <span className="text-xs text-gray-600">—</span>;
+  }
+  const badgeCls =
+    total_offered >= quantity
+      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+      : "bg-blue-500/15 text-blue-400 border border-blue-500/25";
+  return (
+    <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${badgeCls}`}>
+      {total_offered}/{quantity} offered
+    </span>
+  );
+}
 
-const OFFER_LABEL: Record<string, string> = {
-  "not-offered": "⚪ Not Offered",
-  offered:       "🔵 Offered",
-  accepted:      "🟢 Accepted",
-  rejected:      "🔴 Rejected",
-  completed:     "✅ Completed",
-};
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("T")[0].split("-");
@@ -125,11 +126,12 @@ export default function ShortListTable({
             <th className={`${TH} max-w-[200px]`}>Description</th>
             <th className={TH}>Category</th>
             <th className={TH}>UOM</th>
+            <th className={TH}>Qty</th>
             <th className={TH}>Expiry Date</th>
             <th className={TH}>Days Left</th>
             <th className={TH}>Return</th>
             <th className={TH}>Return By</th>
-            <th className={TH}>Offer Status</th>
+            <th className={TH}>Offered</th>
             {isManager && (
               <th className={`${TH} text-right`}>Actions</th>
             )}
@@ -173,6 +175,7 @@ export default function ShortListTable({
                 </td>
                 <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.category}</td>
                 <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>{entry.uom ?? "—"}</td>
+                <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.quantity}</td>
                 <td className={`${TD} text-gray-300 whitespace-nowrap`}>
                   {formatDate(entry.expiry_date)}
                 </td>
@@ -188,25 +191,25 @@ export default function ShortListTable({
                     : "—"}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${OFFER_BADGE[entry.offer_status] ?? ""}`}>
-                    {OFFER_LABEL[entry.offer_status] ?? entry.offer_status}
-                  </span>
+                  <OfferBadge entry={entry} />
                 </td>
                 {isManager && (
                   <td className={`${TD} whitespace-nowrap`}>
                     <div className="flex items-center justify-end gap-1">
-                      {/* Offer to Outlet button */}
-                      <button
-                        onClick={() => onOfferRequest(entry)}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-400 hover:text-white hover:bg-blue-600 border border-blue-500/30 hover:border-blue-600 transition-colors"
-                        title="Offer to Outlet"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                        Offer
-                      </button>
+                      {/* Offer to Outlet button — hidden when fully offered */}
+                      {entry.total_offered < entry.quantity && (
+                        <button
+                          onClick={() => onOfferRequest(entry)}
+                          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-400 hover:text-white hover:bg-blue-600 border border-blue-500/30 hover:border-blue-600 transition-colors"
+                          title={`Offer to Outlet — ${entry.quantity - entry.total_offered} unit${entry.quantity - entry.total_offered === 1 ? "" : "s"} remaining`}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                          </svg>
+                          Offer
+                        </button>
+                      )}
                       <button
                         onClick={() => onEditRequest(entry)}
                         className="p-1.5 rounded text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"

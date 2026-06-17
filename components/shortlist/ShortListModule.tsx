@@ -71,6 +71,8 @@ export default function ShortListModule({
         category:      offeringEntry.category,
         uom:           offeringEntry.uom,
         expiry_date:   offeringEntry.expiry_date,
+        quantity:      offeringEntry.quantity,
+        total_offered: offeringEntry.total_offered,
       }
     : undefined;
 

@@ -14,6 +14,7 @@ interface ExpiryRow {
   notes: string | null;
   stock_id: string | null;
   uom: string | null;
+  quantity: number;
   return_status: string | null;
   return_by_date: string | null;
 }
@@ -54,7 +55,7 @@ export async function PUT(
   }
 
   const body = await req.json().catch(() => null);
-  const { barcode, description, category, expiry_date, notes, stock_id, uom, return_status, return_by_date } =
+  const { barcode, description, category, expiry_date, notes, stock_id, uom, quantity, return_status, return_by_date } =
     body ?? {};
 
   const validReturnStatus = ["pending", "non-returnable", "returned"];
@@ -71,6 +72,7 @@ export async function PUT(
     notes:          notes !== undefined   ? (notes?.trim() || null) : existing.notes,
     stock_id:       stock_id !== undefined ? (stock_id?.trim() || null) : existing.stock_id,
     uom:            uom !== undefined     ? (uom?.trim() || null) : existing.uom,
+    quantity:       quantity !== undefined ? Math.max(1, Math.round(Number(quantity))) : existing.quantity,
     return_status:  rs,
     return_by_date: rs === "pending"
       ? (return_by_date !== undefined ? (return_by_date || null) : existing.return_by_date)
@@ -89,11 +91,11 @@ export async function PUT(
   db.prepare(
     `UPDATE expiry_logs
      SET barcode=?, description=?, category=?, expiry_date=?, notes=?,
-         stock_id=?, uom=?, return_status=?, return_by_date=?
+         stock_id=?, uom=?, quantity=?, return_status=?, return_by_date=?
      WHERE id=?`
   ).run(
     updated.barcode, updated.description, updated.category, updated.expiry_date, updated.notes,
-    updated.stock_id, updated.uom, updated.return_status, updated.return_by_date,
+    updated.stock_id, updated.uom, updated.quantity, updated.return_status, updated.return_by_date,
     id
   );
 

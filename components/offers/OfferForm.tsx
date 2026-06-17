@@ -11,6 +11,8 @@ interface SourceItem {
   category: string;
   uom: string | null;
   expiry_date: string;
+  quantity: number;
+  total_offered: number;
 }
 
 interface Props {
@@ -47,6 +49,7 @@ export default function OfferForm({ isOpen, onClose, source, editingOffer, onSub
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [existingOffers, setExistingOffers] = useState<Array<{ outlet_name: string; quantity: number }>>([]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -56,6 +59,7 @@ export default function OfferForm({ isOpen, onClose, source, editingOffer, onSub
       setOfferStatus(editingOffer.offer_status);
       setHasAlert(editingOffer.has_alert === 1);
       setNotes(editingOffer.notes ?? "");
+      setExistingOffers([]);
     } else {
       setOutletName("");
       setQuantity(1);
@@ -65,6 +69,22 @@ export default function OfferForm({ isOpen, onClose, source, editingOffer, onSub
     }
     setError("");
   }, [isOpen, editingOffer]);
+
+  // Fetch existing offers for this expiry_log_id so we can display them
+  useEffect(() => {
+    if (!isOpen || !source?.expiry_log_id) { setExistingOffers([]); return; }
+    fetch(`/api/offers?expiry_log_id=${source.expiry_log_id}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setExistingOffers(json.data.map((o: { outlet_name: string; quantity: number }) => ({
+            outlet_name: o.outlet_name,
+            quantity: o.quantity,
+          })));
+        }
+      })
+      .catch(() => { /* silent */ });
+  }, [isOpen, source?.expiry_log_id]);
 
   if (!isOpen) return null;
 
@@ -79,10 +99,16 @@ export default function OfferForm({ isOpen, onClose, source, editingOffer, onSub
     expiry_date:   "",
   } : null);
 
+  const remaining = source ? source.quantity - source.total_offered : null;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!outletName.trim()) { setError("Outlet name is required."); return; }
     if (quantity < 1) { setError("Quantity must be at least 1."); return; }
+    if (remaining !== null && quantity > remaining) {
+      setError(`Cannot offer more than ${remaining} remaining unit${remaining === 1 ? "" : "s"}.`);
+      return;
+    }
 
     setSaving(true);
     setError("");
@@ -179,6 +205,29 @@ export default function OfferForm({ isOpen, onClose, source, editingOffer, onSub
               </div>
             )}
 
+            {/* Availability summary */}
+            {source && (
+              <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Availability</p>
+                  <span className={`text-xs font-bold ${remaining === 0 ? "text-red-400" : "text-green-400"}`}>
+                    {remaining} of {source.quantity} unit{source.quantity === 1 ? "" : "s"} remaining
+                  </span>
+                </div>
+                {existingOffers.length > 0 && (
+                  <div className="space-y-1 pt-1 border-t border-gray-700">
+                    <p className="text-xs text-gray-500">Already offered:</p>
+                    {existingOffers.map((o, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-gray-300">{o.outlet_name}</span>
+                        <span className="text-gray-500">{o.quantity} unit{o.quantity === 1 ? "" : "s"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Manager fills */}
             <div>
               <Label required>Outlet Name</Label>
@@ -194,10 +243,13 @@ export default function OfferForm({ isOpen, onClose, source, editingOffer, onSub
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label required>Quantity</Label>
+                <Label required>
+                  Quantity{remaining !== null ? ` (max ${remaining})` : ""}
+                </Label>
                 <input
                   type="number"
                   min={1}
+                  max={remaining ?? undefined}
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Number(e.target.value)))}
                   className={INPUT}

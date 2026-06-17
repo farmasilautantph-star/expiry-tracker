@@ -17,6 +17,7 @@ const EMPTY: ExpiryFormData = {
   description: "",
   category: "",
   uom: "",
+  quantity: 1,
   expiry_date: "",
   return_status: "pending",
   return_by_date: "",
@@ -61,6 +62,7 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
         description:   editingEntry.description ?? "",
         category:      editingEntry.category ?? "",
         uom:           editingEntry.uom ?? "",
+        quantity:      editingEntry.quantity ?? 1,
         expiry_date:   editingEntry.expiry_date.split("T")[0],
         return_status: (editingEntry.return_status as ExpiryFormData["return_status"]) || "pending",
         return_by_date: editingEntry.return_by_date?.split("T")[0] ?? "",
@@ -137,8 +139,9 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
     setError("");
     if (!form.barcode.trim())    { setError("Barcode is required."); return; }
     if (!form.description.trim()){ setError("Description is required."); return; }
-    if (!form.category.trim())   { setError("Category is required."); return; }
+    if (!form.category.trim())   { setError("Category is required — select a product from the search results."); return; }
     if (!form.expiry_date)       { setError("Expiry date is required."); return; }
+    if ((form.quantity ?? 1) < 1){ setError("Quantity must be at least 1."); return; }
     if (form.return_status === "pending" && !form.return_by_date) {
       setError("Return By Date is required for returnable items."); return;
     }
@@ -264,16 +267,16 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
             {activeField === "description" && <SearchDropdown />}
           </div>
 
-          {/* Category + UOM */}
+          {/* Category + UOM (auto-filled from product search, read-only) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label required>Category</Label>
               <input
                 type="text"
                 value={form.category}
-                onChange={(e) => set("category", e.target.value)}
-                placeholder="e.g. OTC"
-                className={INPUT}
+                readOnly
+                placeholder="Auto-filled from search"
+                className={INPUT_RO}
               />
             </div>
             <div>
@@ -281,11 +284,23 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
               <input
                 type="text"
                 value={form.uom}
-                onChange={(e) => set("uom", e.target.value)}
-                placeholder="e.g. BOX"
-                className={INPUT}
+                readOnly
+                placeholder="Auto-filled from search"
+                className={INPUT_RO}
               />
             </div>
+          </div>
+
+          {/* Quantity */}
+          <div>
+            <Label required>Quantity</Label>
+            <input
+              type="number"
+              min={1}
+              value={form.quantity ?? 1}
+              onChange={(e) => set("quantity", Math.max(1, Math.round(Number(e.target.value))))}
+              className={INPUT}
+            />
           </div>
 
           {/* Expiry Date */}

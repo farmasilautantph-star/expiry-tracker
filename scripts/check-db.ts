@@ -20,7 +20,7 @@ let errors = 0;
 // ── Required tables ───────────────────────────────────────────────────────────
 const REQUIRED_TABLES: Record<string, string[]> = {
   users:       ["id", "username", "password_hash", "role", "pic_name", "created_at"],
-  expiry_logs: ["id", "barcode", "description", "category", "expiry_date", "pic_id", "pic_name", "logged_at"],
+  expiry_logs: ["id", "barcode", "description", "category", "expiry_date", "pic_id", "pic_name", "logged_at", "quantity"],
   offers:      ["id", "description", "barcode", "uom", "quantity", "has_alert", "created_at", "created_by",
                 "stock_id", "category", "notes", "expiry_log_id", "outlet_name", "offer_status", "updated_at"],
   history_log: ["id", "action", "module", "record_id", "pic_id", "pic_name", "description", "timestamp"],

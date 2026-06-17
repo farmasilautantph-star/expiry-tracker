@@ -37,15 +37,21 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ success: false, error }, { status });
 
   const { searchParams } = new URL(req.url);
-  const search    = searchParams.get("search")?.trim()    ?? "";
-  const category  = searchParams.get("category")?.trim()  ?? "";
-  const offerSt   = searchParams.get("status")?.trim()    ?? "";
-  const hasAlert  = searchParams.get("has_alert")?.trim() ?? "";
-  const month     = searchParams.get("month")?.trim()     ?? "";
+  const search       = searchParams.get("search")?.trim()         ?? "";
+  const category     = searchParams.get("category")?.trim()       ?? "";
+  const offerSt      = searchParams.get("status")?.trim()         ?? "";
+  const hasAlert     = searchParams.get("has_alert")?.trim()      ?? "";
+  const month        = searchParams.get("month")?.trim()          ?? "";
+  const expiryLogId  = searchParams.get("expiry_log_id")?.trim()  ?? "";
 
   const db = getDb();
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
+
+  if (expiryLogId) {
+    conditions.push("expiry_log_id = ?");
+    bindings.push(Number(expiryLogId));
+  }
 
   if (category) { conditions.push("category = ?"); bindings.push(category); }
 
@@ -104,10 +110,27 @@ export async function POST(req: NextRequest) {
 
   const validStatus = ["offered", "accepted", "rejected", "completed"];
   const oStatus = offer_status && validStatus.includes(offer_status) ? offer_status : "offered";
-  const qty = Number(quantity) > 0 ? Number(quantity) : 1;
+  const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
   const now = new Date().toISOString();
 
   const db = getDb();
+
+  // Validate against expiry_logs.quantity when linked to a log entry
+  if (expiry_log_id) {
+    const logRow = db.prepare("SELECT quantity FROM expiry_logs WHERE id = ?")
+      .get(expiry_log_id) as { quantity: number } | undefined;
+    if (logRow) {
+      const sumRow = db.prepare("SELECT COALESCE(SUM(quantity), 0) AS total FROM offers WHERE expiry_log_id = ?")
+        .get(expiry_log_id) as { total: number };
+      const remaining = logRow.quantity - (sumRow.total ?? 0);
+      if (qty > remaining) {
+        return NextResponse.json(
+          { success: false, error: `Cannot offer more than ${remaining} available unit${remaining === 1 ? "" : "s"} (${logRow.quantity} logged, ${sumRow.total} already offered)` },
+          { status: 400 }
+        );
+      }
+    }
+  }
   const result = db.prepare(
     `INSERT INTO offers
       (expiry_log_id, stock_id, barcode, description, category, uom, quantity,

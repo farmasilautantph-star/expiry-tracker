@@ -23,6 +23,7 @@ interface ExpiryRow {
 interface RawRow extends ExpiryRow {
   offer_status: string | null;
   offer_id: number | null;
+  total_offered: number;
 }
 
 export interface ShortListEntry extends ExpiryRow {
@@ -30,6 +31,7 @@ export interface ShortListEntry extends ExpiryRow {
   urgency: Urgency;
   offer_status: "not-offered" | "offered" | "accepted" | "rejected" | "completed";
   offer_id: number | null;
+  total_offered: number;
 }
 
 function calcUrgency(expiryDate: string): { days_left: number; urgency: Urgency } {
@@ -93,11 +95,12 @@ export async function GET(req: NextRequest) {
 
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  // Subquery gets latest offer for each expiry_log_id
+  // Subquery gets latest offer status and total offered quantity per row
   const sql = `
     SELECT el.*,
       (SELECT offer_status FROM offers WHERE expiry_log_id = el.id ORDER BY created_at DESC LIMIT 1) AS offer_status,
-      (SELECT id FROM offers WHERE expiry_log_id = el.id ORDER BY created_at DESC LIMIT 1) AS offer_id
+      (SELECT id FROM offers WHERE expiry_log_id = el.id ORDER BY created_at DESC LIMIT 1) AS offer_id,
+      COALESCE((SELECT SUM(quantity) FROM offers WHERE expiry_log_id = el.id), 0) AS total_offered
     FROM expiry_logs el
     ${where}
     ORDER BY el.expiry_date ASC
@@ -110,6 +113,7 @@ export async function GET(req: NextRequest) {
     ...calcUrgency(row.expiry_date),
     offer_status: (row.offer_status as ShortListEntry["offer_status"]) ?? "not-offered",
     offer_id: row.offer_id ?? null,
+    total_offered: row.total_offered ?? 0,
   }));
 
   if (statusFilter && ["expired", "critical", "warning", "safe"].includes(statusFilter)) {
