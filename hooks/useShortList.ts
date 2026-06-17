@@ -18,6 +18,8 @@ export interface ShortListEntry {
   return_by_date: string | null;
   days_left: number;
   urgency: "expired" | "critical" | "warning" | "safe";
+  offer_status: "not-offered" | "offered" | "accepted" | "rejected" | "completed";
+  offer_id: number | null;
 }
 
 export interface ShortListFilters {
@@ -70,10 +72,10 @@ export function useShortList(): UseShortListReturn {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (f.search)        params.set("search",   f.search);
-      if (f.category)      params.set("category", f.category);
-      if (f.status)        params.set("status",   f.status);
-      if (f.pic)           params.set("pic",      f.pic);
+      if (f.search)   params.set("search",   f.search);
+      if (f.category) params.set("category", f.category);
+      if (f.status)   params.set("status",   f.status);
+      if (f.pic)      params.set("pic",      f.pic);
 
       const url = `/api/shortlist${params.toString() ? `?${params}` : ""}`;
       const res = await fetch(url);
@@ -81,7 +83,6 @@ export function useShortList(): UseShortListReturn {
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? "Unknown error");
 
-      // Apply client-side return_status filter (not worth a round-trip)
       let data: ShortListEntry[] = json.data;
       if (f.return_status) {
         data = f.return_status === "none"
@@ -90,7 +91,6 @@ export function useShortList(): UseShortListReturn {
       }
 
       setEntries(data);
-      // Recompute counts after client-side filter
       const c = { expired: 0, critical: 0, warning: 0, safe: 0, total: data.length };
       for (const e of data) {
         const u = e.urgency as keyof typeof c;
@@ -110,9 +110,7 @@ export function useShortList(): UseShortListReturn {
     setFilters((prev) => ({ ...prev, [key]: value }));
   }
 
-  function clearFilters() {
-    setFilters(EMPTY_FILTERS);
-  }
+  function clearFilters() { setFilters(EMPTY_FILTERS); }
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 

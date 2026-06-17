@@ -11,6 +11,22 @@ const BADGE: Record<Urgency, string> = {
   safe:     "bg-green-500/15 text-green-400 border border-green-500/25",
 };
 
+const OFFER_BADGE: Record<string, string> = {
+  "not-offered": "bg-gray-500/10 text-gray-500 border border-gray-500/20",
+  offered:       "bg-blue-500/15 text-blue-400 border border-blue-500/25",
+  accepted:      "bg-green-500/15 text-green-400 border border-green-500/25",
+  rejected:      "bg-red-500/15 text-red-400 border border-red-500/25",
+  completed:     "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+};
+
+const OFFER_LABEL: Record<string, string> = {
+  "not-offered": "⚪ Not Offered",
+  offered:       "🔵 Offered",
+  accepted:      "🟢 Accepted",
+  rejected:      "🔴 Rejected",
+  completed:     "✅ Completed",
+};
+
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}/${y}`;
@@ -41,11 +57,11 @@ function ReturnBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-gray-600 text-xs">—</span>;
   return (
     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-      status === "returnable"
+      status === "pending"
         ? "bg-green-500/15 text-green-400 border border-green-500/25"
         : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
     }`}>
-      {status === "returnable" ? "Return" : "Non-Return"}
+      {status === "pending" ? "Return" : "Non-Return"}
     </span>
   );
 }
@@ -56,6 +72,7 @@ interface Props {
   isManager: boolean;
   onEditRequest: (entry: ShortListEntry) => void;
   onDeleteRequest: (entry: ShortListEntry) => void;
+  onOfferRequest: (entry: ShortListEntry) => void;
 }
 
 const TH = "sticky top-0 z-10 bg-gray-900 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap border-b border-gray-800";
@@ -67,6 +84,7 @@ export default function ShortListTable({
   isManager,
   onEditRequest,
   onDeleteRequest,
+  onOfferRequest,
 }: Props) {
   if (isLoading) {
     return (
@@ -111,6 +129,7 @@ export default function ShortListTable({
             <th className={TH}>Days Left</th>
             <th className={TH}>Return</th>
             <th className={TH}>Return By</th>
+            <th className={TH}>Offer Status</th>
             {isManager && (
               <th className={`${TH} text-right`}>Actions</th>
             )}
@@ -164,13 +183,30 @@ export default function ShortListTable({
                   <ReturnBadge status={entry.return_status} />
                 </td>
                 <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
-                  {entry.return_status === "returnable" && entry.return_by_date
+                  {entry.return_status === "pending" && entry.return_by_date
                     ? formatDate(entry.return_by_date)
                     : "—"}
+                </td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${OFFER_BADGE[entry.offer_status] ?? ""}`}>
+                    {OFFER_LABEL[entry.offer_status] ?? entry.offer_status}
+                  </span>
                 </td>
                 {isManager && (
                   <td className={`${TD} whitespace-nowrap`}>
                     <div className="flex items-center justify-end gap-1">
+                      {/* Offer to Outlet button */}
+                      <button
+                        onClick={() => onOfferRequest(entry)}
+                        className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-400 hover:text-white hover:bg-blue-600 border border-blue-500/30 hover:border-blue-600 transition-colors"
+                        title="Offer to Outlet"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+                        </svg>
+                        Offer
+                      </button>
                       <button
                         onClick={() => onEditRequest(entry)}
                         className="p-1.5 rounded text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"

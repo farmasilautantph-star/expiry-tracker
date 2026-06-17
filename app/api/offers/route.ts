@@ -4,16 +4,20 @@ import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 export interface OfferRow {
   id: number;
-  description: string;
-  barcode: string;
+  expiry_log_id: number | null;
   stock_id: string | null;
-  uom: string;
-  quantity: number;
+  barcode: string;
+  description: string;
   category: string | null;
-  notes: string | null;
+  uom: string | null;
+  quantity: number;
+  outlet_name: string;
+  offer_status: "offered" | "accepted" | "rejected" | "completed";
   has_alert: number;
-  created_at: string;
+  notes: string | null;
   created_by: number;
+  created_at: string;
+  updated_at: string;
 }
 
 async function authManager(req: NextRequest) {
@@ -33,42 +37,52 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ success: false, error }, { status });
 
   const { searchParams } = new URL(req.url);
-  const search   = searchParams.get("search")?.trim()   ?? "";
-  const category = searchParams.get("category")?.trim() ?? "";
-  const alert    = searchParams.get("alert")?.trim()    ?? "";
+  const search    = searchParams.get("search")?.trim()    ?? "";
+  const category  = searchParams.get("category")?.trim()  ?? "";
+  const offerSt   = searchParams.get("status")?.trim()    ?? "";
+  const hasAlert  = searchParams.get("has_alert")?.trim() ?? "";
+  const month     = searchParams.get("month")?.trim()     ?? "";
 
   const db = getDb();
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
-  if (category) {
-    conditions.push("category = ?");
-    bindings.push(category);
+  if (category) { conditions.push("category = ?"); bindings.push(category); }
+
+  if (offerSt && ["offered", "accepted", "rejected", "completed"].includes(offerSt)) {
+    conditions.push("offer_status = ?"); bindings.push(offerSt);
   }
 
-  if (alert === "1") {
+  if (hasAlert === "true" || hasAlert === "1") {
     conditions.push("has_alert = 1");
-  } else if (alert === "0") {
+  } else if (hasAlert === "false" || hasAlert === "0") {
     conditions.push("has_alert = 0");
+  }
+
+  if (month) {
+    conditions.push("strftime('%Y-%m', created_at) = ?");
+    bindings.push(month);
   }
 
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER(?))"
+      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(outlet_name,'')) LIKE LOWER(?))"
     );
     bindings.push(like, like, like);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const sql = `SELECT * FROM offers ${where} ORDER BY created_at DESC`;
+  const rows = db.prepare(`SELECT * FROM offers ${where} ORDER BY created_at DESC`)
+    .all(...bindings) as unknown as OfferRow[];
 
-  const rows = db.prepare(sql).all(...bindings) as unknown as OfferRow[];
+  // Counts by status
+  const counts = { offered: 0, accepted: 0, rejected: 0, completed: 0, total: rows.length };
+  for (const r of rows) {
+    if (r.offer_status in counts) (counts[r.offer_status] as number)++;
+  }
 
-  const totalOffers = rows.length;
-  const withAlert = rows.filter((r) => r.has_alert === 1).length;
-
-  return NextResponse.json({ success: true, data: rows, summary: { totalOffers, withAlert } });
+  return NextResponse.json({ success: true, data: rows, counts });
 }
 
 export async function POST(req: NextRequest) {
@@ -76,44 +90,53 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ success: false, error }, { status });
 
   const body = await req.json().catch(() => null);
-  const { description, barcode, stock_id, uom, quantity, category, notes, has_alert } = body ?? {};
+  const {
+    expiry_log_id, stock_id, barcode, description, category, uom,
+    quantity, outlet_name, offer_status, has_alert, notes,
+  } = body ?? {};
 
-  if (!description || !barcode || !uom) {
+  if (!barcode || !description || !outlet_name) {
     return NextResponse.json(
-      { success: false, error: "description, barcode, and uom are required" },
+      { success: false, error: "barcode, description, and outlet_name are required" },
       { status: 400 }
     );
   }
 
+  const validStatus = ["offered", "accepted", "rejected", "completed"];
+  const oStatus = offer_status && validStatus.includes(offer_status) ? offer_status : "offered";
   const qty = Number(quantity) > 0 ? Number(quantity) : 1;
-  const alertVal = has_alert ? 1 : 0;
-  const created_at = new Date().toISOString();
+  const now = new Date().toISOString();
 
   const db = getDb();
-  const result = db
-    .prepare(
-      `INSERT INTO offers (description, barcode, stock_id, uom, quantity, category, notes, has_alert, created_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
-      description.trim(),
-      barcode.trim(),
-      stock_id?.trim() || null,
-      uom.trim(),
-      qty,
-      category?.trim() || null,
-      notes?.trim() || null,
-      alertVal,
-      created_at,
-      user.userId
-    );
+  const result = db.prepare(
+    `INSERT INTO offers
+      (expiry_log_id, stock_id, barcode, description, category, uom, quantity,
+       outlet_name, offer_status, has_alert, notes, created_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    expiry_log_id ?? null,
+    stock_id?.trim() || null,
+    barcode.trim(),
+    description.trim(),
+    category?.trim() || null,
+    uom?.trim() || null,
+    qty,
+    outlet_name.trim(),
+    oStatus,
+    has_alert ? 1 : 0,
+    notes?.trim() || null,
+    user.userId,
+    now,
+    now,
+  );
 
   const newId = Number(result.lastInsertRowid);
 
   db.prepare(
     "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)"
-  ).run("CREATE", "offers", newId, user.userId, user.picName, `Added offer: ${description.trim()}`, created_at);
+  ).run("CREATE", "offers", newId, user.userId, user.picName,
+    `Offered ${description.trim()} to ${outlet_name.trim()}`, now);
 
-  const entry = db.prepare("SELECT * FROM offers WHERE id = ?").get(newId) as unknown as OfferRow;
+  const entry = db.prepare("SELECT * FROM offers WHERE id = ?").get(newId);
   return NextResponse.json({ success: true, data: entry }, { status: 201 });
 }

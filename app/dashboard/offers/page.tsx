@@ -12,15 +12,14 @@ export default function OffersPage() {
 
   const {
     entries,
-    summary,
+    counts,
     isLoading,
     error,
     filters,
     setFilter,
     clearFilters,
     activeFilterCount,
-    addOffer,
-    editOffer,
+    updateOffer,
     deleteOffer,
     toggleAlert,
   } = useOffers();
@@ -37,8 +36,19 @@ export default function OffersPage() {
       <div>
         <h2 className="text-xl font-semibold text-white">Offer Ke Outlet</h2>
         <p className="text-sm text-gray-400 mt-0.5">
-          Manage items offered to the outlet with UOM, quantity, and alerts.
+          Monitor all items offered to outlets across all statuses.
         </p>
+      </div>
+
+      {/* Info note */}
+      <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+        <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>
+          Offers are created from <strong>Item Short List</strong> — click &quot;Offer to Outlet&quot; on any row there.
+        </span>
       </div>
 
       {/* Error banner */}
@@ -50,14 +60,13 @@ export default function OffersPage() {
 
       <OffersModule
         entries={entries}
-        summary={summary}
+        counts={counts}
         isLoading={isLoading}
         filters={filters}
         setFilter={setFilter}
         clearFilters={clearFilters}
         activeFilterCount={activeFilterCount}
-        onAdd={addOffer}
-        onEdit={editOffer}
+        onUpdate={updateOffer}
         onDelete={deleteOffer}
         onToggleAlert={toggleAlert}
       />

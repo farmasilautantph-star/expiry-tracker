@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
+import type { OfferFormData } from "@/hooks/useOffers";
 
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
@@ -36,6 +37,17 @@ export default function ShortListPage() {
     const res = await fetch(`/api/expiry/${id}`, { method: "DELETE" });
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to delete entry");
+    await refresh();
+  }
+
+  async function handleAddOffer(data: OfferFormData): Promise<void> {
+    const res = await fetch("/api/offers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to create offer");
     await refresh();
   }
 
@@ -88,6 +100,7 @@ export default function ShortListPage() {
         activeFilterCount={activeFilterCount}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onAddOffer={handleAddOffer}
       />
     </div>
   );

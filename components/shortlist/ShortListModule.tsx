@@ -5,8 +5,10 @@ import ShortListTable from "./ShortListTable";
 import ShortListFilters from "./ShortListFilters";
 import ShortListSummary from "./ShortListSummary";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
+import OfferForm from "@/components/offers/OfferForm";
 import type { ShortListEntry, ShortListFilters as Filters, ShortListCounts } from "@/hooks/useShortList";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
+import type { OfferFormData } from "@/hooks/useOffers";
 
 interface Props {
   entries: ShortListEntry[];
@@ -20,6 +22,7 @@ interface Props {
   activeFilterCount: number;
   onEdit: (id: number, data: ExpiryFormData) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
+  onAddOffer: (data: OfferFormData) => Promise<void>;
 }
 
 export default function ShortListModule({
@@ -34,8 +37,10 @@ export default function ShortListModule({
   activeFilterCount,
   onEdit,
   onDelete,
+  onAddOffer,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
+  const [offeringEntry, setOfferingEntry] = useState<ShortListEntry | null>(null);
 
   const picOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -45,10 +50,6 @@ export default function ShortListModule({
     }
     return names.sort();
   }, [entries]);
-
-  function handleEditRequest(entry: ShortListEntry) {
-    setEditingEntry(entry);
-  }
 
   async function handleDeleteRequest(entry: ShortListEntry) {
     if (!confirm(`Delete "${entry.description}"?\n\nThis cannot be undone.`)) return;
@@ -60,6 +61,18 @@ export default function ShortListModule({
     await onEdit(editingEntry.id, data);
     setEditingEntry(null);
   }
+
+  const offerSource = offeringEntry
+    ? {
+        expiry_log_id: offeringEntry.id,
+        stock_id:      offeringEntry.stock_id,
+        barcode:       offeringEntry.barcode,
+        description:   offeringEntry.description,
+        category:      offeringEntry.category,
+        uom:           offeringEntry.uom,
+        expiry_date:   offeringEntry.expiry_date,
+      }
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -78,18 +91,31 @@ export default function ShortListModule({
         entries={entries}
         isLoading={isLoading}
         isManager={isManager}
-        onEditRequest={handleEditRequest}
+        onEditRequest={setEditingEntry}
         onDeleteRequest={handleDeleteRequest}
+        onOfferRequest={setOfferingEntry}
       />
 
       {isManager && (
-        <ExpiryForm
-          isOpen={editingEntry !== null}
-          onClose={() => setEditingEntry(null)}
-          editingEntry={editingEntry}
-          picName={picName}
-          onSubmit={handleFormSubmit}
-        />
+        <>
+          <ExpiryForm
+            isOpen={editingEntry !== null}
+            onClose={() => setEditingEntry(null)}
+            editingEntry={editingEntry}
+            picName={picName}
+            onSubmit={handleFormSubmit}
+          />
+
+          <OfferForm
+            isOpen={offeringEntry !== null}
+            onClose={() => setOfferingEntry(null)}
+            source={offerSource}
+            onSubmit={async (data) => {
+              await onAddOffer(data);
+              setOfferingEntry(null);
+            }}
+          />
+        </>
       )}
     </div>
   );

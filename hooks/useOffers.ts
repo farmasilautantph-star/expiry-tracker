@@ -4,46 +4,58 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface OfferEntry {
   id: number;
-  description: string;
-  barcode: string;
+  expiry_log_id: number | null;
   stock_id: string | null;
-  uom: string;
-  quantity: number;
+  barcode: string;
+  description: string;
   category: string | null;
-  notes: string | null;
+  uom: string | null;
+  quantity: number;
+  outlet_name: string;
+  offer_status: "offered" | "accepted" | "rejected" | "completed";
   has_alert: number;
-  created_at: string;
+  notes: string | null;
   created_by: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface OfferFilters {
   search: string;
   category: string;
-  alert: string;
+  status: string;
+  has_alert: string;
+  month: string;
 }
 
-export interface OfferSummary {
-  totalOffers: number;
-  withAlert: number;
+export interface OfferCounts {
+  offered: number;
+  accepted: number;
+  rejected: number;
+  completed: number;
+  total: number;
 }
-
-const EMPTY_FILTERS: OfferFilters = { search: "", category: "", alert: "" };
-const EMPTY_SUMMARY: OfferSummary = { totalOffers: 0, withAlert: 0 };
 
 export interface OfferFormData {
-  description: string;
+  expiry_log_id?: number | null;
+  stock_id?: string;
   barcode: string;
-  stock_id: string;
-  uom: string;
+  description: string;
+  category?: string;
+  uom?: string;
+  outlet_name: string;
   quantity: number;
-  category: string;
-  notes: string;
+  offer_status: string;
   has_alert: boolean;
+  notes?: string;
 }
+
+const EMPTY_FILTERS: OfferFilters = { search: "", category: "", status: "", has_alert: "", month: "" };
+const EMPTY_COUNTS: OfferCounts = { offered: 0, accepted: 0, rejected: 0, completed: 0, total: 0 };
 
 interface UseOffersReturn {
   entries: OfferEntry[];
-  summary: OfferSummary;
+  counts: OfferCounts;
   isLoading: boolean;
   error: string | null;
   filters: OfferFilters;
@@ -51,7 +63,7 @@ interface UseOffersReturn {
   clearFilters: () => void;
   activeFilterCount: number;
   addOffer: (data: OfferFormData) => Promise<void>;
-  editOffer: (id: number, data: Partial<OfferFormData>) => Promise<void>;
+  updateOffer: (id: number, data: Partial<OfferFormData>) => Promise<void>;
   deleteOffer: (id: number) => Promise<void>;
   toggleAlert: (id: number) => Promise<void>;
   refresh: () => Promise<void>;
@@ -59,7 +71,7 @@ interface UseOffersReturn {
 
 export function useOffers(): UseOffersReturn {
   const [entries, setEntries] = useState<OfferEntry[]>([]);
-  const [summary, setSummary] = useState<OfferSummary>(EMPTY_SUMMARY);
+  const [counts, setCounts] = useState<OfferCounts>(EMPTY_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS);
@@ -69,9 +81,11 @@ export function useOffers(): UseOffersReturn {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (f.search)   params.set("search",   f.search);
-      if (f.category) params.set("category", f.category);
-      if (f.alert)    params.set("alert",    f.alert);
+      if (f.search)    params.set("search",    f.search);
+      if (f.category)  params.set("category",  f.category);
+      if (f.status)    params.set("status",    f.status);
+      if (f.has_alert) params.set("has_alert", f.has_alert);
+      if (f.month)     params.set("month",     f.month);
 
       const res = await fetch(`/api/offers?${params}`);
       if (!res.ok) throw new Error("Failed to fetch offers");
@@ -79,7 +93,7 @@ export function useOffers(): UseOffersReturn {
       if (!json.success) throw new Error(json.error ?? "Unknown error");
 
       setEntries(json.data);
-      setSummary(json.summary ?? EMPTY_SUMMARY);
+      setCounts(json.counts ?? EMPTY_COUNTS);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load offers");
     } finally {
@@ -111,7 +125,7 @@ export function useOffers(): UseOffersReturn {
     await fetchData(filters);
   }
 
-  async function editOffer(id: number, data: Partial<OfferFormData>): Promise<void> {
+  async function updateOffer(id: number, data: Partial<OfferFormData>): Promise<void> {
     const res = await fetch(`/api/offers/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -132,19 +146,12 @@ export function useOffers(): UseOffersReturn {
   async function toggleAlert(id: number): Promise<void> {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
-    const res = await fetch(`/api/offers/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ has_alert: entry.has_alert === 1 ? 0 : 1 }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to toggle alert");
-    await fetchData(filters);
+    await updateOffer(id, { has_alert: entry.has_alert !== 1 });
   }
 
   return {
     entries,
-    summary,
+    counts,
     isLoading,
     error,
     filters,
@@ -152,7 +159,7 @@ export function useOffers(): UseOffersReturn {
     clearFilters,
     activeFilterCount,
     addOffer,
-    editOffer,
+    updateOffer,
     deleteOffer,
     toggleAlert,
     refresh: () => fetchData(filters),

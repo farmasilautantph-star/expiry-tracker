@@ -1,8 +1,21 @@
 "use client";
 
+import { useMemo } from "react";
 import type { OfferFilters } from "@/hooks/useOffers";
 
 const CATEGORIES = ["MOM & BABY", "FS", "OTC", "Poison B", "Poison C", "PET CARE", "HS"] as const;
+
+function monthOptions(): { value: string; label: string }[] {
+  const now = new Date();
+  const opts: { value: string; label: string }[] = [];
+  for (let i = -3; i <= 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+    opts.push({ value, label });
+  }
+  return opts;
+}
 
 interface Props {
   filters: OfferFilters;
@@ -15,6 +28,8 @@ const SELECT =
   "px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
 
 export default function OffersFilters({ filters, setFilter, clearFilters, activeFilterCount }: Props) {
+  const months = useMemo(() => monthOptions(), []);
+
   return (
     <div className="flex flex-wrap items-center gap-2.5">
       {/* Search */}
@@ -26,7 +41,7 @@ export default function OffersFilters({ filters, setFilter, clearFilters, active
         </svg>
         <input
           type="text"
-          placeholder="Search desc, barcode, stock ID…"
+          placeholder="Search desc, barcode, outlet…"
           value={filters.search}
           onChange={(e) => setFilter("search", e.target.value)}
           className="w-full pl-9 pr-8 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
@@ -49,11 +64,26 @@ export default function OffersFilters({ filters, setFilter, clearFilters, active
         {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
       </select>
 
+      {/* Status */}
+      <select value={filters.status} onChange={(e) => setFilter("status", e.target.value)} className={SELECT}>
+        <option value="">All Statuses</option>
+        <option value="offered">🔵 Offered</option>
+        <option value="accepted">🟢 Accepted</option>
+        <option value="rejected">🔴 Rejected</option>
+        <option value="completed">✅ Completed</option>
+      </select>
+
       {/* Alert */}
-      <select value={filters.alert} onChange={(e) => setFilter("alert", e.target.value)} className={SELECT}>
+      <select value={filters.has_alert} onChange={(e) => setFilter("has_alert", e.target.value)} className={SELECT}>
         <option value="">All Alerts</option>
-        <option value="1">🔔 With Alert</option>
-        <option value="0">No Alert</option>
+        <option value="true">🔔 With Alert</option>
+        <option value="false">No Alert</option>
+      </select>
+
+      {/* Month */}
+      <select value={filters.month} onChange={(e) => setFilter("month", e.target.value)} className={SELECT}>
+        <option value="">All Months</option>
+        {months.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
       </select>
 
       {/* Clear */}

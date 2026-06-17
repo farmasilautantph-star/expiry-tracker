@@ -2,17 +2,32 @@
 
 import { useState } from "react";
 import type { OfferEntry, OfferFormData } from "@/hooks/useOffers";
-import OffersForm from "./OffersForm";
+import OfferForm from "./OfferForm";
 
-function formatDate(iso: string): string {
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
   const [y, m, d] = iso.split("T")[0].split("-");
   return `${d}/${m}/${y}`;
 }
 
+const STATUS_BADGE: Record<string, string> = {
+  offered:   "bg-blue-500/15 text-blue-400 border border-blue-500/25",
+  accepted:  "bg-green-500/15 text-green-400 border border-green-500/25",
+  rejected:  "bg-red-500/15 text-red-400 border border-red-500/25",
+  completed: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  offered:   "🔵 Offered",
+  accepted:  "🟢 Accepted",
+  rejected:  "🔴 Rejected",
+  completed: "✅ Completed",
+};
+
 interface Props {
   entries: OfferEntry[];
   isLoading: boolean;
-  onEdit: (id: number, data: Partial<OfferFormData>) => Promise<void>;
+  onUpdate: (id: number, data: Partial<OfferFormData>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onToggleAlert: (id: number) => Promise<void>;
 }
@@ -21,8 +36,8 @@ const TH =
   "sticky top-0 z-10 bg-gray-900 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap border-b border-gray-800";
 const TD = "px-4 py-3";
 
-export default function OffersTable({ entries, isLoading, onEdit, onDelete, onToggleAlert }: Props) {
-  const [editingId, setEditingId] = useState<number | null>(null);
+export default function OffersTable({ entries, isLoading, onUpdate, onDelete, onToggleAlert }: Props) {
+  const [editingOffer, setEditingOffer] = useState<OfferEntry | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   if (isLoading) {
@@ -47,52 +62,68 @@ export default function OffersTable({ entries, isLoading, onEdit, onDelete, onTo
             d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
         </svg>
         <p className="text-sm text-gray-500">No offers found.</p>
-        <p className="text-xs text-gray-600 mt-1">Click &quot;+ Add Offer&quot; to get started.</p>
+        <p className="text-xs text-gray-600 mt-1">Offers are created from Item Short List.</p>
       </div>
     );
   }
 
-  const editingEntry = editingId !== null ? entries.find((e) => e.id === editingId) : undefined;
-
   return (
-    <div className="space-y-4">
-      {/* Inline edit panel */}
-      {editingEntry && (
-        <div className="rounded-xl border border-blue-500/30 bg-gray-900 p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Edit Offer</h3>
-          <OffersForm
-            initial={editingEntry}
-            onSubmit={async (data) => {
-              await onEdit(editingEntry.id, data);
-              setEditingId(null);
-            }}
-            onCancel={() => setEditingId(null)}
-          />
-        </div>
-      )}
-
+    <>
       <div className="overflow-x-auto rounded-xl border border-gray-800">
         <p className="px-4 py-2.5 text-xs text-gray-500 bg-gray-900 border-b border-gray-800">
-          Showing {entries.length} {entries.length === 1 ? "item" : "items"}
+          Showing {entries.length} {entries.length === 1 ? "offer" : "offers"}
         </p>
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-900">
-              <th className={TH}>Alert</th>
+              <th className={TH}>Date Offered</th>
               <th className={TH}>Stock ID</th>
               <th className={TH}>Barcode</th>
               <th className={`${TH} max-w-[200px]`}>Description</th>
               <th className={TH}>Category</th>
               <th className={TH}>UOM</th>
               <th className={TH}>Qty</th>
-              <th className={TH}>Date Added</th>
+              <th className={TH}>Outlet Name</th>
+              <th className={TH}>Offer Status</th>
+              <th className={TH}>Alert</th>
+              <th className={TH}>Expiry Date</th>
               <th className={`${TH} text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800">
             {entries.map((entry) => (
               <tr key={entry.id} className="hover:bg-gray-800/50 transition-colors">
-                {/* Alert bell */}
+                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                  {formatDate(entry.created_at)}
+                </td>
+                <td className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}>
+                  {entry.stock_id ?? "—"}
+                </td>
+                <td className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}>
+                  {entry.barcode}
+                </td>
+                <td className={`${TD} max-w-[200px]`}>
+                  <span
+                    className="block truncate text-white"
+                    title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
+                  >
+                    {entry.description}
+                  </span>
+                  {entry.notes && (
+                    <span className="block truncate text-xs text-gray-500 mt-0.5" title={entry.notes}>
+                      {entry.notes}
+                    </span>
+                  )}
+                </td>
+                <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.category ?? "—"}</td>
+                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>{entry.uom ?? "—"}</td>
+                <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.quantity}</td>
+                <td className={`${TD} text-white whitespace-nowrap`}>{entry.outlet_name}</td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[entry.offer_status] ?? ""}`}>
+                    {STATUS_LABEL[entry.offer_status] ?? entry.offer_status}
+                  </span>
+                </td>
                 <td className={`${TD} whitespace-nowrap`}>
                   <button
                     onClick={() => onToggleAlert(entry.id)}
@@ -109,26 +140,11 @@ export default function OffersTable({ entries, isLoading, onEdit, onDelete, onTo
                     </svg>
                   </button>
                 </td>
-                <td className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}>{entry.stock_id ?? "—"}</td>
-                <td className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}>{entry.barcode}</td>
-                <td className={`${TD} max-w-[200px]`}>
-                  <span className="block truncate text-white" title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}>
-                    {entry.description}
-                  </span>
-                  {entry.notes && (
-                    <span className="block truncate text-xs text-gray-500 mt-0.5" title={entry.notes}>
-                      {entry.notes}
-                    </span>
-                  )}
-                </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.category ?? "—"}</td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>{entry.uom}</td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>{entry.quantity}</td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>{formatDate(entry.created_at)}</td>
+                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>—</td>
                 <td className={`${TD} whitespace-nowrap`}>
                   <div className="flex items-center justify-end gap-1.5">
                     <button
-                      onClick={() => setEditingId(editingId === entry.id ? null : entry.id)}
+                      onClick={() => setEditingOffer(entry)}
                       className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-gray-800 transition-colors"
                       title="Edit"
                     >
@@ -171,6 +187,24 @@ export default function OffersTable({ entries, isLoading, onEdit, onDelete, onTo
           </tbody>
         </table>
       </div>
-    </div>
+
+      {/* Edit modal */}
+      <OfferForm
+        isOpen={editingOffer !== null}
+        onClose={() => setEditingOffer(null)}
+        editingOffer={editingOffer ?? undefined}
+        onSubmit={async (data) => {
+          if (!editingOffer) return;
+          await onUpdate(editingOffer.id, {
+            offer_status: data.offer_status,
+            quantity: data.quantity,
+            outlet_name: data.outlet_name,
+            has_alert: data.has_alert,
+            notes: data.notes,
+          });
+          setEditingOffer(null);
+        }}
+      />
+    </>
   );
 }
