@@ -84,7 +84,7 @@ const MODULE_CARDS = [
   {
     label: "Item Short List",
     description: "View all logged expiry items, filterable by PIC and category.",
-    href: "/dashboard/item-short-list",
+    href: "/dashboard/shortlist",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
