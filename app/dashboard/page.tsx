@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface Stats {
   expired: number;
@@ -223,21 +224,19 @@ export default function DashboardPage() {
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Modules</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {MODULE_CARDS.map((mod) => (
-            <div
+            <Link
               key={mod.href}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4"
+              href={mod.href}
+              className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex items-start gap-4 hover:border-gray-700 hover:bg-gray-800/60 transition-colors group"
             >
-              <div className="p-2.5 rounded-lg bg-gray-800 text-gray-400 flex-shrink-0">
+              <div className="p-2.5 rounded-lg bg-gray-800 text-gray-400 group-hover:text-gray-300 flex-shrink-0 transition-colors">
                 {mod.icon}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white">{mod.label}</p>
                 <p className="text-xs text-gray-500 mt-1">{mod.description}</p>
-                <span className="inline-block mt-2 text-xs text-gray-600 bg-gray-800 border border-gray-700 rounded-md px-2 py-0.5">
-                  Coming soon
-                </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

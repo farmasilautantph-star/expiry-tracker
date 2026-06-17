@@ -1,49 +1,52 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export interface ReturnEntry {
   id: number;
-  logged_date: string;
+  barcode: string;
+  description: string;
+  category: string;
+  expiry_date: string;
   pic_id: number;
   pic_name: string;
-  category: string;
-  description: string;
-  barcode: string;
-  created_at: string;
+  logged_at: string;
+  notes: string | null;
   stock_id: string | null;
   uom: string | null;
+  return_status: string;
   return_by_date: string | null;
-  notes: string | null;
-  status: string;
-}
-
-export interface ReturnFormData {
-  logged_date: string;
-  barcode: string;
-  description: string;
-  category: string;
-  stock_id: string;
-  uom: string;
-  return_by_date: string;
-  notes: string;
+  overdue: boolean;
 }
 
 export interface ReturnFilters {
-  search: string;
+  month: string;
+  status: string;
   category: string;
   pic: string;
-  status: string;
+  search: string;
 }
 
 export interface ReturnCounts {
   pending: number;
+  overdue: number;
   returned: number;
   total: number;
 }
 
-const EMPTY_FILTERS: ReturnFilters = { search: "", category: "", pic: "", status: "" };
-const EMPTY_COUNTS: ReturnCounts = { pending: 0, returned: 0, total: 0 };
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+const EMPTY_FILTERS: ReturnFilters = {
+  month: currentMonth(),
+  status: "",
+  category: "",
+  pic: "",
+  search: "",
+};
+const EMPTY_COUNTS: ReturnCounts = { pending: 0, overdue: 0, returned: 0, total: 0 };
 
 interface UseReturnsReturn {
   entries: ReturnEntry[];
@@ -54,10 +57,8 @@ interface UseReturnsReturn {
   setFilter: <K extends keyof ReturnFilters>(key: K, value: ReturnFilters[K]) => void;
   clearFilters: () => void;
   activeFilterCount: number;
-  addReturn: (data: ReturnFormData) => Promise<void>;
-  editReturn: (id: number, data: ReturnFormData) => Promise<void>;
-  deleteReturn: (id: number) => Promise<void>;
   markReturned: (id: number) => Promise<void>;
+  updateReturnDate: (id: number, date: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -73,13 +74,13 @@ export function useReturns(): UseReturnsReturn {
     setError(null);
     try {
       const params = new URLSearchParams();
-      if (f.search)   params.set("search",   f.search);
+      if (f.month)    params.set("month",    f.month);
+      if (f.status)   params.set("status",   f.status);
       if (f.category) params.set("category", f.category);
       if (f.pic)      params.set("pic",      f.pic);
-      if (f.status)   params.set("status",   f.status);
+      if (f.search)   params.set("search",   f.search);
 
-      const url = `/api/returns${params.toString() ? `?${params}` : ""}`;
-      const res = await fetch(url);
+      const res = await fetch(`/api/returns?${params}`);
       if (!res.ok) throw new Error("Failed to fetch returns");
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? "Unknown error");
@@ -101,45 +102,30 @@ export function useReturns(): UseReturnsReturn {
 
   function clearFilters() { setFilters(EMPTY_FILTERS); }
 
-  const activeFilterCount = Object.values(filters).filter(Boolean).length;
-
-  async function addReturn(data: ReturnFormData): Promise<void> {
-    const res = await fetch("/api/returns", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to log return");
-    await fetchData(filters);
-  }
-
-  async function editReturn(id: number, data: ReturnFormData): Promise<void> {
-    const res = await fetch(`/api/returns/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update return");
-    await fetchData(filters);
-  }
-
-  async function deleteReturn(id: number): Promise<void> {
-    const res = await fetch(`/api/returns/${id}`, { method: "DELETE" });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to delete return");
-    await fetchData(filters);
-  }
+  const activeFilterCount = useMemo(
+    () => Object.entries(filters).filter(([k, v]) => k !== "month" && Boolean(v)).length,
+    [filters]
+  );
 
   async function markReturned(id: number): Promise<void> {
     const res = await fetch(`/api/returns/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "returned" }),
+      body: JSON.stringify({ return_status: "returned" }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to mark as returned");
+    await fetchData(filters);
+  }
+
+  async function updateReturnDate(id: number, date: string): Promise<void> {
+    const res = await fetch(`/api/returns/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ return_by_date: date }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update return date");
     await fetchData(filters);
   }
 
@@ -152,10 +138,8 @@ export function useReturns(): UseReturnsReturn {
     setFilter,
     clearFilters,
     activeFilterCount,
-    addReturn,
-    editReturn,
-    deleteReturn,
     markReturned,
+    updateReturnDate,
     refresh: () => fetchData(filters),
   };
 }

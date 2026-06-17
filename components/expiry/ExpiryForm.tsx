@@ -18,7 +18,7 @@ const EMPTY: ExpiryFormData = {
   category: "",
   uom: "",
   expiry_date: "",
-  return_status: "returnable",
+  return_status: "pending",
   return_by_date: "",
   notes: "",
 };
@@ -62,7 +62,7 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
         category:      editingEntry.category ?? "",
         uom:           editingEntry.uom ?? "",
         expiry_date:   editingEntry.expiry_date.split("T")[0],
-        return_status: (editingEntry.return_status as ExpiryFormData["return_status"]) || "returnable",
+        return_status: (editingEntry.return_status as ExpiryFormData["return_status"]) || "pending",
         return_by_date: editingEntry.return_by_date?.split("T")[0] ?? "",
         notes:         editingEntry.notes ?? "",
       });
@@ -139,7 +139,7 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
     if (!form.description.trim()){ setError("Description is required."); return; }
     if (!form.category.trim())   { setError("Category is required."); return; }
     if (!form.expiry_date)       { setError("Expiry date is required."); return; }
-    if (form.return_status === "returnable" && !form.return_by_date) {
+    if (form.return_status === "pending" && !form.return_by_date) {
       setError("Return By Date is required for returnable items."); return;
     }
 
@@ -303,27 +303,27 @@ export default function ExpiryForm({ isOpen, onClose, editingEntry, picName, onS
           <div>
             <Label>Return Status</Label>
             <div className="flex gap-2">
-              {(["returnable", "non-returnable"] as const).map((val) => (
+              {(["pending", "non-returnable"] as const).map((val) => (
                 <button
                   key={val}
                   type="button"
                   onClick={() => set("return_status", val)}
                   className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${
                     form.return_status === val
-                      ? val === "returnable"
+                      ? val === "pending"
                         ? "bg-green-500/20 border-green-500/40 text-green-400"
                         : "bg-red-500/20 border-red-500/40 text-red-400"
                       : "bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600"
                   }`}
                 >
-                  {val === "returnable" ? "Returnable" : "Non-Returnable"}
+                  {val === "pending" ? "Returnable" : "Non-Returnable"}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Return By Date — only visible when returnable */}
-          {form.return_status === "returnable" && (
+          {form.return_status === "pending" && (
             <div>
               <Label required>Return By Date</Label>
               <input

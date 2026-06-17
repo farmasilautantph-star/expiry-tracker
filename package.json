@@ -12,7 +12,8 @@
     "check-db": "npx ts-node --project tsconfig.scripts.json scripts/check-db.ts",
     "expiry-check": "npx ts-node --project tsconfig.scripts.json scripts/expiry-check.ts",
     "preflight": "npx ts-node --project tsconfig.scripts.json scripts/preflight.ts",
-    "import-products": "npx ts-node --project tsconfig.scripts.json scripts/import-products.ts"
+    "import-products": "npx ts-node --project tsconfig.scripts.json scripts/import-products.ts",
+    "verify": "npx ts-node --project tsconfig.scripts.json scripts/verify.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

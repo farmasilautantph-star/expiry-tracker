@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const validReturnStatus = ["returnable", "non-returnable"];
+  const validReturnStatus = ["pending", "non-returnable", "returned"];
   const rs = return_status && validReturnStatus.includes(return_status) ? return_status : null;
 
   const db = getDb();
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       stock_id?.trim() || null,
       uom?.trim() || null,
       rs,
-      rs === "returnable" ? (return_by_date || null) : null
+      rs === "pending" ? (return_by_date || null) : null
     );
 
   const newId = Number(result.lastInsertRowid);

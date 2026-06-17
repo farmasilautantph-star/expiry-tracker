@@ -57,7 +57,7 @@ export async function PUT(
   const { barcode, description, category, expiry_date, notes, stock_id, uom, return_status, return_by_date } =
     body ?? {};
 
-  const validReturnStatus = ["returnable", "non-returnable"];
+  const validReturnStatus = ["pending", "non-returnable", "returned"];
   const rs =
     return_status !== undefined
       ? (validReturnStatus.includes(return_status) ? return_status : null)
@@ -72,7 +72,7 @@ export async function PUT(
     stock_id:       stock_id !== undefined ? (stock_id?.trim() || null) : existing.stock_id,
     uom:            uom !== undefined     ? (uom?.trim() || null) : existing.uom,
     return_status:  rs,
-    return_by_date: rs === "returnable"
+    return_by_date: rs === "pending"
       ? (return_by_date !== undefined ? (return_by_date || null) : existing.return_by_date)
       : null,
   };

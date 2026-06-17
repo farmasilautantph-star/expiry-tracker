@@ -24,7 +24,9 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'success={d[\\\\\"success\\\\\"]} error={d[\\\\\"error\\\\\"]}'\\)\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f'ok={d[\\\\\"success\\\\\"]} {d[\\\\\"data\\\\\"]}'\\)\")",
       "Bash(curl -s -c /tmp/v2.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"manager\",\"password\":\"manager123\"}')",
-      "Bash(curl -s -c /tmp/v2s.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"nadiah\",\"password\":\"staff123\"}')"
+      "Bash(curl -s -c /tmp/v2s.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"nadiah\",\"password\":\"staff123\"}')",
+      "Bash(cat scripts/migrate.ts)",
+      "Bash(cat scripts/run-migrations.ts)"
     ]
   }
 }

@@ -16,7 +16,27 @@ interface Props {
 const SELECT =
   "px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
 
-export default function ReturnListFilters({
+function monthLabel(ym: string): string {
+  if (!ym) return "";
+  const [y, m] = ym.split("-");
+  const date = new Date(Number(y), Number(m) - 1, 1);
+  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+}
+
+function buildMonthOptions(): string[] {
+  const months: string[] = [];
+  const now = new Date();
+  for (let i = -3; i <= 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    months.push(ym);
+  }
+  return months;
+}
+
+const MONTH_OPTIONS = buildMonthOptions();
+
+export default function ReturnsFilters({
   filters,
   setFilter,
   clearFilters,
@@ -26,6 +46,52 @@ export default function ReturnListFilters({
 }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
+      {/* Month picker */}
+      <select
+        value={filters.month}
+        onChange={(e) => setFilter("month", e.target.value)}
+        className={SELECT}
+      >
+        <option value="">All Months</option>
+        {MONTH_OPTIONS.map((ym) => (
+          <option key={ym} value={ym}>{monthLabel(ym)}</option>
+        ))}
+      </select>
+
+      {/* Status */}
+      <select
+        value={filters.status}
+        onChange={(e) => setFilter("status", e.target.value)}
+        className={SELECT}
+      >
+        <option value="">All Statuses</option>
+        <option value="pending">🟡 Pending</option>
+        <option value="overdue">🔴 Overdue</option>
+        <option value="returned">✅ Returned</option>
+      </select>
+
+      {/* Category */}
+      <select
+        value={filters.category}
+        onChange={(e) => setFilter("category", e.target.value)}
+        className={SELECT}
+      >
+        <option value="">All Categories</option>
+        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+
+      {/* PIC — manager only */}
+      {isManager && (
+        <select
+          value={filters.pic}
+          onChange={(e) => setFilter("pic", e.target.value)}
+          className={SELECT}
+        >
+          <option value="">All PICs</option>
+          {picOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
+      )}
+
       {/* Search */}
       <div className="relative flex-1 min-w-[200px] max-w-xs">
         <svg
@@ -37,7 +103,7 @@ export default function ReturnListFilters({
         </svg>
         <input
           type="text"
-          placeholder="Search barcode, stock ID or desc…"
+          placeholder="Search desc, barcode, stock ID…"
           value={filters.search}
           onChange={(e) => setFilter("search", e.target.value)}
           className="w-full pl-9 pr-8 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
@@ -54,28 +120,7 @@ export default function ReturnListFilters({
         )}
       </div>
 
-      {/* Category */}
-      <select value={filters.category} onChange={(e) => setFilter("category", e.target.value)} className={SELECT}>
-        <option value="">All Categories</option>
-        {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-      </select>
-
-      {/* Status */}
-      <select value={filters.status} onChange={(e) => setFilter("status", e.target.value)} className={SELECT}>
-        <option value="">All Statuses</option>
-        <option value="pending">🟡 Pending</option>
-        <option value="returned">✅ Returned</option>
-      </select>
-
-      {/* PIC — manager only */}
-      {isManager && (
-        <select value={filters.pic} onChange={(e) => setFilter("pic", e.target.value)} className={SELECT}>
-          <option value="">All PICs</option>
-          {picOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-      )}
-
-      {/* Clear all */}
+      {/* Clear (non-month filters only) */}
       {activeFilterCount > 0 && (
         <button
           onClick={clearFilters}

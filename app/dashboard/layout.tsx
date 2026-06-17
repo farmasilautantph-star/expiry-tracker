@@ -68,7 +68,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Return List",
-    href: "/dashboard/return-list",
+    href: "/dashboard/returns",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
