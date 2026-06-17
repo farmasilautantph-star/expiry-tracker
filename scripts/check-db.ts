@@ -21,9 +21,8 @@ let errors = 0;
 const REQUIRED_TABLES: Record<string, string[]> = {
   users:       ["id", "username", "password_hash", "role", "pic_name", "created_at"],
   expiry_logs: ["id", "barcode", "description", "category", "expiry_date", "pic_id", "pic_name", "logged_at"],
-  offers:      ["id", "description", "barcode", "uom", "quantity", "has_alert", "created_at", "created_by"],
-  returns:     ["id", "logged_date", "pic_id", "pic_name", "category", "description", "barcode", "created_at",
-                "stock_id", "uom", "return_by_date", "notes", "status"],
+  offers:      ["id", "description", "barcode", "uom", "quantity", "has_alert", "created_at", "created_by",
+                "stock_id", "category", "notes"],
   history_log: ["id", "action", "module", "record_id", "pic_id", "pic_name", "description", "timestamp"],
 };
 

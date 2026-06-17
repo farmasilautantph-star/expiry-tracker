@@ -96,7 +96,7 @@ const MODULE_CARDS = [
   {
     label: "Offer Ke Outlet",
     description: "Track items offered to outlet with UOM and quantity.",
-    href: "/dashboard/offer-ke-outlet",
+    href: "/dashboard/offers",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -107,7 +107,7 @@ const MODULE_CARDS = [
   {
     label: "Return List",
     description: "Items returned, tracked by PIC and category.",
-    href: "/dashboard/return-list",
+    href: "/dashboard/returns",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
