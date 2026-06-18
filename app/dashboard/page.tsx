@@ -9,6 +9,13 @@ import SystemHealthCard from "@/components/dashboard/SystemHealthCard";
 import StaleItemsCard from "@/components/dashboard/StaleItemsCard";
 import CompletionRateCard from "@/components/dashboard/CompletionRateCard";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
+import {
+  ClipboardDocumentListIcon,
+  PlusIcon,
+  ExclamationTriangleIcon,
+  ClockIcon,
+  CheckCircleIcon,
+} from "@heroicons/react/24/outline";
 
 interface Stats {
   expired: number;
@@ -20,58 +27,61 @@ interface Stats {
 interface StatCardProps {
   label: string;
   value: number | null;
-  color: "red" | "orange" | "yellow" | "green";
-  icon: React.ReactNode;
   description: string;
+  topBorderColor: string;
+  gradientBg: string;
+  labelColor: string;
+  valueColor: string;
+  iconBg: string;
+  icon: React.ReactNode;
 }
 
-const COLOR_MAP = {
-  red: {
-    border: "border-l-[#ef4444]",
-    iconBg: "bg-red-50 text-[#ef4444]",
-    value: "text-[#ef4444]",
-  },
-  orange: {
-    border: "border-l-[#f97316]",
-    iconBg: "bg-orange-50 text-[#f97316]",
-    value: "text-[#f97316]",
-  },
-  yellow: {
-    border: "border-l-[#eab308]",
-    iconBg: "bg-yellow-50 text-[#eab308]",
-    value: "text-[#ca8a04]",
-  },
-  green: {
-    border: "border-l-[#22c55e]",
-    iconBg: "bg-green-50 text-[#22c55e]",
-    value: "text-[#16a34a]",
-  },
-};
-
-function StatCard({ label, value, color, icon, description }: StatCardProps) {
-  const c = COLOR_MAP[color];
+function StatCard({
+  label,
+  value,
+  description,
+  topBorderColor,
+  gradientBg,
+  labelColor,
+  valueColor,
+  iconBg,
+  icon,
+}: StatCardProps) {
   return (
     <div
-      className={`rounded-2xl bg-white border border-[#e2e8f0] border-l-4 ${c.border} p-5 shadow-sm flex items-start justify-between`}
+      className="rounded-2xl p-5 min-h-[120px] shadow-sm"
+      style={{
+        background: gradientBg,
+        borderTop: `4px solid ${topBorderColor}`,
+        border: `1px solid #e2e8f0`,
+        borderTopColor: topBorderColor,
+      }}
     >
-      <div>
-        <p className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wider mb-1">
+      <div className="flex items-start justify-between mb-3">
+        <p
+          className="text-[10px] font-semibold uppercase tracking-[0.08em]"
+          style={{ color: labelColor }}
+        >
           {label}
         </p>
-        <p className={`text-4xl font-black ${c.value} mt-1 leading-none`}>
-          {value === null ? (
-            <span className="inline-block w-12 h-9 bg-[#f1f5f9] animate-pulse rounded" />
-          ) : (
-            value
-          )}
-        </p>
-        <p className="text-xs font-medium text-[#94a3b8] mt-2">{description}</p>
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+          style={{ background: iconBg, color: topBorderColor }}
+        >
+          {icon}
+        </div>
       </div>
-      <div
-        className={`w-10 h-10 rounded-full flex items-center justify-center ${c.iconBg}`}
+      <p
+        className="font-black leading-none"
+        style={{ fontSize: "48px", color: valueColor }}
       >
-        {icon}
-      </div>
+        {value === null ? (
+          <span className="inline-block w-12 h-10 bg-[#f1f5f9] animate-pulse rounded" />
+        ) : (
+          value
+        )}
+      </p>
+      <p className="text-xs font-medium text-[#94a3b8] mt-2">{description}</p>
     </div>
   );
 }
@@ -109,50 +119,39 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Quick Log card — gradient blue */}
-      <div className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-blue-900/10 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6]">
+      {/* Quick Log card */}
+      <div
+        className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        style={{
+          background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%)",
+          boxShadow: "0 4px 16px rgba(37,99,235,0.25)",
+        }}
+      >
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-white/15 text-white flex-shrink-0 backdrop-blur-sm">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8h6m-6 4h6"
-              />
-            </svg>
-          </div>
+          <ClipboardDocumentListIcon className="w-6 h-6 text-white flex-shrink-0" />
           <div>
-            <p className="text-base font-semibold text-white">
-              Log New Expiry Entry
-            </p>
-            <p className="text-sm text-blue-100 mt-0.5">
+            <p className="text-base font-bold text-white">Log New Expiry Entry</p>
+            <p className="text-sm text-[#bfdbfe] mt-0.5">
               Record a short-expiry item for your outlet inventory
             </p>
           </div>
         </div>
         <button
           onClick={() => setFormOpen(true)}
-          className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-[#1e3a8a] text-sm font-semibold transition-colors shadow-md"
+          className="flex-shrink-0 flex items-center justify-center gap-2 font-semibold text-[#2563eb] transition-colors"
+          style={{
+            background: "white",
+            borderRadius: "10px",
+            padding: "10px 20px",
+          }}
+          onMouseEnter={(e) =>
+            ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
+          }
+          onMouseLeave={(e) =>
+            ((e.currentTarget as HTMLElement).style.background = "white")
+          }
         >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
+          <PlusIcon className="w-4 h-4" />
           Add Entry
         </button>
       </div>
@@ -165,93 +164,53 @@ export default function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           <StatCard
-            label="Expired"
+            label="EXPIRED"
             value={stats?.expired ?? null}
-            color="red"
             description="Past expiry date"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            }
+            topBorderColor="#ef4444"
+            gradientBg="linear-gradient(to bottom, white, #fff5f5)"
+            labelColor="#ef4444"
+            valueColor="#ef4444"
+            iconBg="rgba(239,68,68,0.12)"
+            icon={<ExclamationTriangleIcon className="w-4 h-4" />}
           />
           <StatCard
-            label="Critical"
+            label="CRITICAL"
             value={stats?.critical ?? null}
-            color="orange"
             description="Expiring within 7 days"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-                />
-              </svg>
-            }
+            topBorderColor="#ea580c"
+            gradientBg="linear-gradient(to bottom, white, #fff7ed)"
+            labelColor="#ea580c"
+            valueColor="#ea580c"
+            iconBg="rgba(234,88,12,0.12)"
+            icon={<ClockIcon className="w-4 h-4" />}
           />
           <StatCard
-            label="Warning"
+            label="WARNING"
             value={stats?.warning ?? null}
-            color="yellow"
             description="Expiring in 8–30 days"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
+            topBorderColor="#d97706"
+            gradientBg="linear-gradient(to bottom, white, #fefce8)"
+            labelColor="#d97706"
+            valueColor="#d97706"
+            iconBg="rgba(217,119,6,0.12)"
+            icon={<ClockIcon className="w-4 h-4" />}
           />
           <StatCard
-            label="Safe"
+            label="SAFE"
             value={stats?.safe ?? null}
-            color="green"
             description="More than 30 days left"
-            icon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
+            topBorderColor="#16a34a"
+            gradientBg="linear-gradient(to bottom, white, #f0fdf4)"
+            labelColor="#16a34a"
+            valueColor="#16a34a"
+            iconBg="rgba(22,163,74,0.12)"
+            icon={<CheckCircleIcon className="w-4 h-4" />}
           />
         </div>
       )}
 
-      {/* Health row: StaleItemsCard (60%) + SystemHealthCard (40%) */}
+      {/* Health row */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
         <div className="xl:col-span-3">
           <StaleItemsCard
@@ -267,7 +226,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Completion rate row — full width */}
+      {/* Completion rate */}
       <CompletionRateCard
         rates={healthData?.completionRates ?? []}
         isManager={isManager}

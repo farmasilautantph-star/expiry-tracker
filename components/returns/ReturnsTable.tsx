@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ReturnEntry } from "@/hooks/useReturns";
+import { CheckIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -9,24 +10,33 @@ function formatDate(iso: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
+function Dot({ color }: { color: string }) {
+  return (
+    <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
+  );
+}
+
 function StatusBadge({ entry }: { entry: ReturnEntry }) {
   if (entry.return_status === "returned") {
     return (
-      <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-[#16a34a] border border-green-200">
-        ✅ Returned
+      <span className="badge" style={{ background: "#dcfce7", color: "#16a34a" }}>
+        <Dot color="#16a34a" />
+        Returned
       </span>
     );
   }
   if (entry.overdue) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-[#ef4444] border border-red-200">
-        🔴 Overdue
+      <span className="badge" style={{ background: "#fee2e2", color: "#dc2626" }}>
+        <Dot color="#dc2626" />
+        Overdue
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-[#ca8a04] border border-yellow-200">
-      🟡 Pending
+    <span className="badge" style={{ background: "#fef3c7", color: "#d97706" }}>
+      <Dot color="#d97706" />
+      Pending
     </span>
   );
 }
@@ -44,33 +54,17 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
   if (!editing) {
     return (
       <div className="flex items-center gap-1 group">
-        <span
-          className={
-            entry.overdue ? "text-[#ef4444] font-medium" : "text-[#1e293b]"
-          }
-        >
+        <span className={entry.overdue ? "text-[#ef4444] font-medium" : "text-[#334155]"}>
           {formatDate(entry.return_by_date)}
-          {entry.overdue && (
-            <span className="ml-1 text-xs text-[#ef4444]">(overdue)</span>
-          )}
+          {entry.overdue && <span className="ml-1 text-xs text-[#ef4444]">(overdue)</span>}
         </span>
         <button
           onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-[#94a3b8] hover:text-[#1e3a8a] transition-all"
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-[#94a3b8] hover:text-[#2563eb] transition-all"
           title="Edit return date"
         >
-          <svg
-            className="w-3 h-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-            />
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
         </button>
       </div>
@@ -83,7 +77,7 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
         type="date"
         value={val}
         onChange={(e) => setVal(e.target.value)}
-        className="text-xs px-1.5 py-1 rounded bg-white border border-[#3b82f6] text-[#1e293b] focus:outline-none"
+        className="text-xs px-1.5 py-1 rounded bg-white border border-[#2563eb] text-[#0f172a] focus:outline-none"
         autoFocus
       />
       <button
@@ -103,37 +97,13 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
         className="text-[#16a34a] hover:text-[#15803d] disabled:opacity-50"
         title="Save"
       >
-        <svg
-          className="w-3.5 h-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M5 13l4 4L19 7"
-          />
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </button>
-      <button
-        onClick={() => setEditing(false)}
-        className="text-[#94a3b8] hover:text-[#1e293b]"
-        title="Cancel"
-      >
-        <svg
-          className="w-3.5 h-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M6 18L18 6M6 6l12 12"
-          />
+      <button onClick={() => setEditing(false)} className="text-[#94a3b8] hover:text-[#0f172a]" title="Cancel">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
         </svg>
       </button>
     </div>
@@ -149,8 +119,8 @@ interface Props {
 }
 
 const TH =
-  "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap border-b border-[#e2e8f0]";
-const TD = "px-4 py-3 font-medium";
+  "sticky top-0 z-10 bg-[#f8fafc] px-5 py-3 text-left text-[11px] uppercase font-semibold text-[#64748b] tracking-[0.08em] whitespace-nowrap";
+const TD = "px-5 py-3.5 font-medium";
 
 export default function ReturnsTable({
   entries,
@@ -161,63 +131,38 @@ export default function ReturnsTable({
 }: Props) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
-        <div className="flex items-center gap-3 text-[#64748b]">
-          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <span className="text-sm">Loading…</span>
-        </div>
+      <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="px-5 py-4 border-b border-[#f1f5f9] animate-pulse">
+            <div className="flex gap-4">
+              <div className="h-4 w-24 bg-[#f1f5f9] rounded" />
+              <div className="h-4 w-16 bg-[#f1f5f9] rounded" />
+              <div className="h-4 flex-1 bg-[#f1f5f9] rounded" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
-        <svg
-          className="w-10 h-10 text-[#cbd5e1] mb-3"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-          />
-        </svg>
-        <p className="text-sm text-[#64748b]">
-          No returns found for this period.
-        </p>
-        <p className="text-xs text-[#94a3b8] mt-1">
-          Items appear here when logged as Returnable in Log New Expiry.
-        </p>
+      <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm flex flex-col items-center justify-center py-16 text-center">
+        <DocumentTextIcon className="w-12 h-12 text-[#cbd5e1] mb-3" />
+        <p className="text-sm text-[#94a3b8]">No items found</p>
+        <p className="text-xs text-[#94a3b8] mt-1">Items appear here when logged as Returnable.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-      <p className="px-4 py-2.5 text-xs text-[#64748b] bg-[#f8fafc] border-b border-[#e2e8f0]">
+    <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+      <p className="px-5 py-2.5 text-xs text-[#64748b] bg-[#f8fafc]" style={{ borderBottom: "1px solid #e2e8f0" }}>
         Showing {entries.length} {entries.length === 1 ? "item" : "items"}
       </p>
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-[#f8fafc]">
+          <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
             <th className={TH}>Return By</th>
             <th className={TH}>Date Logged</th>
             <th className={TH}>PIC</th>
@@ -230,81 +175,48 @@ export default function ReturnsTable({
             <th className={`${TH} text-right`}>Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-[#e2e8f0]">
+        <tbody>
           {entries.map((entry) => (
             <tr
               key={entry.id}
-              className={`hover:bg-[#f0f4ff] transition-colors ${entry.overdue ? "bg-red-50/40" : ""}`}
+              className="transition-colors duration-150"
+              style={{ borderBottom: "1px solid #f1f5f9" }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
             >
               <td className={`${TD} whitespace-nowrap`}>
                 {isManager ? (
                   <EditDateCell entry={entry} onSave={onUpdateReturnDate} />
                 ) : (
-                  <span
-                    className={
-                      entry.overdue
-                        ? "text-[#ef4444] font-medium"
-                        : "text-[#1e293b]"
-                    }
-                  >
+                  <span className={entry.overdue ? "text-[#ef4444] font-medium" : "text-[#334155]"}>
                     {formatDate(entry.return_by_date)}
-                    {entry.overdue && (
-                      <span className="ml-1 text-xs">(overdue)</span>
-                    )}
+                    {entry.overdue && <span className="ml-1 text-xs">(overdue)</span>}
                   </span>
                 )}
               </td>
-              <td className={`${TD} text-[#64748b] whitespace-nowrap`}>
-                {formatDate(entry.logged_at)}
-              </td>
+              <td className={`${TD} text-[#334155] whitespace-nowrap`}>{formatDate(entry.logged_at)}</td>
               <td className={`${TD} whitespace-nowrap`}>
-                <span className="text-xs font-medium text-[#1e3a8a] bg-[#dbeafe] px-2 py-0.5 rounded">
+                <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>
                   {entry.pic_name}
                 </span>
               </td>
-              <td
-                className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
-              >
-                {entry.stock_id ?? "—"}
-              </td>
-              <td
-                className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
-              >
-                {entry.barcode}
-              </td>
+              <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.stock_id ?? "—"}</td>
+              <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.barcode}</td>
               <td className={`${TD} max-w-[200px]`}>
                 <span
-                  className="block truncate text-[#1e293b] font-medium"
-                  title={
-                    entry.description + (entry.notes ? ` — ${entry.notes}` : "")
-                  }
+                  className="block truncate text-[#334155] font-medium"
+                  title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
                 >
-                  {entry.overdue && (
-                    <svg
-                      className="inline w-3.5 h-3.5 text-[#ef4444] mr-1 flex-shrink-0"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                    </svg>
-                  )}
                   {entry.description}
                 </span>
                 {entry.notes && (
-                  <span
-                    className="block truncate text-xs text-[#94a3b8] mt-0.5"
-                    title={entry.notes}
-                  >
+                  <span className="block truncate text-xs text-[#94a3b8] mt-0.5" title={entry.notes}>
                     {entry.notes}
                   </span>
                 )}
               </td>
-              <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
-                {entry.category}
-              </td>
-              <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
-                {entry.uom ?? "—"}
-              </td>
+              <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.category}</td>
+              <td className={`${TD} text-[#334155] text-xs whitespace-nowrap`}>{entry.uom ?? "—"}</td>
               <td className={`${TD} whitespace-nowrap`}>
                 <StatusBadge entry={entry} />
               </td>
@@ -313,23 +225,17 @@ export default function ReturnsTable({
                   {entry.return_status !== "returned" && (
                     <button
                       onClick={() => onMarkReturned(entry.id)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[#16a34a] hover:text-white hover:bg-[#16a34a] border border-green-200 hover:border-[#16a34a] transition-colors"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                      style={{ color: "#16a34a" }}
                       title="Mark as Returned"
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLElement).style.background = "")
+                      }
                     >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      Mark Returned
+                      <CheckIcon className="w-4 h-4" />
                     </button>
                   )}
                 </div>

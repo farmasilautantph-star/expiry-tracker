@@ -7,38 +7,55 @@ interface Props {
   isLoading: boolean;
 }
 
-export default function HistorySummary({ counts, isLoading }: Props) {
-  const fade = isLoading ? "opacity-40" : "";
-
+function Dot({ color }: { color: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <div className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 shadow-sm px-4 py-2.5">
-        <span className="w-2 h-2 rounded-full bg-[#22c55e] flex-shrink-0" />
-        <span className="text-xs text-[#64748b]">Creates</span>
-        <span className={`text-sm font-bold text-[#16a34a] ${fade}`}>
-          {counts.creates}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 rounded-2xl border border-yellow-200 bg-yellow-50 shadow-sm px-4 py-2.5">
-        <span className="w-2 h-2 rounded-full bg-[#eab308] flex-shrink-0" />
-        <span className="text-xs text-[#64748b]">Updates</span>
-        <span className={`text-sm font-bold text-[#ca8a04] ${fade}`}>
-          {counts.updates}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 shadow-sm px-4 py-2.5">
-        <span className="w-2 h-2 rounded-full bg-[#ef4444] flex-shrink-0" />
-        <span className="text-xs text-[#64748b]">Deletes</span>
-        <span className={`text-sm font-bold text-[#ef4444] ${fade}`}>
-          {counts.deletes}
-        </span>
-      </div>
-      <div className="flex items-center gap-2 rounded-2xl border border-[#e2e8f0] bg-white shadow-sm px-4 py-2.5">
-        <span className="text-xs text-[#64748b]">Total</span>
-        <span className={`text-sm font-bold text-[#1e293b] ${fade}`}>
-          {counts.total}
-        </span>
-      </div>
+    <span
+      className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+      style={{ background: color }}
+    />
+  );
+}
+
+function SummaryPill({
+  label,
+  count,
+  bg,
+  color,
+  dotColor,
+  isLoading,
+}: {
+  label: string;
+  count: number;
+  bg: string;
+  color: string;
+  dotColor: string;
+  isLoading: boolean;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+      style={{ background: bg, color }}
+    >
+      <Dot color={dotColor} />
+      {label}
+      {isLoading ? (
+        <span className="inline-block w-4 h-3 rounded bg-current opacity-20 animate-pulse" />
+      ) : (
+        count
+      )}
+    </span>
+  );
+}
+
+export default function HistorySummary({ counts, isLoading }: Props) {
+  return (
+    <div className="flex flex-wrap gap-2 items-center">
+      <SummaryPill label="Creates" count={counts.creates} bg="#dcfce7" color="#16a34a" dotColor="#16a34a" isLoading={isLoading} />
+      <SummaryPill label="Updates" count={counts.updates} bg="#fef3c7" color="#d97706" dotColor="#d97706" isLoading={isLoading} />
+      <SummaryPill label="Deletes" count={counts.deletes} bg="#fee2e2" color="#dc2626" dotColor="#dc2626" isLoading={isLoading} />
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ml-auto" style={{ background: "#f1f5f9", color: "#475569" }}>
+        Total {isLoading ? "…" : counts.total}
+      </span>
     </div>
   );
 }

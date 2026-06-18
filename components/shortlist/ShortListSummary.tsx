@@ -7,74 +7,56 @@ interface Props {
   isLoading: boolean;
 }
 
-function Pill({
+function Dot({ color }: { color: string }) {
+  return (
+    <span
+      className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+      style={{ background: color }}
+    />
+  );
+}
+
+function SummaryPill({
   label,
   count,
+  bg,
   color,
+  dotColor,
   isLoading,
 }: {
   label: string;
   count: number;
+  bg: string;
   color: string;
+  dotColor: string;
   isLoading: boolean;
 }) {
   return (
-    <div
-      className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${color}`}
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+      style={{ background: bg, color }}
     >
-      <span className="text-xs font-medium opacity-80">{label}</span>
+      <Dot color={dotColor} />
+      {label}
       {isLoading ? (
-        <span className="w-5 h-4 rounded bg-current opacity-20 animate-pulse" />
+        <span className="inline-block w-4 h-3 rounded bg-current opacity-20 animate-pulse" />
       ) : (
-        <span className="text-sm font-bold">{count}</span>
+        count
       )}
-    </div>
+    </span>
   );
 }
 
 export default function ShortListSummary({ counts, isLoading }: Props) {
   return (
-    <div className="flex flex-wrap gap-2">
-      <Pill
-        label="🔴 Expired"
-        count={counts.expired}
-        color="bg-red-50 border-red-200 text-[#ef4444]"
-        isLoading={isLoading}
-      />
-      <Pill
-        label="🟠 Critical"
-        count={counts.critical}
-        color="bg-orange-50 border-orange-200 text-[#f97316]"
-        isLoading={isLoading}
-      />
-      <Pill
-        label="🟡 Warning"
-        count={counts.warning}
-        color="bg-yellow-50 border-yellow-200 text-[#ca8a04]"
-        isLoading={isLoading}
-      />
-      <Pill
-        label="🟢 Safe"
-        count={counts.safe}
-        color="bg-green-50 border-green-200 text-[#16a34a]"
-        isLoading={isLoading}
-      />
-      <div className="ml-auto flex items-center gap-1.5 text-xs text-[#64748b] self-center pr-1">
-        <svg
-          className="w-3.5 h-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-          />
-        </svg>
-        {isLoading ? "…" : `${counts.total} items`}
-      </div>
+    <div className="flex flex-wrap gap-2 items-center">
+      <SummaryPill label="Expired" count={counts.expired} bg="#fee2e2" color="#dc2626" dotColor="#dc2626" isLoading={isLoading} />
+      <SummaryPill label="Critical" count={counts.critical} bg="#ffedd5" color="#ea580c" dotColor="#ea580c" isLoading={isLoading} />
+      <SummaryPill label="Warning" count={counts.warning} bg="#fef3c7" color="#d97706" dotColor="#d97706" isLoading={isLoading} />
+      <SummaryPill label="Safe" count={counts.safe} bg="#dcfce7" color="#16a34a" dotColor="#16a34a" isLoading={isLoading} />
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ml-auto" style={{ background: "#f1f5f9", color: "#475569" }}>
+        Total {isLoading ? "…" : counts.total}
+      </span>
     </div>
   );
 }

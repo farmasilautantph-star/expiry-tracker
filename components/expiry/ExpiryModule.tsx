@@ -64,25 +64,16 @@ export default function ExpiryModule({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
-        <div className="flex items-center gap-3 text-[#64748b]">
-          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <span className="text-sm">Loading entries…</span>
-        </div>
+      <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="px-5 py-4 border-b border-[#f1f5f9] animate-pulse">
+            <div className="flex gap-4">
+              <div className="h-4 w-24 bg-[#f1f5f9] rounded" />
+              <div className="h-4 w-16 bg-[#f1f5f9] rounded" />
+              <div className="h-4 flex-1 bg-[#f1f5f9] rounded" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

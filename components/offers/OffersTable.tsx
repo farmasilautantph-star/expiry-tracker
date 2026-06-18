@@ -3,6 +3,11 @@
 import { useState } from "react";
 import type { OfferEntry, OfferFormData } from "@/hooks/useOffers";
 import OfferForm from "./OfferForm";
+import {
+  PencilSquareIcon,
+  TrashIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -10,18 +15,27 @@ function formatDate(iso: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  offered: "bg-blue-50 text-[#1e3a8a] border border-blue-200",
-  accepted: "bg-green-50 text-[#16a34a] border border-green-200",
-  rejected: "bg-red-50 text-[#ef4444] border border-red-200",
-  completed: "bg-emerald-50 text-[#059669] border border-emerald-200",
+function Dot({ color }: { color: string }) {
+  return (
+    <span
+      className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+      style={{ background: color }}
+    />
+  );
+}
+
+const STATUS_STYLE: Record<string, { bg: string; color: string; dot: string }> = {
+  offered:   { bg: "#dbeafe", color: "#2563eb", dot: "#2563eb" },
+  accepted:  { bg: "#dcfce7", color: "#16a34a", dot: "#16a34a" },
+  rejected:  { bg: "#fee2e2", color: "#dc2626", dot: "#dc2626" },
+  completed: { bg: "#dcfce7", color: "#16a34a", dot: "#16a34a" },
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  offered: "🔵 Offered",
-  accepted: "🟢 Accepted",
-  rejected: "🔴 Rejected",
-  completed: "✅ Completed",
+  offered:   "Offered",
+  accepted:  "Accepted",
+  rejected:  "Rejected",
+  completed: "Completed",
 };
 
 interface Props {
@@ -33,8 +47,8 @@ interface Props {
 }
 
 const TH =
-  "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap border-b border-[#e2e8f0]";
-const TD = "px-4 py-3 font-medium";
+  "sticky top-0 z-10 bg-[#f8fafc] px-5 py-3 text-left text-[11px] uppercase font-semibold text-[#64748b] tracking-[0.08em] whitespace-nowrap";
+const TD = "px-5 py-3.5 font-medium";
 
 export default function OffersTable({
   entries,
@@ -48,62 +62,36 @@ export default function OffersTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
-        <div className="flex items-center gap-3 text-[#64748b]">
-          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
-          </svg>
-          <span className="text-sm">Loading…</span>
-        </div>
+      <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="px-5 py-4 border-b border-[#f1f5f9] animate-pulse">
+            <div className="flex gap-4">
+              <div className="h-4 w-24 bg-[#f1f5f9] rounded" />
+              <div className="h-4 w-16 bg-[#f1f5f9] rounded" />
+              <div className="h-4 flex-1 bg-[#f1f5f9] rounded" />
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
-        <svg
-          className="w-10 h-10 text-[#cbd5e1] mb-3"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"
-          />
-        </svg>
-        <p className="text-sm text-[#64748b]">No offers found.</p>
-        <p className="text-xs text-[#94a3b8] mt-1">
-          Offers are created from Item Short List.
-        </p>
+      <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm flex flex-col items-center justify-center py-16 text-center">
+        <DocumentTextIcon className="w-12 h-12 text-[#cbd5e1] mb-3" />
+        <p className="text-sm text-[#94a3b8]">No offers found</p>
+        <p className="text-xs text-[#94a3b8] mt-1">Offers are created from Item Short List.</p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-        <p className="px-4 py-2.5 text-xs text-[#64748b] bg-[#f8fafc] border-b border-[#e2e8f0]">
-          Showing {entries.length} {entries.length === 1 ? "offer" : "offers"}
-        </p>
+      <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-[#f8fafc]">
+            <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
               <th className={TH}>Date Offered</th>
               <th className={TH}>Stock ID</th>
               <th className={TH}>Barcode</th>
@@ -114,127 +102,86 @@ export default function OffersTable({
               <th className={TH}>Outlet Name</th>
               <th className={TH}>Offer Status</th>
               <th className={TH}>Alert</th>
-              <th className={TH}>Expiry Date</th>
               <th className={`${TH} text-right`}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#e2e8f0]">
-            {entries.map((entry) => (
+          <tbody>
+            {entries.map((entry) => {
+              const statusStyle = STATUS_STYLE[entry.offer_status] ?? { bg: "#f1f5f9", color: "#475569", dot: "#94a3b8" };
+              return (
               <tr
                 key={entry.id}
-                className="hover:bg-[#f0f4ff] transition-colors"
+                className="transition-colors duration-150"
+                style={{ borderBottom: "1px solid #f1f5f9" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
               >
-                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
+                <td className={`${TD} text-[#334155] text-xs whitespace-nowrap`}>
                   {formatDate(entry.created_at)}
                 </td>
-                <td
-                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
-                >
+                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
                   {entry.stock_id ?? "—"}
                 </td>
-                <td
-                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
-                >
+                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
                   {entry.barcode}
                 </td>
                 <td className={`${TD} max-w-[200px]`}>
                   <span
-                    className="block truncate text-[#1e293b] font-medium"
-                    title={
-                      entry.description +
-                      (entry.notes ? ` — ${entry.notes}` : "")
-                    }
+                    className="block truncate text-[#334155] font-medium"
+                    title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
                   >
                     {entry.description}
                   </span>
                   {entry.notes && (
-                    <span
-                      className="block truncate text-xs text-[#94a3b8] mt-0.5"
-                      title={entry.notes}
-                    >
+                    <span className="block truncate text-xs text-[#94a3b8] mt-0.5" title={entry.notes}>
                       {entry.notes}
                     </span>
                   )}
                 </td>
-                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
-                  {entry.category ?? "—"}
-                </td>
-                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
-                  {entry.uom ?? "—"}
-                </td>
-                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
-                  {entry.quantity}
-                </td>
-                <td className={`${TD} text-[#1e293b] font-medium whitespace-nowrap`}>
-                  {entry.outlet_name}
-                </td>
+                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.category ?? "—"}</td>
+                <td className={`${TD} text-[#334155] text-xs whitespace-nowrap`}>{entry.uom ?? "—"}</td>
+                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.quantity}</td>
+                <td className={`${TD} text-[#334155] font-medium whitespace-nowrap`}>{entry.outlet_name}</td>
                 <td className={`${TD} whitespace-nowrap`}>
                   <span
-                    className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_BADGE[entry.offer_status] ?? ""}`}
+                    className="badge"
+                    style={{ background: statusStyle.bg, color: statusStyle.color }}
                   >
+                    <Dot color={statusStyle.dot} />
                     {STATUS_LABEL[entry.offer_status] ?? entry.offer_status}
                   </span>
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
                   <button
                     onClick={() => onToggleAlert(entry.id)}
-                    title={
-                      entry.has_alert
-                        ? "Alert on — click to turn off"
-                        : "Alert off — click to turn on"
-                    }
+                    title={entry.has_alert ? "Alert on — click to turn off" : "Alert off — click to turn on"}
                     className={`p-1.5 rounded-lg transition-colors ${
                       entry.has_alert
                         ? "text-[#ca8a04] hover:text-[#a16207] hover:bg-yellow-50"
                         : "text-[#cbd5e1] hover:text-[#64748b] hover:bg-[#f1f5f9]"
                     }`}
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill={entry.has_alert ? "currentColor" : "none"}
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                      />
+                    <svg className="w-4 h-4" fill={entry.has_alert ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                   </button>
                 </td>
-                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
-                  —
-                </td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  <div className="flex items-center justify-end gap-1.5">
+                  <div className="flex items-center justify-end gap-1">
                     <button
                       onClick={() => setEditingOffer(entry)}
-                      className="p-1.5 rounded-lg text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#eff6ff] transition-colors"
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                      style={{ color: "#2563eb" }}
                       title="Edit"
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#eff6ff")}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
                     >
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
+                      <PencilSquareIcon className="w-4 h-4" />
                     </button>
                     {deletingId === entry.id ? (
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={async () => {
-                            await onDelete(entry.id);
-                            setDeletingId(null);
-                          }}
+                          onClick={async () => { await onDelete(entry.id); setDeletingId(null); }}
                           className="text-xs px-2 py-1 rounded bg-[#ef4444] text-white hover:bg-[#dc2626] transition-colors"
                         >
                           Confirm
@@ -249,28 +196,20 @@ export default function OffersTable({
                     ) : (
                       <button
                         onClick={() => setDeletingId(entry.id)}
-                        className="p-1.5 rounded-lg text-[#64748b] hover:text-[#ef4444] hover:bg-red-50 transition-colors"
+                        className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                        style={{ color: "#dc2626" }}
                         title="Delete"
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#fee2e2")}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
                       >
-                        <svg
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          />
-                        </svg>
+                        <TrashIcon className="w-4 h-4" />
                       </button>
                     )}
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

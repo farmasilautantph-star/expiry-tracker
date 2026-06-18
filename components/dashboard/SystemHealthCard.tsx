@@ -13,86 +13,88 @@ function scoreColor(score: number): string {
   return "#ef4444";
 }
 
+const CIRCUMFERENCE = 2 * Math.PI * 45; // r=45
+
 export default function SystemHealthCard({ data, isLoading }: Props) {
   const color = data ? scoreColor(data.score) : "#94a3b8";
+  const dashOffset = data
+    ? CIRCUMFERENCE - (data.score / 100) * CIRCUMFERENCE
+    : CIRCUMFERENCE;
 
   return (
-    <div className="rounded-2xl bg-white border border-[#e2e8f0] shadow-sm p-6">
-      <p className="text-base font-bold text-[#1e293b] mb-4">
-        🏥 System Health
+    <div className="rounded-2xl bg-white shadow-sm p-6" style={{ border: "1px solid #e2e8f0" }}>
+      <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider mb-4">
+        SYSTEM HEALTH
       </p>
 
       {isLoading || !data ? (
         <div className="flex flex-col items-center gap-4 py-4">
-          <div className="w-32 h-32 rounded-full bg-[#f1f5f9] animate-pulse" />
+          <div className="w-[120px] h-[120px] rounded-full bg-[#f1f5f9] animate-pulse" />
           <div className="w-full space-y-2">
             {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="h-5 bg-[#f1f5f9] animate-pulse rounded"
-              />
+              <div key={i} className="h-5 bg-[#f1f5f9] animate-pulse rounded" />
             ))}
           </div>
         </div>
       ) : (
         <>
           <div className="flex flex-col items-center mb-6">
-            <div
-              className="w-32 h-32 rounded-full flex items-center justify-center border-8"
-              style={{ borderColor: color }}
-            >
-              <div className="text-center leading-none">
+            <div className="relative" style={{ width: 120, height: 120 }}>
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                {/* Track */}
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  stroke="#f1f5f9"
+                  strokeWidth="10"
+                />
+                {/* Progress */}
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="45"
+                  fill="none"
+                  stroke={color}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={dashOffset}
+                  transform="rotate(-90 60 60)"
+                  style={{ transition: "stroke-dashoffset 0.5s ease" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span
-                  className="text-5xl font-black"
-                  style={{ color }}
+                  className="font-black leading-none"
+                  style={{ fontSize: "36px", color }}
                 >
                   {data.score}
                 </span>
-                <span className="text-2xl font-bold" style={{ color }}>
-                  %
-                </span>
+                <span className="text-xs text-[#94a3b8] mt-0.5">Health Score</span>
               </div>
             </div>
-            <p className="text-sm text-[#64748b] mt-2">System Health Score</p>
           </div>
 
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <span>✅</span>
-                <span className="text-[#475569]">Up to date</span>
-              </span>
-              <span className="font-semibold text-[#1e293b]">
-                {data.upToDate} items
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <span>🟡</span>
-                <span className="text-[#475569]">Needs review</span>
-              </span>
-              <span className="font-semibold text-[#1e293b]">
-                {data.needsReview} items
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <span>🔴</span>
-                <span className="text-[#475569]">Critical</span>
-              </span>
-              <span className="font-semibold text-[#1e293b]">
-                {data.criticalStale} items
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <span>☑️</span>
-                <span className="text-[#475569]">Resolved</span>
-              </span>
-              <span className="font-semibold text-[#1e293b]">
-                {data.resolved} items
-              </span>
-            </div>
+            {[
+              { dot: "#22c55e", label: "Up to date", count: data.upToDate },
+              { dot: "#eab308", label: "Needs review", count: data.needsReview },
+              { dot: "#ef4444", label: "Critical", count: data.criticalStale },
+              { dot: "#64748b", label: "Resolved", count: data.resolved },
+            ].map(({ dot, label, count }) => (
+              <div key={label} className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: dot }}
+                  />
+                  <span className="text-[#475569]">{label}</span>
+                </span>
+                <span className="font-bold text-[#0f172a]">{count} items</span>
+              </div>
+            ))}
           </div>
         </>
       )}

@@ -7,68 +7,56 @@ interface Props {
   isLoading: boolean;
 }
 
-const PILLS = [
-  {
-    key: "offered",
-    label: "Offered",
-    dot: "bg-[#3b82f6]",
-    text: "text-[#1e3a8a]",
-    border: "border-blue-200",
-    bg: "bg-blue-50",
-  },
-  {
-    key: "accepted",
-    label: "Accepted",
-    dot: "bg-[#22c55e]",
-    text: "text-[#16a34a]",
-    border: "border-green-200",
-    bg: "bg-green-50",
-  },
-  {
-    key: "rejected",
-    label: "Rejected",
-    dot: "bg-[#ef4444]",
-    text: "text-[#ef4444]",
-    border: "border-red-200",
-    bg: "bg-red-50",
-  },
-  {
-    key: "completed",
-    label: "Completed",
-    dot: "bg-[#22c55e]",
-    text: "text-[#059669]",
-    border: "border-emerald-200",
-    bg: "bg-emerald-50",
-  },
-] as const;
+function Dot({ color }: { color: string }) {
+  return (
+    <span
+      className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+      style={{ background: color }}
+    />
+  );
+}
+
+function SummaryPill({
+  label,
+  count,
+  bg,
+  color,
+  dotColor,
+  isLoading,
+}: {
+  label: string;
+  count: number;
+  bg: string;
+  color: string;
+  dotColor: string;
+  isLoading: boolean;
+}) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+      style={{ background: bg, color }}
+    >
+      <Dot color={dotColor} />
+      {label}
+      {isLoading ? (
+        <span className="inline-block w-4 h-3 rounded bg-current opacity-20 animate-pulse" />
+      ) : (
+        count
+      )}
+    </span>
+  );
+}
 
 export default function OffersSummary({ counts, isLoading }: Props) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {/* Total */}
-      <div className="flex items-center gap-2 rounded-2xl border border-[#e2e8f0] bg-white shadow-sm px-4 py-2.5">
-        <span className="text-xs text-[#64748b]">Total</span>
-        <span
-          className={`text-sm font-bold text-[#1e293b] ${isLoading ? "opacity-40" : ""}`}
-        >
-          {counts.total}
-        </span>
-      </div>
-
-      {PILLS.map(({ key, label, dot, text, border, bg }) => (
-        <div
-          key={key}
-          className={`flex items-center gap-2 rounded-2xl border ${border} ${bg} shadow-sm px-4 py-2.5`}
-        >
-          <span className={`w-2 h-2 rounded-full ${dot} flex-shrink-0`} />
-          <span className="text-xs text-[#64748b]">{label}</span>
-          <span
-            className={`text-sm font-bold ${text} ${isLoading ? "opacity-40" : ""}`}
-          >
-            {counts[key]}
-          </span>
-        </div>
-      ))}
+    <div className="flex flex-wrap gap-2 items-center">
+      <SummaryPill label="Offered"   count={counts.offered}   bg="#dbeafe" color="#2563eb" dotColor="#2563eb" isLoading={isLoading} />
+      <SummaryPill label="Accepted"  count={counts.accepted}  bg="#dcfce7" color="#16a34a" dotColor="#16a34a" isLoading={isLoading} />
+      <SummaryPill label="Rejected"  count={counts.rejected}  bg="#fee2e2" color="#dc2626" dotColor="#dc2626" isLoading={isLoading} />
+      <SummaryPill label="Completed" count={counts.completed} bg="#dcfce7" color="#16a34a" dotColor="#16a34a" isLoading={isLoading} />
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ml-auto" style={{ background: "#f1f5f9", color: "#475569" }}>
+        Total {isLoading ? "…" : counts.total}
+      </span>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { StaleItem } from "@/hooks/useDashboardHealth";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   items: StaleItem[];
@@ -13,14 +14,25 @@ export default function StaleItemsCard({ items, isLoading }: Props) {
   const count = items.length;
 
   return (
-    <div className="rounded-2xl bg-white border border-[#e2e8f0] shadow-sm p-6">
+    <div className="rounded-2xl bg-white shadow-sm p-6" style={{ border: "1px solid #e2e8f0" }}>
       <div className="flex items-center justify-between mb-4">
-        <p className="text-base font-bold text-[#1e293b]">
-          ⚠️ Items Needing Review
+        <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
+          ITEMS NEEDING REVIEW
         </p>
         {count > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full bg-red-500 text-white text-xs font-bold">
+          <span
+            className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-white text-xs font-bold"
+            style={{ background: "#dc2626" }}
+          >
             {count}
+          </span>
+        )}
+        {count === 0 && !isLoading && (
+          <span
+            className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-bold"
+            style={{ background: "#dcfce7", color: "#16a34a" }}
+          >
+            All clear
           </span>
         )}
       </div>
@@ -28,43 +40,42 @@ export default function StaleItemsCard({ items, isLoading }: Props) {
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="h-16 bg-[#f1f5f9] animate-pulse rounded-xl"
-            />
+            <div key={i} className="h-16 bg-[#f1f5f9] animate-pulse rounded-xl" />
           ))}
         </div>
       ) : count === 0 ? (
         <div className="flex flex-col items-center justify-center py-8 text-center">
-          <p className="text-3xl mb-2">✅</p>
-          <p className="text-sm font-semibold text-[#1e293b]">
-            All items are up to date!
-          </p>
+          <CheckCircleIcon className="w-10 h-10 text-[#22c55e] mb-2" />
+          <p className="text-sm font-semibold text-[#16a34a]">All items are up to date</p>
           <p className="text-xs text-[#94a3b8] mt-1">
             Great work keeping records fresh.
           </p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-          {items.map((item) => {
+        <div className="space-y-0 max-h-80 overflow-y-auto">
+          {items.map((item, idx) => {
             const isCritical = item.review_status === "critical_stale";
             return (
               <div
                 key={item.id}
-                className="flex items-start justify-between gap-3 p-3 rounded-xl border border-[#e2e8f0] hover:bg-[#f8fafc] transition-colors"
+                className="flex items-start justify-between gap-3 py-3"
+                style={{
+                  borderBottom: idx < items.length - 1 ? "1px solid #f1f5f9" : "none",
+                }}
               >
                 <div className="flex items-start gap-2 min-w-0">
-                  <span className="mt-0.5 flex-shrink-0">
-                    {isCritical ? "🔴" : "🟡"}
-                  </span>
+                  <span
+                    className="mt-1 w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: isCritical ? "#ef4444" : "#eab308" }}
+                  />
                   <div className="min-w-0">
                     <p
-                      className="text-sm font-medium text-[#1e293b] truncate"
+                      className="text-sm font-semibold text-[#0f172a] truncate"
                       title={item.description}
                     >
                       {item.description}
                     </p>
-                    <p className="text-xs text-[#64748b] mt-0.5">
+                    <p className="text-xs text-[#94a3b8] mt-0.5">
                       {item.category} · {item.pic_name} ·{" "}
                       {item.days_since_review}d since review
                     </p>
@@ -76,9 +87,16 @@ export default function StaleItemsCard({ items, isLoading }: Props) {
                       `/dashboard/shortlist?search=${encodeURIComponent(item.barcode)}`,
                     )
                   }
-                  className="flex-shrink-0 text-xs font-medium text-[#3b82f6] hover:text-[#1e3a8a] whitespace-nowrap transition-colors"
+                  className="flex-shrink-0 text-xs font-semibold transition-colors"
+                  style={{ color: "#2563eb" }}
+                  onMouseEnter={(e) =>
+                    ((e.currentTarget as HTMLElement).style.color = "#1d4ed8")
+                  }
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget as HTMLElement).style.color = "#2563eb")
+                  }
                 >
-                  Review Now →
+                  Review
                 </button>
               </div>
             );
