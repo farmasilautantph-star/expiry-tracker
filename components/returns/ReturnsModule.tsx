@@ -24,6 +24,7 @@ interface Props {
   activeFilterCount: number;
   onMarkReturned: (id: number) => Promise<void>;
   onUpdateReturnDate: (id: number, date: string) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 export default function ReturnsModule({
@@ -37,6 +38,7 @@ export default function ReturnsModule({
   activeFilterCount,
   onMarkReturned,
   onUpdateReturnDate,
+  onRefresh,
 }: Props) {
   const picOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -69,6 +71,7 @@ export default function ReturnsModule({
         isManager={isManager}
         onMarkReturned={onMarkReturned}
         onUpdateReturnDate={onUpdateReturnDate}
+        onRefresh={onRefresh}
       />
     </div>
   );

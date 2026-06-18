@@ -6,8 +6,12 @@ import OfferForm from "./OfferForm";
 import {
   PencilSquareIcon,
   TrashIcon,
+  CheckIcon,
+  XMarkIcon,
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
@@ -44,6 +48,7 @@ interface Props {
   onUpdate: (id: number, data: Partial<OfferFormData>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onToggleAlert: (id: number) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 const TH =
@@ -56,9 +61,64 @@ export default function OffersTable({
   onUpdate,
   onDelete,
   onToggleAlert,
+  onRefresh,
 }: Props) {
   const [editingOffer, setEditingOffer] = useState<OfferEntry | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [receivingOffer, setReceivingOffer] = useState<OfferEntry | null>(null);
+  const [rejectingOffer, setRejectingOffer] = useState<OfferEntry | null>(null);
+  const [receivedAt, setReceivedAt] = useState(
+    () => new Date().toISOString().split("T")[0],
+  );
+  const [rejectionNotes, setRejectionNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { toasts, showSuccess, showError, dismiss } = useToast();
+
+  async function handleConfirmReceived() {
+    if (!receivingOffer) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/offers/${receivingOffer.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offer_status: "accepted", received_at: receivedAt }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      showSuccess("Offer marked as received");
+      setReceivingOffer(null);
+      await onRefresh?.();
+    } catch {
+      showError("Failed to confirm received");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmRejected() {
+    if (!rejectingOffer) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/offers/${rejectingOffer.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          offer_status: "rejected",
+          rejection_notes: rejectionNotes || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      showSuccess("Offer marked as rejected");
+      setRejectingOffer(null);
+      setRejectionNotes("");
+      await onRefresh?.();
+    } catch {
+      showError("Failed to confirm rejection");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -88,6 +148,8 @@ export default function OffersTable({
 
   return (
     <>
+      <Toast toasts={toasts} onDismiss={dismiss} />
+
       <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
@@ -168,6 +230,37 @@ export default function OffersTable({
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
                   <div className="flex items-center justify-end gap-1">
+                    {/* Received / Rejected buttons for offered items */}
+                    {entry.offer_status === "offered" && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setReceivingOffer(entry);
+                            setReceivedAt(new Date().toISOString().split("T")[0]);
+                          }}
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                          style={{ color: "#16a34a" }}
+                          title="Mark as Received"
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#dcfce7")}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
+                        >
+                          <CheckIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setRejectingOffer(entry);
+                            setRejectionNotes("");
+                          }}
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                          style={{ color: "#dc2626" }}
+                          title="Mark as Rejected"
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#fee2e2")}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
+                        >
+                          <XMarkIcon className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={() => setEditingOffer(entry)}
                       className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
@@ -231,6 +324,107 @@ export default function OffersTable({
           setEditingOffer(null);
         }}
       />
+
+      {/* Received modal */}
+      {receivingOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-md p-6 space-y-5">
+            <h3 className="text-base font-semibold text-[#1e293b]">
+              Confirm Outlet Received
+            </h3>
+            <div className="space-y-1 text-sm text-[#64748b]">
+              <p>
+                <span className="font-medium text-[#334155]">Item:</span>{" "}
+                {receivingOffer.description}
+              </p>
+              <p>
+                <span className="font-medium text-[#334155]">Outlet:</span>{" "}
+                {receivingOffer.outlet_name}
+              </p>
+              <p>
+                <span className="font-medium text-[#334155]">Quantity:</span>{" "}
+                {receivingOffer.quantity}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide">
+                Date Received
+              </label>
+              <input
+                type="date"
+                value={receivedAt}
+                onChange={(e) => setReceivedAt(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-[#e2e8f0] text-sm text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb]"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => setReceivingOffer(null)}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmReceived}
+                disabled={submitting || !receivedAt}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#16a34a] hover:bg-[#15803d] transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Saving..." : "Confirm Received"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejected modal */}
+      {rejectingOffer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
+          <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-md p-6 space-y-5">
+            <h3 className="text-base font-semibold text-[#1e293b]">
+              Confirm Offer Rejected
+            </h3>
+            <div className="space-y-1 text-sm text-[#64748b]">
+              <p>
+                <span className="font-medium text-[#334155]">Item:</span>{" "}
+                {rejectingOffer.description}
+              </p>
+              <p>
+                <span className="font-medium text-[#334155]">Outlet:</span>{" "}
+                {rejectingOffer.outlet_name}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide">
+                Reason (optional)
+              </label>
+              <textarea
+                value={rejectionNotes}
+                onChange={(e) => setRejectionNotes(e.target.value)}
+                rows={3}
+                placeholder="Enter reason for rejection..."
+                className="w-full px-3 py-2 rounded-xl border border-[#e2e8f0] text-sm text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => { setRejectingOffer(null); setRejectionNotes(""); }}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRejected}
+                disabled={submitting}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#dc2626] hover:bg-[#b91c1c] transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Saving..." : "Confirm Rejected"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

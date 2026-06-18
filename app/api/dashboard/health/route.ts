@@ -64,13 +64,15 @@ export async function GET(req: NextRequest) {
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
+  // Only consider active items for health scoring
+  conditions.push("item_status = 'active'");
+
   if (user.role !== "manager") {
     conditions.push("pic_id = ?");
     bindings.push(user.userId);
   }
 
-  const where =
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const where = `WHERE ${conditions.join(" AND ")}`;
 
   const rows = db
     .prepare(
@@ -165,6 +167,36 @@ export async function GET(req: NextRequest) {
     }))
     .sort((a, b) => a.pic_name.localeCompare(b.pic_name));
 
+  // Completion stats
+  const today = new Date().toISOString().split("T")[0];
+  const currentMonth = today.slice(0, 7);
+
+  interface CountRow { cnt: number }
+
+  const completedTodayRow = db
+    .prepare(
+      `SELECT COUNT(*) AS cnt FROM expiry_logs
+       WHERE item_status IN ('sold','completed')
+         AND DATE(completed_at) = ?`,
+    )
+    .get(today) as unknown as CountRow;
+
+  const soldThisMonthRow = db
+    .prepare(
+      `SELECT COUNT(*) AS cnt FROM expiry_logs
+       WHERE completed_via = 'sold'
+         AND strftime('%Y-%m', completed_at) = ?`,
+    )
+    .get(currentMonth) as unknown as CountRow;
+
+  const returnedThisMonthRow = db
+    .prepare(
+      `SELECT COUNT(*) AS cnt FROM expiry_logs
+       WHERE completed_via = 'returned'
+         AND strftime('%Y-%m', completed_at) = ?`,
+    )
+    .get(currentMonth) as unknown as CountRow;
+
   return NextResponse.json({
     success: true,
     data: {
@@ -178,6 +210,9 @@ export async function GET(req: NextRequest) {
       },
       staleItems,
       completionRates,
+      completedToday: completedTodayRow?.cnt ?? 0,
+      soldThisMonth: soldThisMonthRow?.cnt ?? 0,
+      returnedThisMonth: returnedThisMonthRow?.cnt ?? 0,
     },
   });
 }

@@ -87,6 +87,9 @@ export async function GET(req: NextRequest) {
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
+  // Always filter to active items only
+  conditions.push("el.item_status = 'active'");
+
   if (user.role !== "manager") {
     conditions.push("el.pic_id = ?");
     bindings.push(user.userId);

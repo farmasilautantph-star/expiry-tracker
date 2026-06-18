@@ -8,7 +8,10 @@ import {
   CheckIcon,
   TagIcon,
   DocumentTextIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
@@ -180,6 +183,8 @@ export default function ShortListTable({
 }: Props) {
   const [reviewingIds, setReviewingIds] = useState<Set<number>>(new Set());
   const [justReviewedIds, setJustReviewedIds] = useState<Set<number>>(new Set());
+  const [sellingIds, setSellingIds] = useState<Set<number>>(new Set());
+  const { toasts, showSuccess, showError, dismiss } = useToast();
 
   async function handleMarkReviewed(id: number) {
     setReviewingIds((prev) => { const s = new Set(prev); s.add(id); return s; });
@@ -201,6 +206,25 @@ export default function ShortListTable({
         s.delete(id);
         return s;
       });
+    }
+  }
+
+  async function handleMarkSold(entry: ShortListEntry) {
+    const confirmed = window.confirm(
+      `Mark "${entry.description}" as sold? This will move it to Completed Items.`,
+    );
+    if (!confirmed) return;
+    setSellingIds((prev) => { const s = new Set(prev); s.add(entry.id); return s; });
+    try {
+      const res = await fetch(`/api/expiry/${entry.id}/sell`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      showSuccess("Item marked as sold");
+      await onMarkReviewed?.(entry.id);
+    } catch {
+      showError("Failed to mark as sold");
+    } finally {
+      setSellingIds((prev) => { const s = new Set(prev); s.delete(entry.id); return s; });
     }
   }
 
@@ -230,6 +254,8 @@ export default function ShortListTable({
   }
 
   return (
+    <>
+    <Toast toasts={toasts} onDismiss={dismiss} />
     <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
@@ -260,6 +286,10 @@ export default function ShortListTable({
             const isReviewing = reviewingIds.has(entry.id);
             const justReviewed = justReviewedIds.has(entry.id);
             const review = calcReviewInfo(entry);
+            const canSell =
+              (entry.item_status === "active" || entry.item_status === undefined) &&
+              (isManager || entry.pic_name === currentPicName);
+            const isSelling = sellingIds.has(entry.id);
 
             return (
               <tr
@@ -347,15 +377,40 @@ export default function ShortListTable({
                   </span>
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  {canReview &&
-                    entry.return_status !== "returned" &&
-                    entry.quantity > 0 && (
+                  <div className="flex items-center gap-1">
+                    {canReview &&
+                      entry.return_status !== "returned" &&
+                      entry.quantity > 0 && (
+                        <button
+                          onClick={() => handleMarkReviewed(entry.id)}
+                          disabled={isReviewing || justReviewed}
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{ color: "#16a34a" }}
+                          title="Mark Reviewed"
+                          onMouseEnter={(e) =>
+                            ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
+                          }
+                          onMouseLeave={(e) =>
+                            ((e.currentTarget as HTMLElement).style.background = "")
+                          }
+                        >
+                          {isReviewing ? (
+                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                          ) : (
+                            <CheckIcon className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    {canSell && (
                       <button
-                        onClick={() => handleMarkReviewed(entry.id)}
-                        disabled={isReviewing || justReviewed}
+                        onClick={() => handleMarkSold(entry)}
+                        disabled={isSelling}
                         className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{ color: "#16a34a" }}
-                        title="Mark Reviewed"
+                        title="Mark as Sold"
                         onMouseEnter={(e) =>
                           ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
                         }
@@ -363,16 +418,17 @@ export default function ShortListTable({
                           ((e.currentTarget as HTMLElement).style.background = "")
                         }
                       >
-                        {isReviewing ? (
+                        {isSelling ? (
                           <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                           </svg>
                         ) : (
-                          <CheckIcon className="w-4 h-4" />
+                          <BanknotesIcon className="w-4 h-4" />
                         )}
                       </button>
                     )}
+                  </div>
                 </td>
                 {isManager && (
                   <td className={`${TD} whitespace-nowrap`}>
@@ -430,5 +486,6 @@ export default function ShortListTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }

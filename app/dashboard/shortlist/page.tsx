@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
+import CompletedItemsTable from "@/components/shortlist/CompletedItemsTable";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 import type { OfferFormData } from "@/hooks/useOffers";
 
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
+  const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
   const {
     entries,
     counts,
@@ -94,29 +97,62 @@ export default function ShortListPage() {
         )}
       </div>
 
+      {/* Tab nav */}
+      <div className="flex border-b border-[#e2e8f0] gap-6">
+        <button
+          onClick={() => setActiveTab("active")}
+          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+            activeTab === "active"
+              ? "border-[#2563eb] text-[#2563eb]"
+              : "border-transparent text-[#64748b] hover:text-[#334155]"
+          }`}
+        >
+          Active Items{" "}
+          {counts.total > 0 && (
+            <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
+              {counts.total}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab("completed")}
+          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+            activeTab === "completed"
+              ? "border-[#2563eb] text-[#2563eb]"
+              : "border-transparent text-[#64748b] hover:text-[#334155]"
+          }`}
+        >
+          Completed Items
+        </button>
+      </div>
+
       {/* Error banner */}
-      {error && (
+      {error && activeTab === "active" && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
 
-      {/* Main module */}
-      <ShortListModule
-        entries={entries}
-        counts={counts}
-        isLoading={isLoading}
-        isManager={isManager}
-        picName={user.picName}
-        filters={filters}
-        setFilter={setFilter}
-        clearFilters={clearFilters}
-        activeFilterCount={activeFilterCount}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        onAddOffer={handleAddOffer}
-        onRefresh={refresh}
-      />
+      {/* Main content */}
+      {activeTab === "active" ? (
+        <ShortListModule
+          entries={entries}
+          counts={counts}
+          isLoading={isLoading}
+          isManager={isManager}
+          picName={user.picName}
+          filters={filters}
+          setFilter={setFilter}
+          clearFilters={clearFilters}
+          activeFilterCount={activeFilterCount}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAddOffer={handleAddOffer}
+          onRefresh={refresh}
+        />
+      ) : (
+        <CompletedItemsTable isManager={isManager} picName={user.picName} />
+      )}
     </div>
   );
 }

@@ -17,6 +17,7 @@ export default function ReturnsPage() {
     activeFilterCount,
     markReturned,
     updateReturnDate,
+    refresh,
   } = useReturns();
 
   if (!user) return null;
@@ -72,6 +73,7 @@ export default function ReturnsPage() {
         activeFilterCount={activeFilterCount}
         onMarkReturned={markReturned}
         onUpdateReturnDate={updateReturnDate}
+        onRefresh={refresh}
       />
     </div>
   );

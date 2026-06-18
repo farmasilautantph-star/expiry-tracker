@@ -22,6 +22,7 @@ export default function OffersPage() {
     updateOffer,
     deleteOffer,
     toggleAlert,
+    refresh,
   } = useOffers();
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export default function OffersPage() {
         onUpdate={updateOffer}
         onDelete={deleteOffer}
         onToggleAlert={toggleAlert}
+        onRefresh={refresh}
       />
     </div>
   );

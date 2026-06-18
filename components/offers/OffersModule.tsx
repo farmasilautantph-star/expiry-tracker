@@ -24,6 +24,7 @@ interface Props {
   onUpdate: (id: number, data: Partial<OfferFormData>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onToggleAlert: (id: number) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 export default function OffersModule({
@@ -37,6 +38,7 @@ export default function OffersModule({
   onUpdate,
   onDelete,
   onToggleAlert,
+  onRefresh,
 }: Props) {
   return (
     <div className="space-y-4">
@@ -55,6 +57,7 @@ export default function OffersModule({
         onUpdate={onUpdate}
         onDelete={onDelete}
         onToggleAlert={onToggleAlert}
+        onRefresh={onRefresh}
       />
     </div>
   );

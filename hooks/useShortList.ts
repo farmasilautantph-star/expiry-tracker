@@ -19,6 +19,7 @@ export interface ShortListEntry {
   return_by_date: string | null;
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
+  item_status: "active" | "sold" | "completed";
   days_left: number;
   urgency: "expired" | "critical" | "warning" | "safe";
   offer_status:
