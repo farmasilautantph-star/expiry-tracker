@@ -26,7 +26,18 @@
       "Bash(curl -s -c /tmp/v2.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"manager\",\"password\":\"manager123\"}')",
       "Bash(curl -s -c /tmp/v2s.txt -X POST http://localhost:3000/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"nadiah\",\"password\":\"staff123\"}')",
       "Bash(cat scripts/migrate.ts)",
-      "Bash(cat scripts/run-migrations.ts)"
+      "Bash(cat scripts/run-migrations.ts)",
+      "Bash(npx tsx *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(npm install *)",
+      "Bash(xargs wc *)",
+      "Bash(npx prettier *)",
+      "Bash(npx eslint *)",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \" const fs = require\\('fs'\\); const lines = fs.readFileSync\\('C:/Users/CLIENT/.claude/projects/C--Projects-EXPIRY-TRACKER/a3ed9bf5-ab89-4e42-b26f-a51f3c38d05e.jsonl', 'utf8'\\).split\\('\\\\n'\\); lines.slice\\(-300\\).forEach\\(line => { try { const obj = JSON.parse\\(line\\); if \\(obj.type === 'message' || obj.role\\) { const content = obj.content || obj.message?.content; if \\(Array.isArray\\(content\\)\\) { content.forEach\\(b => { if \\(b.type === 'text' && b.text && b.text.length > 100\\) { console.log\\('=== TEXT ==='\\); console.log\\(b.text.substring\\(0, 800\\)\\); } }\\); } else if \\(typeof content === 'string' && content.length > 100\\) { console.log\\('=== STR ==='\\); console.log\\(content.substring\\(0, 800\\)\\); } } } catch\\(e\\) {} }\\); \")",
+      "Bash(grep -o '\"content\":\\\\[{\"type\":\"text\",\"text\":\"[^\"]*\"')",
+      "Bash(awk 'NR==3' \"C:/Users/CLIENT/.claude/projects/C--Projects-EXPIRY-TRACKER/a3ed9bf5-ab89-4e42-b26f-a51f3c38d05e.jsonl\")"
     ]
   }
 }

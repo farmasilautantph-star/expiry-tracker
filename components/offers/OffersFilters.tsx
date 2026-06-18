@@ -39,7 +39,7 @@ interface Props {
 }
 
 const SELECT =
-  "px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
+  "px-3 py-2 rounded-lg bg-white border border-[#e2e8f0] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition";
 
 export default function OffersFilters({
   filters,
@@ -54,7 +54,7 @@ export default function OffersFilters({
       {/* Search */}
       <div className="relative flex-1 min-w-[200px] max-w-xs">
         <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -71,12 +71,12 @@ export default function OffersFilters({
           placeholder="Search desc, barcode, outlet…"
           value={filters.search}
           onChange={(e) => setFilter("search", e.target.value)}
-          className="w-full pl-9 pr-8 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          className="w-full pl-9 pr-8 py-2 rounded-lg bg-white border border-[#e2e8f0] text-[#1e293b] placeholder-[#94a3b8] text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
         />
         {filters.search && (
           <button
             onClick={() => setFilter("search", "")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#1e293b]"
           >
             <svg
               className="w-3.5 h-3.5"
@@ -151,10 +151,10 @@ export default function OffersFilters({
       {activeFilterCount > 0 && (
         <button
           onClick={clearFilters}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#f0f4ff] border border-[#e2e8f0] transition-colors"
         >
           Clear
-          <span className="bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold">
+          <span className="bg-[#1e3a8a] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold">
             {activeFilterCount}
           </span>
         </button>

@@ -79,8 +79,10 @@ export default function ExpiryPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-white">Log New Expiry</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
+          <h2 className="text-xl font-semibold text-[#1e293b]">
+            Log New Expiry
+          </h2>
+          <p className="text-sm text-[#64748b] mt-0.5">
             {isManager
               ? "All entries across all PICs."
               : `Your entries (${user.picName}).`}
@@ -88,7 +90,7 @@ export default function ExpiryPage() {
         </div>
         <button
           onClick={openAdd}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#1e3a8a] hover:bg-[#1e40af] text-white text-sm font-semibold transition-colors shadow-sm"
         >
           <svg
             className="w-4 h-4"
@@ -112,7 +114,7 @@ export default function ExpiryPage() {
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -129,7 +131,7 @@ export default function ExpiryPage() {
             placeholder="Search desc, barcode, stock ID…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-2 rounded-lg bg-gray-900 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            className="w-full pl-9 pr-3.5 py-2 rounded-lg bg-white border border-[#e2e8f0] text-[#1e293b] placeholder-[#94a3b8] text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
           />
         </div>
 
@@ -137,7 +139,7 @@ export default function ExpiryPage() {
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          className="px-3 py-2 rounded-lg bg-white border border-[#e2e8f0] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
         >
           <option value="">All Categories</option>
           {CATEGORIES.map((c) => (
@@ -152,7 +154,7 @@ export default function ExpiryPage() {
           <select
             value={picFilter}
             onChange={(e) => setPicFilter(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="px-3 py-2 rounded-lg bg-white border border-[#e2e8f0] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
           >
             <option value="">All PICs</option>
             {picOptions.map((p) => (
@@ -167,7 +169,7 @@ export default function ExpiryPage() {
         <select
           value={returnFilter}
           onChange={(e) => setReturnFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          className="px-3 py-2 rounded-lg bg-white border border-[#e2e8f0] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
         >
           <option value="">All Returns</option>
           <option value="returnable">Returnable</option>
@@ -184,20 +186,20 @@ export default function ExpiryPage() {
               setPicFilter("");
               setReturnFilter("");
             }}
-            className="px-3 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700 transition-colors"
+            className="px-3 py-2 rounded-lg text-xs text-[#64748b] hover:text-[#1e293b] hover:bg-[#f1f5f9] border border-[#e2e8f0] hover:border-[#cbd5e1] transition-colors"
           >
             Clear
           </button>
         )}
 
-        <span className="ml-auto text-xs text-gray-500">
+        <span className="ml-auto text-xs text-[#94a3b8]">
           {filtered.length} of {entries.length} entries
         </span>
       </div>
 
       {/* Error state */}
       {error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-[#ef4444]">
           {error}
         </div>
       )}

@@ -1,30 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/useAuth";
 import { useExpiry } from "@/hooks/useExpiry";
-import { useDashboardCharts } from "@/hooks/useDashboardCharts";
+import { useDashboardHealth } from "@/hooks/useDashboardHealth";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
+import SystemHealthCard from "@/components/dashboard/SystemHealthCard";
+import StaleItemsCard from "@/components/dashboard/StaleItemsCard";
+import CompletionRateCard from "@/components/dashboard/CompletionRateCard";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
-
-// Recharts uses browser APIs — load client-side only
-const CategoryExpiryChart = dynamic(
-  () => import("@/components/dashboard/CategoryExpiryChart"),
-  { ssr: false },
-);
-const ExpiryTimelineChart = dynamic(
-  () => import("@/components/dashboard/ExpiryTimelineChart"),
-  { ssr: false },
-);
-const ReturnStatusChart = dynamic(
-  () => import("@/components/dashboard/ReturnStatusChart"),
-  { ssr: false },
-);
-const TopUrgentItems = dynamic(
-  () => import("@/components/dashboard/TopUrgentItems"),
-  { ssr: false },
-);
 
 interface Stats {
   expired: number;
@@ -43,28 +27,24 @@ interface StatCardProps {
 
 const COLOR_MAP = {
   red: {
-    bg: "bg-red-500/10",
-    border: "border-red-500/20",
-    badge: "bg-red-500/20 text-red-400",
-    value: "text-red-400",
+    border: "border-l-[#ef4444]",
+    iconBg: "bg-red-50 text-[#ef4444]",
+    value: "text-[#ef4444]",
   },
   orange: {
-    bg: "bg-orange-500/10",
-    border: "border-orange-500/20",
-    badge: "bg-orange-500/20 text-orange-400",
-    value: "text-orange-400",
+    border: "border-l-[#f97316]",
+    iconBg: "bg-orange-50 text-[#f97316]",
+    value: "text-[#f97316]",
   },
   yellow: {
-    bg: "bg-yellow-500/10",
-    border: "border-yellow-500/20",
-    badge: "bg-yellow-500/20 text-yellow-400",
-    value: "text-yellow-400",
+    border: "border-l-[#eab308]",
+    iconBg: "bg-yellow-50 text-[#eab308]",
+    value: "text-[#ca8a04]",
   },
   green: {
-    bg: "bg-green-500/10",
-    border: "border-green-500/20",
-    badge: "bg-green-500/20 text-green-400",
-    value: "text-green-400",
+    border: "border-l-[#22c55e]",
+    iconBg: "bg-green-50 text-[#22c55e]",
+    value: "text-[#16a34a]",
   },
 };
 
@@ -72,66 +52,34 @@ function StatCard({ label, value, color, icon, description }: StatCardProps) {
   const c = COLOR_MAP[color];
   return (
     <div
-      className={`rounded-xl border ${c.bg} ${c.border} p-5 flex items-start justify-between`}
+      className={`rounded-2xl bg-white border border-[#e2e8f0] border-l-4 ${c.border} p-5 shadow-sm flex items-start justify-between`}
     >
       <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">
+        <p className="text-[11px] font-semibold text-[#64748b] uppercase tracking-wider mb-1">
           {label}
         </p>
-        <p className={`text-3xl font-bold ${c.value} mt-1`}>
+        <p className={`text-4xl font-black ${c.value} mt-1 leading-none`}>
           {value === null ? (
-            <span className="inline-block w-12 h-8 bg-gray-800 animate-pulse rounded" />
+            <span className="inline-block w-12 h-9 bg-[#f1f5f9] animate-pulse rounded" />
           ) : (
             value
           )}
         </p>
-        <p className="text-xs text-gray-500 mt-1">{description}</p>
+        <p className="text-xs font-medium text-[#94a3b8] mt-2">{description}</p>
       </div>
-      <div className={`p-2.5 rounded-lg ${c.badge}`}>{icon}</div>
-    </div>
-  );
-}
-
-function ChartCard({
-  title,
-  children,
-  isLoading,
-  minH = "min-h-[300px]",
-}: {
-  title: string;
-  children: React.ReactNode;
-  isLoading: boolean;
-  minH?: string;
-}) {
-  return (
-    <div
-      className={`rounded-xl border border-gray-800 bg-gray-900 p-4 flex flex-col ${minH}`}
-    >
-      <p className="text-sm font-semibold text-white mb-3">{title}</p>
-      {isLoading ? (
-        <div className="flex-1 flex flex-col gap-2 justify-end">
-          <div className="flex items-end gap-2 h-44">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="flex-1 bg-gray-800 animate-pulse rounded-sm"
-                style={{ height: `${40 + ((i * 13) % 60)}%` }}
-              />
-            ))}
-          </div>
-          <div className="h-3 w-2/3 bg-gray-800 animate-pulse rounded" />
-        </div>
-      ) : (
-        <div className="flex-1">{children}</div>
-      )}
+      <div
+        className={`w-10 h-10 rounded-full flex items-center justify-center ${c.iconBg}`}
+      >
+        {icon}
+      </div>
     </div>
   );
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isManager } = useAuth();
   const { addEntry } = useExpiry();
-  const { chartData, isLoading: chartsLoading } = useDashboardCharts();
+  const { healthData, isLoading: healthLoading } = useDashboardHealth();
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsError, setStatsError] = useState(false);
@@ -161,20 +109,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h2 className="text-xl font-semibold text-white">Dashboard</h2>
-        <p className="text-sm text-gray-400 mt-0.5">
-          Overview of current inventory expiry status.
-        </p>
-      </div>
-
-      {/* Quick Log card */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 flex items-center justify-between gap-4">
+      {/* Quick Log card — gradient blue */}
+      <div className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-blue-900/10 bg-gradient-to-r from-[#1e3a8a] to-[#3b82f6]">
         <div className="flex items-center gap-4">
-          <div className="p-2.5 rounded-lg bg-blue-600/15 text-blue-400 flex-shrink-0">
+          <div className="p-3 rounded-xl bg-white/15 text-white flex-shrink-0 backdrop-blur-sm">
             <svg
-              className="w-5 h-5"
+              className="w-6 h-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -188,17 +128,17 @@ export default function DashboardPage() {
             </svg>
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">
+            <p className="text-base font-semibold text-white">
               Log New Expiry Entry
             </p>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <p className="text-sm text-blue-100 mt-0.5">
               Record a short-expiry item for your outlet inventory
             </p>
           </div>
         </div>
         <button
           onClick={() => setFormOpen(true)}
-          className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+          className="flex-shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white hover:bg-blue-50 text-[#1e3a8a] text-sm font-semibold transition-colors shadow-md"
         >
           <svg
             className="w-4 h-4"
@@ -219,7 +159,7 @@ export default function DashboardPage() {
 
       {/* Stat cards */}
       {statsError ? (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
           Failed to load expiry stats. Please refresh.
         </div>
       ) : (
@@ -311,44 +251,28 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Charts row 1: Category (60%) + Return Status (40%) */}
+      {/* Health row: StaleItemsCard (60%) + SystemHealthCard (40%) */}
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
         <div className="xl:col-span-3">
-          <ChartCard
-            title="Expiry Status by Category"
-            isLoading={chartsLoading}
-          >
-            <CategoryExpiryChart data={chartData?.categoryBreakdown ?? []} />
-          </ChartCard>
+          <StaleItemsCard
+            items={healthData?.staleItems ?? []}
+            isLoading={healthLoading}
+          />
         </div>
         <div className="xl:col-span-2">
-          <ChartCard title="Return Status Overview" isLoading={chartsLoading}>
-            <ReturnStatusChart
-              data={
-                chartData?.returnStatus ?? {
-                  pending: 0,
-                  returned: 0,
-                  overdue: 0,
-                }
-              }
-            />
-          </ChartCard>
+          <SystemHealthCard
+            data={healthData?.systemHealth ?? null}
+            isLoading={healthLoading}
+          />
         </div>
       </div>
 
-      {/* Charts row 2: Timeline (60%) + Top Urgent (40%) */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3">
-          <ChartCard title="Items Expiring by Month" isLoading={chartsLoading}>
-            <ExpiryTimelineChart data={chartData?.expiryTimeline ?? []} />
-          </ChartCard>
-        </div>
-        <div className="xl:col-span-2">
-          <ChartCard title="🔔 Top 10 Urgent Items" isLoading={chartsLoading}>
-            <TopUrgentItems items={chartData?.topUrgentItems ?? []} />
-          </ChartCard>
-        </div>
-      </div>
+      {/* Completion rate row — full width */}
+      <CompletionRateCard
+        rates={healthData?.completionRates ?? []}
+        isManager={isManager}
+        isLoading={healthLoading}
+      />
 
       {/* ExpiryForm modal */}
       <ExpiryForm

@@ -34,14 +34,16 @@ export default function OffersPage() {
     <div className="space-y-5">
       {/* Page header */}
       <div>
-        <h2 className="text-xl font-semibold text-white">Offer Ke Outlet</h2>
-        <p className="text-sm text-gray-400 mt-0.5">
+        <h2 className="text-xl font-semibold text-[#1e293b]">
+          Offer Ke Outlet
+        </h2>
+        <p className="text-sm text-[#64748b] mt-0.5">
           Monitor all items offered to outlets across all statuses.
         </p>
       </div>
 
       {/* Info note */}
-      <div className="flex items-start gap-2.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-300">
+      <div className="flex items-start gap-2.5 rounded-xl border border-blue-200 bg-[#eff6ff] px-4 py-3 text-sm text-[#1e3a8a]">
         <svg
           className="w-4 h-4 mt-0.5 flex-shrink-0"
           fill="none"
@@ -63,7 +65,7 @@ export default function OffersPage() {
 
       {/* Error banner */}
       {error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-[#ef4444]">
           {error}
         </div>
       )}

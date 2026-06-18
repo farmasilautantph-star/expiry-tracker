@@ -16,6 +16,7 @@
     "verify": "npx ts-node --project tsconfig.scripts.json scripts/verify.ts"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "bcryptjs": "^2.4.3",
     "date-fns": "^3.6.0",
     "jose": "^6.2.3",
@@ -23,7 +24,6 @@
     "nodemailer": "^6.9.13",
     "react": "^18",
     "react-dom": "^18",
-    "recharts": "^3.8.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

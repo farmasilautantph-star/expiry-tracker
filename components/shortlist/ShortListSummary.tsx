@@ -38,28 +38,28 @@ export default function ShortListSummary({ counts, isLoading }: Props) {
       <Pill
         label="🔴 Expired"
         count={counts.expired}
-        color="bg-red-500/10 border-red-500/20 text-red-400"
+        color="bg-red-50 border-red-200 text-[#ef4444]"
         isLoading={isLoading}
       />
       <Pill
         label="🟠 Critical"
         count={counts.critical}
-        color="bg-orange-500/10 border-orange-500/20 text-orange-400"
+        color="bg-orange-50 border-orange-200 text-[#f97316]"
         isLoading={isLoading}
       />
       <Pill
         label="🟡 Warning"
         count={counts.warning}
-        color="bg-yellow-500/10 border-yellow-500/20 text-yellow-400"
+        color="bg-yellow-50 border-yellow-200 text-[#ca8a04]"
         isLoading={isLoading}
       />
       <Pill
         label="🟢 Safe"
         count={counts.safe}
-        color="bg-green-500/10 border-green-500/20 text-green-400"
+        color="bg-green-50 border-green-200 text-[#16a34a]"
         isLoading={isLoading}
       />
-      <div className="ml-auto flex items-center gap-1.5 text-xs text-gray-500 self-center pr-1">
+      <div className="ml-auto flex items-center gap-1.5 text-xs text-[#64748b] self-center pr-1">
         <svg
           className="w-3.5 h-3.5"
           fill="none"

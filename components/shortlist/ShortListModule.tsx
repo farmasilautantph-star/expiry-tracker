@@ -27,6 +27,7 @@ interface Props {
   onEdit: (id: number, data: ExpiryFormData) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onAddOffer: (data: OfferFormData) => Promise<void>;
+  onRefresh: () => Promise<void>;
 }
 
 export default function ShortListModule({
@@ -42,6 +43,7 @@ export default function ShortListModule({
   onEdit,
   onDelete,
   onAddOffer,
+  onRefresh,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
   const [offeringEntry, setOfferingEntry] = useState<ShortListEntry | null>(
@@ -103,9 +105,11 @@ export default function ShortListModule({
         entries={entries}
         isLoading={isLoading}
         isManager={isManager}
+        currentPicName={picName}
         onEditRequest={setEditingEntry}
         onDeleteRequest={handleDeleteRequest}
         onOfferRequest={setOfferingEntry}
+        onMarkReviewed={onRefresh}
       />
 
       {isManager && (

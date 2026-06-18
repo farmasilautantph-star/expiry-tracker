@@ -1,28 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import type { ShortListEntry } from "@/hooks/useShortList";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
 const BADGE: Record<Urgency, string> = {
-  expired: "bg-red-500/15 text-red-400 border border-red-500/25",
-  critical: "bg-orange-500/15 text-orange-400 border border-orange-500/25",
-  warning: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25",
-  safe: "bg-green-500/15 text-green-400 border border-green-500/25",
+  expired: "bg-red-50 text-[#ef4444] border border-red-200",
+  critical: "bg-orange-50 text-[#f97316] border border-orange-200",
+  warning: "bg-yellow-50 text-[#ca8a04] border border-yellow-200",
+  safe: "bg-green-50 text-[#16a34a] border border-green-200",
 };
 
 function OfferBadge({ entry }: { entry: ShortListEntry }) {
   const { quantity, total_offered, offer_status } = entry;
   if (offer_status === "not-offered") {
-    return <span className="text-xs text-gray-600">—</span>;
+    return <span className="text-xs text-[#cbd5e1]">—</span>;
   }
   const badgeCls =
     total_offered >= quantity
-      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-      : "bg-blue-500/15 text-blue-400 border border-blue-500/25";
+      ? "bg-emerald-50 text-[#059669] border border-emerald-200"
+      : "bg-blue-50 text-[#1e3a8a] border border-blue-200";
   return (
     <span
-      className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${badgeCls}`}
+      className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full ${badgeCls}`}
     >
       {total_offered}/{quantity} offered
     </span>
@@ -43,7 +44,7 @@ function DaysLeftBadge({ entry }: { entry: ShortListEntry }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${BADGE[urgency as Urgency]}`}
+      className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE[urgency as Urgency]}`}
     >
       {(urgency === "expired" || urgency === "critical") && (
         <svg
@@ -64,13 +65,13 @@ function DaysLeftBadge({ entry }: { entry: ShortListEntry }) {
 }
 
 function ReturnBadge({ status }: { status: string | null }) {
-  if (!status) return <span className="text-gray-600 text-xs">—</span>;
+  if (!status) return <span className="text-[#cbd5e1] text-xs">—</span>;
   return (
     <span
       className={`text-xs font-medium px-2 py-0.5 rounded-full ${
         status === "pending"
-          ? "bg-green-500/15 text-green-400 border border-green-500/25"
-          : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+          ? "bg-green-50 text-[#16a34a] border border-green-200"
+          : "bg-[#f1f5f9] text-[#64748b] border border-[#e2e8f0]"
       }`}
     >
       {status === "pending" ? "Return" : "Non-Return"}
@@ -78,31 +79,109 @@ function ReturnBadge({ status }: { status: string | null }) {
   );
 }
 
+function calcReviewInfo(entry: ShortListEntry): {
+  label: string;
+  colorClass: string;
+  statusLabel: string;
+  statusClass: string;
+} {
+  if (entry.return_status === "returned" || entry.quantity === 0) {
+    return {
+      label: "Resolved",
+      colorClass: "text-[#64748b]",
+      statusLabel: "☑️ Resolved",
+      statusClass: "bg-[#f1f5f9] text-[#64748b] border border-[#e2e8f0]",
+    };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const ref = entry.last_reviewed_at ?? entry.logged_at;
+  const refDate = new Date(ref);
+  refDate.setHours(0, 0, 0, 0);
+  const days = Math.floor(
+    (today.getTime() - refDate.getTime()) / 86_400_000,
+  );
+
+  if (days <= 7) {
+    return {
+      label: days === 0 ? "Just now" : `${days}d ago`,
+      colorClass: "text-[#16a34a]",
+      statusLabel: "🟢 Up to date",
+      statusClass: "bg-green-50 text-[#16a34a] border border-green-200",
+    };
+  }
+  if (days <= 14) {
+    return {
+      label: `${days}d ago`,
+      colorClass: "text-[#ca8a04]",
+      statusLabel: "🟡 Needs Review",
+      statusClass: "bg-yellow-50 text-[#ca8a04] border border-yellow-200",
+    };
+  }
+  return {
+    label: entry.last_reviewed_at ? `${days}d ago` : "Never",
+    colorClass: "text-[#ef4444]",
+    statusLabel: "🔴 Critical",
+    statusClass: "bg-red-50 text-[#ef4444] border border-red-200",
+  };
+}
+
 interface Props {
   entries: ShortListEntry[];
   isLoading: boolean;
   isManager: boolean;
+  currentPicName: string;
   onEditRequest: (entry: ShortListEntry) => void;
   onDeleteRequest: (entry: ShortListEntry) => void;
   onOfferRequest: (entry: ShortListEntry) => void;
+  onMarkReviewed?: (id: number) => Promise<void>;
 }
 
 const TH =
-  "sticky top-0 z-10 bg-gray-900 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap border-b border-gray-800";
-const TD = "px-4 py-3";
+  "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap border-b border-[#e2e8f0]";
+const TD = "px-4 py-3 font-medium";
 
 export default function ShortListTable({
   entries,
   isLoading,
   isManager,
+  currentPicName,
   onEditRequest,
   onDeleteRequest,
   onOfferRequest,
+  onMarkReviewed,
 }: Props) {
+  const [reviewingIds, setReviewingIds] = useState<Set<number>>(new Set());
+  const [justReviewedIds, setJustReviewedIds] = useState<Set<number>>(new Set());
+
+  async function handleMarkReviewed(id: number) {
+    setReviewingIds((prev) => { const s = new Set(prev); s.add(id); return s; });
+    try {
+      const res = await fetch(`/api/expiry/${id}/review`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to mark reviewed");
+      setJustReviewedIds((prev) => { const s = new Set(prev); s.add(id); return s; });
+      setTimeout(() => {
+        setJustReviewedIds((prev) => {
+          const s = new Set(prev);
+          s.delete(id);
+          return s;
+        });
+      }, 3000);
+      await onMarkReviewed?.(id);
+    } finally {
+      setReviewingIds((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
+    }
+  }
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
+        <div className="flex items-center gap-3 text-[#64748b]">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
@@ -126,9 +205,9 @@ export default function ShortListTable({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
         <svg
-          className="w-10 h-10 text-gray-700 mb-3"
+          className="w-10 h-10 text-[#cbd5e1] mb-3"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -140,8 +219,8 @@ export default function ShortListTable({
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <p className="text-sm text-gray-500">No items found.</p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-sm text-[#64748b]">No items found.</p>
+        <p className="text-xs text-[#94a3b8] mt-1">
           Try adjusting your filters or adding entries via Log New Expiry.
         </p>
       </div>
@@ -149,10 +228,10 @@ export default function ShortListTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-800">
+    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-900">
+          <tr className="bg-[#f8fafc]">
             <th className={TH}>Date Logged</th>
             <th className={TH}>PIC</th>
             <th className={TH}>Stock ID</th>
@@ -166,45 +245,54 @@ export default function ShortListTable({
             <th className={TH}>Return</th>
             <th className={TH}>Return By</th>
             <th className={TH}>Offered</th>
+            <th className={TH}>Last Review</th>
+            <th className={TH}>Status</th>
+            <th className={TH}>Review</th>
             {isManager && <th className={`${TH} text-right`}>Actions</th>}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800">
+        <tbody className="divide-y divide-[#e2e8f0]">
           {entries.map((entry) => {
             const urgency = entry.urgency as Urgency;
             const rowBg =
               urgency === "expired"
-                ? "bg-red-500/5"
+                ? "bg-red-50/40"
                 : urgency === "critical"
-                  ? "bg-orange-500/5"
+                  ? "bg-orange-50/40"
                   : "";
+
+            const canReview =
+              isManager || entry.pic_name === currentPicName;
+            const isReviewing = reviewingIds.has(entry.id);
+            const justReviewed = justReviewedIds.has(entry.id);
+            const review = calcReviewInfo(entry);
 
             return (
               <tr
                 key={entry.id}
-                className={`hover:bg-gray-800/50 transition-colors ${rowBg}`}
+                className={`hover:bg-[#f0f4ff] transition-colors ${rowBg}`}
               >
-                <td className={`${TD} text-gray-400 whitespace-nowrap`}>
+                <td className={`${TD} text-[#64748b] whitespace-nowrap`}>
                   {formatDate(entry.logged_at)}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  <span className="text-xs font-medium text-gray-300 bg-gray-800 px-2 py-0.5 rounded">
+                  <span className="text-xs font-medium text-[#1e3a8a] bg-[#dbeafe] px-2 py-0.5 rounded">
                     {entry.pic_name}
                   </span>
                 </td>
                 <td
-                  className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
                 >
                   {entry.stock_id ?? "—"}
                 </td>
                 <td
-                  className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
                 >
                   {entry.barcode}
                 </td>
                 <td className={`${TD} max-w-[200px]`}>
                   <span
-                    className="block truncate text-white"
+                    className="block truncate text-[#1e293b] font-medium"
                     title={
                       entry.description +
                       (entry.notes ? ` — ${entry.notes}` : "")
@@ -214,23 +302,25 @@ export default function ShortListTable({
                   </span>
                   {entry.notes && (
                     <span
-                      className="block truncate text-xs text-gray-500 mt-0.5"
+                      className="block truncate text-xs text-[#94a3b8] mt-0.5"
                       title={entry.notes}
                     >
                       {entry.notes}
                     </span>
                   )}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {entry.category}
                 </td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                <td
+                  className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}
+                >
                   {entry.uom ?? "—"}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {entry.quantity}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {formatDate(entry.expiry_date)}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
@@ -239,7 +329,9 @@ export default function ShortListTable({
                 <td className={`${TD} whitespace-nowrap`}>
                   <ReturnBadge status={entry.return_status} />
                 </td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                <td
+                  className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}
+                >
                   {entry.return_status === "pending" && entry.return_by_date
                     ? formatDate(entry.return_by_date)
                     : "—"}
@@ -247,14 +339,67 @@ export default function ShortListTable({
                 <td className={`${TD} whitespace-nowrap`}>
                   <OfferBadge entry={entry} />
                 </td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  <span
+                    className={`text-xs font-medium ${justReviewed ? "text-[#16a34a]" : review.colorClass}`}
+                  >
+                    {justReviewed ? "Just now" : review.label}
+                  </span>
+                </td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full ${justReviewed ? "bg-green-50 text-[#16a34a] border border-green-200" : review.statusClass}`}
+                  >
+                    {justReviewed ? "🟢 Up to date" : review.statusLabel}
+                  </span>
+                </td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  {canReview &&
+                    entry.return_status !== "returned" &&
+                    entry.quantity > 0 && (
+                      <button
+                        onClick={() => handleMarkReviewed(entry.id)}
+                        disabled={isReviewing || justReviewed}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
+                          justReviewed
+                            ? "bg-green-50 text-[#16a34a] border border-green-200 cursor-default"
+                            : "bg-green-50 text-[#16a34a] hover:bg-green-600 hover:text-white border border-green-200 hover:border-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        }`}
+                      >
+                        {isReviewing ? (
+                          <svg
+                            className="animate-spin w-3 h-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                            />
+                          </svg>
+                        ) : (
+                          "✓"
+                        )}
+                        {justReviewed ? "Just now" : "Reviewed"}
+                      </button>
+                    )}
+                </td>
                 {isManager && (
                   <td className={`${TD} whitespace-nowrap`}>
                     <div className="flex items-center justify-end gap-1">
-                      {/* Offer to Outlet button — hidden when fully offered */}
                       {entry.total_offered < entry.quantity && (
                         <button
                           onClick={() => onOfferRequest(entry)}
-                          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-blue-400 hover:text-white hover:bg-blue-600 border border-blue-500/30 hover:border-blue-600 transition-colors"
+                          className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-[#1e3a8a] bg-[#eff6ff] hover:bg-[#1e3a8a] hover:text-white border border-blue-200 hover:border-[#1e3a8a] transition-colors"
                           title={`Offer to Outlet — ${entry.quantity - entry.total_offered} unit${entry.quantity - entry.total_offered === 1 ? "" : "s"} remaining`}
                         >
                           <svg
@@ -275,7 +420,7 @@ export default function ShortListTable({
                       )}
                       <button
                         onClick={() => onEditRequest(entry)}
-                        className="p-1.5 rounded text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                        className="p-1.5 rounded text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#eff6ff] transition-colors"
                         title="Edit"
                       >
                         <svg
@@ -294,7 +439,7 @@ export default function ShortListTable({
                       </button>
                       <button
                         onClick={() => onDeleteRequest(entry)}
-                        className="p-1.5 rounded text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="p-1.5 rounded text-[#64748b] hover:text-[#ef4444] hover:bg-red-50 transition-colors"
                         title="Delete"
                       >
                         <svg

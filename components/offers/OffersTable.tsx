@@ -11,10 +11,10 @@ function formatDate(iso: string | null): string {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  offered: "bg-blue-500/15 text-blue-400 border border-blue-500/25",
-  accepted: "bg-green-500/15 text-green-400 border border-green-500/25",
-  rejected: "bg-red-500/15 text-red-400 border border-red-500/25",
-  completed: "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25",
+  offered: "bg-blue-50 text-[#1e3a8a] border border-blue-200",
+  accepted: "bg-green-50 text-[#16a34a] border border-green-200",
+  rejected: "bg-red-50 text-[#ef4444] border border-red-200",
+  completed: "bg-emerald-50 text-[#059669] border border-emerald-200",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -33,8 +33,8 @@ interface Props {
 }
 
 const TH =
-  "sticky top-0 z-10 bg-gray-900 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap border-b border-gray-800";
-const TD = "px-4 py-3";
+  "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap border-b border-[#e2e8f0]";
+const TD = "px-4 py-3 font-medium";
 
 export default function OffersTable({
   entries,
@@ -48,8 +48,8 @@ export default function OffersTable({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
+        <div className="flex items-center gap-3 text-[#64748b]">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
@@ -73,9 +73,9 @@ export default function OffersTable({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
         <svg
-          className="w-10 h-10 text-gray-700 mb-3"
+          className="w-10 h-10 text-[#cbd5e1] mb-3"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -87,8 +87,8 @@ export default function OffersTable({
             d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"
           />
         </svg>
-        <p className="text-sm text-gray-500">No offers found.</p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-sm text-[#64748b]">No offers found.</p>
+        <p className="text-xs text-[#94a3b8] mt-1">
           Offers are created from Item Short List.
         </p>
       </div>
@@ -97,13 +97,13 @@ export default function OffersTable({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-xl border border-gray-800">
-        <p className="px-4 py-2.5 text-xs text-gray-500 bg-gray-900 border-b border-gray-800">
+      <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+        <p className="px-4 py-2.5 text-xs text-[#64748b] bg-[#f8fafc] border-b border-[#e2e8f0]">
           Showing {entries.length} {entries.length === 1 ? "offer" : "offers"}
         </p>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-900">
+            <tr className="bg-[#f8fafc]">
               <th className={TH}>Date Offered</th>
               <th className={TH}>Stock ID</th>
               <th className={TH}>Barcode</th>
@@ -118,28 +118,28 @@ export default function OffersTable({
               <th className={`${TH} text-right`}>Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-800">
+          <tbody className="divide-y divide-[#e2e8f0]">
             {entries.map((entry) => (
               <tr
                 key={entry.id}
-                className="hover:bg-gray-800/50 transition-colors"
+                className="hover:bg-[#f0f4ff] transition-colors"
               >
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
                   {formatDate(entry.created_at)}
                 </td>
                 <td
-                  className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
                 >
                   {entry.stock_id ?? "—"}
                 </td>
                 <td
-                  className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
                 >
                   {entry.barcode}
                 </td>
                 <td className={`${TD} max-w-[200px]`}>
                   <span
-                    className="block truncate text-white"
+                    className="block truncate text-[#1e293b] font-medium"
                     title={
                       entry.description +
                       (entry.notes ? ` — ${entry.notes}` : "")
@@ -149,23 +149,23 @@ export default function OffersTable({
                   </span>
                   {entry.notes && (
                     <span
-                      className="block truncate text-xs text-gray-500 mt-0.5"
+                      className="block truncate text-xs text-[#94a3b8] mt-0.5"
                       title={entry.notes}
                     >
                       {entry.notes}
                     </span>
                   )}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {entry.category ?? "—"}
                 </td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
                   {entry.uom ?? "—"}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {entry.quantity}
                 </td>
-                <td className={`${TD} text-white whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] font-medium whitespace-nowrap`}>
                   {entry.outlet_name}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
@@ -185,8 +185,8 @@ export default function OffersTable({
                     }
                     className={`p-1.5 rounded-lg transition-colors ${
                       entry.has_alert
-                        ? "text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-                        : "text-gray-600 hover:text-gray-400 hover:bg-gray-800"
+                        ? "text-[#ca8a04] hover:text-[#a16207] hover:bg-yellow-50"
+                        : "text-[#cbd5e1] hover:text-[#64748b] hover:bg-[#f1f5f9]"
                     }`}
                   >
                     <svg
@@ -204,14 +204,14 @@ export default function OffersTable({
                     </svg>
                   </button>
                 </td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
                   —
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
                   <div className="flex items-center justify-end gap-1.5">
                     <button
                       onClick={() => setEditingOffer(entry)}
-                      className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-gray-800 transition-colors"
+                      className="p-1.5 rounded-lg text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#eff6ff] transition-colors"
                       title="Edit"
                     >
                       <svg
@@ -235,13 +235,13 @@ export default function OffersTable({
                             await onDelete(entry.id);
                             setDeletingId(null);
                           }}
-                          className="text-xs px-2 py-1 rounded bg-red-600 text-white hover:bg-red-500 transition-colors"
+                          className="text-xs px-2 py-1 rounded bg-[#ef4444] text-white hover:bg-[#dc2626] transition-colors"
                         >
                           Confirm
                         </button>
                         <button
                           onClick={() => setDeletingId(null)}
-                          className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
+                          className="text-xs px-2 py-1 rounded bg-[#f1f5f9] text-[#64748b] hover:bg-[#e2e8f0] transition-colors"
                         >
                           Cancel
                         </button>
@@ -249,7 +249,7 @@ export default function OffersTable({
                     ) : (
                       <button
                         onClick={() => setDeletingId(entry.id)}
-                        className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-gray-800 transition-colors"
+                        className="p-1.5 rounded-lg text-[#64748b] hover:text-[#ef4444] hover:bg-red-50 transition-colors"
                         title="Delete"
                       >
                         <svg

@@ -24,7 +24,6 @@ const files = fs
 for (const file of files) {
   const migrationPath = path.join(migrationsDir, file);
   console.log(`Running migration: ${file}`);
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const migration = require(migrationPath);
   migration.up(db);
   console.log(`  ✓ ${file} applied`);

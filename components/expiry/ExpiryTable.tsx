@@ -27,10 +27,10 @@ function getUrgency(days: number): Urgency {
 }
 
 const BADGE: Record<Urgency, string> = {
-  expired: "bg-red-500/15 text-red-400 border border-red-500/25",
-  critical: "bg-orange-500/15 text-orange-400 border border-orange-500/25",
-  warning: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/25",
-  safe: "bg-green-500/15 text-green-400 border border-green-500/25",
+  expired: "bg-red-50 text-[#ef4444] border border-red-200",
+  critical: "bg-orange-50 text-[#f97316] border border-orange-200",
+  warning: "bg-yellow-50 text-[#ca8a04] border border-yellow-200",
+  safe: "bg-green-50 text-[#16a34a] border border-green-200",
 };
 
 function formatDisplayDate(iso: string): string {
@@ -66,13 +66,13 @@ function DaysLeftBadge({ expiryDate }: { expiryDate: string }) {
 }
 
 function ReturnBadge({ status }: { status: string | null }) {
-  if (!status) return <span className="text-gray-600 text-xs">—</span>;
+  if (!status) return <span className="text-[#cbd5e1] text-xs">—</span>;
   return (
     <span
       className={`text-xs font-medium px-2 py-0.5 rounded-full ${
         status === "returnable"
-          ? "bg-green-500/15 text-green-400 border border-green-500/25"
-          : "bg-gray-500/15 text-gray-400 border border-gray-500/25"
+          ? "bg-green-50 text-[#16a34a] border border-green-200"
+          : "bg-[#f1f5f9] text-[#64748b] border border-[#e2e8f0]"
       }`}
     >
       {status === "returnable" ? "Returnable" : "Non-Return"}
@@ -81,8 +81,8 @@ function ReturnBadge({ status }: { status: string | null }) {
 }
 
 const TH =
-  "sticky top-0 bg-gray-900 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap";
-const TD = "px-4 py-3";
+  "sticky top-0 bg-[#f8fafc] px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap";
+const TD = "px-4 py-3 font-medium";
 
 export default function ExpiryTable({
   entries,
@@ -92,9 +92,9 @@ export default function ExpiryTable({
 }: Props) {
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
         <svg
-          className="w-10 h-10 text-gray-700 mb-3"
+          className="w-10 h-10 text-[#cbd5e1] mb-3"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -106,8 +106,8 @@ export default function ExpiryTable({
             d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
-        <p className="text-sm text-gray-500">No expiry entries found.</p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-sm text-[#64748b]">No expiry entries found.</p>
+        <p className="text-xs text-[#94a3b8] mt-1">
           Add one using the + Add button above.
         </p>
       </div>
@@ -115,10 +115,10 @@ export default function ExpiryTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-800">
+    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-900 border-b border-gray-800">
+          <tr className="bg-[#f8fafc] border-b border-[#e2e8f0]">
             <th className={TH}>Date Logged</th>
             <th className={TH}>PIC</th>
             <th className={TH}>Stock ID</th>
@@ -130,49 +130,49 @@ export default function ExpiryTable({
             <th className={TH}>Days Left</th>
             <th className={TH}>Return</th>
             {isManager && (
-              <th className="sticky top-0 bg-gray-900 px-4 py-3 text-right text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+              <th className="sticky top-0 bg-[#f8fafc] px-4 py-3 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap">
                 Actions
               </th>
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800">
+        <tbody className="divide-y divide-[#e2e8f0]">
           {entries.map((entry) => {
             const days = getDaysLeft(entry.expiry_date);
             const urgency = getUrgency(days);
             const rowBg =
               urgency === "expired"
-                ? "bg-red-500/5"
+                ? "bg-red-50/40"
                 : urgency === "critical"
-                  ? "bg-orange-500/5"
+                  ? "bg-orange-50/40"
                   : "";
 
             return (
               <tr
                 key={entry.id}
-                className={`hover:bg-gray-800/50 transition-colors ${rowBg}`}
+                className={`hover:bg-[#f0f4ff] transition-colors ${rowBg}`}
               >
-                <td className={`${TD} text-gray-400 whitespace-nowrap`}>
+                <td className={`${TD} text-[#64748b] whitespace-nowrap`}>
                   {formatDisplayDate(entry.logged_at)}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  <span className="text-xs font-medium text-gray-300 bg-gray-800 px-2 py-0.5 rounded">
+                  <span className="text-xs font-medium text-[#1e3a8a] bg-[#dbeafe] px-2 py-0.5 rounded">
                     {entry.pic_name}
                   </span>
                 </td>
                 <td
-                  className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
                 >
                   {entry.stock_id ?? "—"}
                 </td>
                 <td
-                  className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                  className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
                 >
                   {entry.barcode}
                 </td>
                 <td className={`${TD} max-w-[200px]`}>
                   <span
-                    className="block truncate text-white"
+                    className="block truncate text-[#1e293b] font-medium"
                     title={
                       entry.description +
                       (entry.notes ? ` — ${entry.notes}` : "")
@@ -182,20 +182,20 @@ export default function ExpiryTable({
                   </span>
                   {entry.notes && (
                     <span
-                      className="block truncate text-xs text-gray-500 mt-0.5"
+                      className="block truncate text-xs text-[#94a3b8] mt-0.5"
                       title={entry.notes}
                     >
                       {entry.notes}
                     </span>
                   )}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {entry.category}
                 </td>
-                <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+                <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
                   {entry.uom ?? "—"}
                 </td>
-                <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+                <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                   {formatDisplayDate(entry.expiry_date)}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
@@ -209,7 +209,7 @@ export default function ExpiryTable({
                     <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => onEditRequest(entry)}
-                        className="p-1.5 rounded text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
+                        className="p-1.5 rounded text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#eff6ff] transition-colors"
                         title="Edit"
                       >
                         <svg
@@ -228,7 +228,7 @@ export default function ExpiryTable({
                       </button>
                       <button
                         onClick={() => onDeleteRequest(entry)}
-                        className="p-1.5 rounded text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        className="p-1.5 rounded text-[#64748b] hover:text-[#ef4444] hover:bg-red-50 transition-colors"
                         title="Delete"
                       >
                         <svg

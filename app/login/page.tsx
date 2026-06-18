@@ -38,11 +38,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-gradient-to-br from-[#eff6ff] to-[#dbeafe] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
         {/* Logo + title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-600 mb-4 shadow-lg shadow-blue-600/30">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#1e3a8a] mb-4 shadow-lg shadow-blue-900/20">
             <svg
               className="w-7 h-7 text-white"
               fill="none"
@@ -57,17 +57,17 @@ export default function LoginPage() {
               />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-bold text-[#1e293b] tracking-tight">
             Expiry Tracker
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-[#64748b] text-sm mt-1">
             Outlet Inventory Management
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl">
-          <h2 className="text-base font-semibold text-white mb-5">
+        <div className="bg-white border border-[#e2e8f0] rounded-2xl p-8 shadow-xl">
+          <h2 className="text-base font-semibold text-[#1e293b] mb-5">
             Sign in to your account
           </h2>
 
@@ -75,7 +75,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-medium text-gray-400 mb-1.5"
+                className="block text-sm font-medium text-[#374151] mb-1.5"
               >
                 Username
               </label>
@@ -86,7 +86,7 @@ export default function LoginPage() {
                 required
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#1e293b] placeholder-[#94a3b8] text-sm focus:outline-none focus:border-[#3b82f6] focus:ring-2 focus:ring-blue-100 transition"
                 placeholder="Enter your username"
               />
             </div>
@@ -94,7 +94,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-medium text-gray-400 mb-1.5"
+                className="block text-sm font-medium text-[#374151] mb-1.5"
               >
                 Password
               </label>
@@ -105,13 +105,13 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#1e293b] placeholder-[#94a3b8] text-sm focus:outline-none focus:border-[#3b82f6] focus:ring-2 focus:ring-blue-100 transition"
                 placeholder="Enter your password"
               />
             </div>
 
             {error && (
-              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
                 <svg
                   className="w-4 h-4 shrink-0"
                   fill="currentColor"
@@ -130,7 +130,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-sm"
+              className="w-full py-2.5 px-4 rounded-xl bg-[#1e3a8a] hover:bg-[#1e40af] active:bg-[#172554] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-sm"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -162,7 +162,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-gray-600 text-xs mt-6">
+        <p className="text-center text-[#94a3b8] text-xs mt-6">
           © 2025 Expiry Tracker · All rights reserved
         </p>
       </div>

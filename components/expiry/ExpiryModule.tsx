@@ -64,8 +64,8 @@ export default function ExpiryModule({
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
+        <div className="flex items-center gap-3 text-[#64748b]">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"

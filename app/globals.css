@@ -1,3 +1,21 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    background-color: #f0f4ff;
+    color: #1e293b;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 700;
+    color: #1e293b;
+  }
+}

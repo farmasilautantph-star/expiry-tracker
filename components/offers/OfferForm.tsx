@@ -24,9 +24,9 @@ interface Props {
 }
 
 const INPUT =
-  "w-full px-3.5 py-2.5 rounded-lg bg-gray-800 border border-gray-700 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition";
+  "w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#e2e8f0] text-[#1e293b] placeholder-[#94a3b8] text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition";
 const INPUT_RO =
-  "w-full px-3.5 py-2.5 rounded-lg bg-gray-800/40 border border-gray-700 text-gray-400 text-sm cursor-not-allowed";
+  "w-full px-3.5 py-2.5 rounded-lg bg-[#f8fafc] border border-[#e2e8f0] text-[#64748b] text-sm cursor-not-allowed";
 
 function Label({
   children,
@@ -36,9 +36,9 @@ function Label({
   required?: boolean;
 }) {
   return (
-    <label className="block text-xs font-medium text-gray-400 mb-1.5">
+    <label className="block text-xs font-medium text-[#374151] mb-1.5">
       {children}
-      {required && <span className="text-red-400 ml-0.5">*</span>}
+      {required && <span className="text-[#ef4444] ml-0.5">*</span>}
     </label>
   );
 }
@@ -184,20 +184,20 @@ export default function OfferForm({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-lg bg-white rounded-2xl border border-[#e2e8f0] shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-          <h2 className="text-base font-semibold text-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0]">
+          <h2 className="text-lg font-bold text-[#1e293b]">
             {isEditMode ? "Edit Offer" : "Offer to Outlet"}
           </h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-1.5 rounded-lg text-[#64748b] hover:text-[#1e293b] hover:bg-[#f1f5f9] transition-colors"
           >
             <svg
               className="w-4 h-4"
@@ -218,15 +218,15 @@ export default function OfferForm({
         <form onSubmit={handleSubmit}>
           <div className="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
             {error && (
-              <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-[#ef4444]">
                 {error}
               </div>
             )}
 
             {/* Read-only item info (pre-filled from shortlist) */}
             {displayItem && (
-              <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-3">
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4 space-y-3">
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">
                   Item Details
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -294,28 +294,28 @@ export default function OfferForm({
 
             {/* Availability summary */}
             {source && (
-              <div className="rounded-xl border border-gray-700 bg-gray-800/40 p-4 space-y-2">
+              <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-4 space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                  <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wider">
                     Availability
                   </p>
                   <span
-                    className={`text-xs font-bold ${remaining === 0 ? "text-red-400" : "text-green-400"}`}
+                    className={`text-xs font-bold ${remaining === 0 ? "text-[#ef4444]" : "text-[#16a34a]"}`}
                   >
                     {remaining} of {source.quantity} unit
                     {source.quantity === 1 ? "" : "s"} remaining
                   </span>
                 </div>
                 {existingOffers.length > 0 && (
-                  <div className="space-y-1 pt-1 border-t border-gray-700">
-                    <p className="text-xs text-gray-500">Already offered:</p>
+                  <div className="space-y-1 pt-1 border-t border-[#e2e8f0]">
+                    <p className="text-xs text-[#94a3b8]">Already offered:</p>
                     {existingOffers.map((o, i) => (
                       <div
                         key={i}
                         className="flex items-center justify-between text-xs"
                       >
-                        <span className="text-gray-300">{o.outlet_name}</span>
-                        <span className="text-gray-500">
+                        <span className="text-[#1e293b]">{o.outlet_name}</span>
+                        <span className="text-[#94a3b8]">
                           {o.quantity} unit{o.quantity === 1 ? "" : "s"}
                         </span>
                       </div>
@@ -386,8 +386,8 @@ export default function OfferForm({
               onClick={() => setHasAlert((v) => !v)}
               className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                 hasAlert
-                  ? "bg-amber-500/15 border-amber-500/30 text-amber-400"
-                  : "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+                  ? "bg-yellow-50 border-yellow-300 text-[#ca8a04]"
+                  : "bg-white border-[#e2e8f0] text-[#64748b] hover:bg-[#f8fafc] hover:text-[#1e293b]"
               }`}
             >
               <svg
@@ -408,18 +408,18 @@ export default function OfferForm({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-800">
+          <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-[#e2e8f0]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700 transition-colors"
+              className="px-4 py-2 rounded-lg text-sm text-[#64748b] hover:text-[#1e293b] hover:bg-[#f1f5f9] border border-[#e2e8f0] hover:border-[#cbd5e1] transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#1e3a8a] text-white hover:bg-[#1e40af] disabled:opacity-50 transition-colors"
             >
               {saving
                 ? "Saving…"

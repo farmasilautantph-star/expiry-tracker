@@ -5,15 +5,15 @@ import type { HistoryEntry } from "@/hooks/useHistory";
 const ACTION_BADGE: Record<string, { label: string; cls: string }> = {
   CREATE: {
     label: "🟢 Create",
-    cls: "bg-green-500/15 text-green-400 border border-green-500/20",
+    cls: "bg-green-50 text-[#16a34a] border border-green-200",
   },
   UPDATE: {
     label: "🟡 Update",
-    cls: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/20",
+    cls: "bg-yellow-50 text-[#ca8a04] border border-yellow-200",
   },
   DELETE: {
     label: "🔴 Delete",
-    cls: "bg-red-500/15 text-red-400 border border-red-500/20",
+    cls: "bg-red-50 text-[#ef4444] border border-red-200",
   },
 };
 
@@ -63,7 +63,7 @@ export default function HistoryTable({
 }: Props) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24 text-gray-500">
+      <div className="flex items-center justify-center py-24 text-[#64748b] bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
         <svg
           className="w-5 h-5 mr-2 animate-spin"
           fill="none"
@@ -90,9 +90,9 @@ export default function HistoryTable({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-gray-500 gap-2">
+      <div className="flex flex-col items-center justify-center py-24 text-[#64748b] gap-2 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
         <svg
-          className="w-10 h-10 text-gray-700"
+          className="w-10 h-10 text-[#cbd5e1]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -126,41 +126,41 @@ export default function HistoryTable({
   return (
     <div className="flex flex-col gap-4">
       {/* Row count */}
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-[#64748b]">
         Showing {start}–{end} of {total} {total === 1 ? "entry" : "entries"}
       </p>
 
       {/* Table */}
-      <div className="rounded-xl border border-gray-800 overflow-hidden">
+      <div className="rounded-2xl border border-[#e2e8f0] bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-900 border-b border-gray-800 text-left">
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+              <tr className="bg-[#f8fafc] border-b border-[#e2e8f0] text-left">
+                <th className="px-4 py-3 text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap">
                   Timestamp
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-semibold text-[#64748b] uppercase tracking-wider">
                   PIC
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-semibold text-[#64748b] uppercase tracking-wider">
                   Action
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-semibold text-[#64748b] uppercase tracking-wider">
                   Module
                 </th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-3 text-xs font-semibold text-[#64748b] uppercase tracking-wider">
                   Description
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800/60">
+            <tbody className="divide-y divide-[#e2e8f0]">
               {groups.map((g) => (
                 <>
                   {/* Date separator */}
-                  <tr key={`date-${g.date}`} className="bg-gray-900/40">
+                  <tr key={`date-${g.date}`} className="bg-[#f1f5f9]">
                     <td
                       colSpan={5}
-                      className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                      className="px-4 py-2 text-xs font-semibold text-[#64748b] uppercase tracking-wider"
                     >
                       {fmtDate(g.date)}
                     </td>
@@ -168,21 +168,21 @@ export default function HistoryTable({
                   {g.rows.map((entry) => {
                     const action = ACTION_BADGE[entry.action] ?? {
                       label: entry.action,
-                      cls: "bg-gray-800 text-gray-400 border border-gray-700",
+                      cls: "bg-[#f1f5f9] text-[#64748b] border border-[#e2e8f0]",
                     };
                     const moduleLbl =
                       MODULE_BADGE[entry.module] ?? entry.module;
                     return (
                       <tr
                         key={entry.id}
-                        className="hover:bg-gray-900/30 transition-colors"
+                        className="hover:bg-[#f0f4ff] transition-colors"
                       >
-                        <td className="px-4 py-3 text-gray-400 whitespace-nowrap font-mono text-xs">
+                        <td className="px-4 py-3 text-[#64748b] whitespace-nowrap font-mono text-xs">
                           {fmt(entry.timestamp)}
                         </td>
-                        <td className="px-4 py-3 text-white whitespace-nowrap">
+                        <td className="px-4 py-3 text-[#1e293b] whitespace-nowrap">
                           {entry.pic_name ?? (
-                            <span className="text-gray-600">—</span>
+                            <span className="text-[#94a3b8]">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -193,13 +193,13 @@ export default function HistoryTable({
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-[#f1f5f9] text-[#1e293b] border border-[#e2e8f0]">
                             {moduleLbl}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-300 max-w-xs">
+                        <td className="px-4 py-3 text-[#1e293b] max-w-xs">
                           {entry.description ?? (
-                            <span className="text-gray-600">—</span>
+                            <span className="text-[#94a3b8]">—</span>
                           )}
                         </td>
                       </tr>
@@ -218,7 +218,7 @@ export default function HistoryTable({
           <button
             onClick={() => setPage(page - 1)}
             disabled={page <= 1}
-            className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#f0f4ff] border border-[#e2e8f0] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             ← Prev
           </button>
@@ -234,7 +234,7 @@ export default function HistoryTable({
             }, [])
             .map((p, i) =>
               p === "…" ? (
-                <span key={`ellipsis-${i}`} className="px-2 text-gray-600">
+                <span key={`ellipsis-${i}`} className="px-2 text-[#94a3b8]">
                   …
                 </span>
               ) : (
@@ -243,8 +243,8 @@ export default function HistoryTable({
                   onClick={() => setPage(p as number)}
                   className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${
                     p === page
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700"
+                      ? "bg-[#1e3a8a] text-white"
+                      : "text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#f0f4ff] border border-[#e2e8f0]"
                   }`}
                 >
                   {p}
@@ -255,7 +255,7 @@ export default function HistoryTable({
           <button
             onClick={() => setPage(page + 1)}
             disabled={page >= totalPages}
-            className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm text-[#64748b] hover:text-[#1e3a8a] hover:bg-[#f0f4ff] border border-[#e2e8f0] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             Next →
           </button>

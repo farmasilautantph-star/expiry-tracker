@@ -12,20 +12,20 @@ function formatDate(iso: string | null): string {
 function StatusBadge({ entry }: { entry: ReturnEntry }) {
   if (entry.return_status === "returned") {
     return (
-      <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+      <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-[#16a34a] border border-green-200">
         ✅ Returned
       </span>
     );
   }
   if (entry.overdue) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-500/15 text-red-400 border border-red-500/25">
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-[#ef4444] border border-red-200">
         🔴 Overdue
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-400 border border-yellow-500/25">
+    <span className="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-[#ca8a04] border border-yellow-200">
       🟡 Pending
     </span>
   );
@@ -46,17 +46,17 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
       <div className="flex items-center gap-1 group">
         <span
           className={
-            entry.overdue ? "text-red-400 font-medium" : "text-gray-300"
+            entry.overdue ? "text-[#ef4444] font-medium" : "text-[#1e293b]"
           }
         >
           {formatDate(entry.return_by_date)}
           {entry.overdue && (
-            <span className="ml-1 text-xs text-red-400">(overdue)</span>
+            <span className="ml-1 text-xs text-[#ef4444]">(overdue)</span>
           )}
         </span>
         <button
           onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-gray-500 hover:text-blue-400 transition-all"
+          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-[#94a3b8] hover:text-[#1e3a8a] transition-all"
           title="Edit return date"
         >
           <svg
@@ -83,7 +83,7 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
         type="date"
         value={val}
         onChange={(e) => setVal(e.target.value)}
-        className="text-xs px-1.5 py-1 rounded bg-gray-800 border border-blue-500 text-white focus:outline-none"
+        className="text-xs px-1.5 py-1 rounded bg-white border border-[#3b82f6] text-[#1e293b] focus:outline-none"
         autoFocus
       />
       <button
@@ -100,7 +100,7 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
           }
         }}
         disabled={saving}
-        className="text-green-400 hover:text-green-300 disabled:opacity-50"
+        className="text-[#16a34a] hover:text-[#15803d] disabled:opacity-50"
         title="Save"
       >
         <svg
@@ -119,7 +119,7 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
       </button>
       <button
         onClick={() => setEditing(false)}
-        className="text-gray-500 hover:text-gray-300"
+        className="text-[#94a3b8] hover:text-[#1e293b]"
         title="Cancel"
       >
         <svg
@@ -149,8 +149,8 @@ interface Props {
 }
 
 const TH =
-  "sticky top-0 z-10 bg-gray-900 px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap border-b border-gray-800";
-const TD = "px-4 py-3";
+  "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider whitespace-nowrap border-b border-[#e2e8f0]";
+const TD = "px-4 py-3 font-medium";
 
 export default function ReturnsTable({
   entries,
@@ -161,8 +161,8 @@ export default function ReturnsTable({
 }: Props) {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-16">
-        <div className="flex items-center gap-3 text-gray-400">
+      <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
+        <div className="flex items-center gap-3 text-[#64748b]">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
             <circle
               className="opacity-25"
@@ -186,9 +186,9 @@ export default function ReturnsTable({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex flex-col items-center justify-center py-16 text-center bg-white rounded-2xl border border-[#e2e8f0] shadow-sm">
         <svg
-          className="w-10 h-10 text-gray-700 mb-3"
+          className="w-10 h-10 text-[#cbd5e1] mb-3"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -200,10 +200,10 @@ export default function ReturnsTable({
             d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
           />
         </svg>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-[#64748b]">
           No returns found for this period.
         </p>
-        <p className="text-xs text-gray-600 mt-1">
+        <p className="text-xs text-[#94a3b8] mt-1">
           Items appear here when logged as Returnable in Log New Expiry.
         </p>
       </div>
@@ -211,13 +211,13 @@ export default function ReturnsTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-800">
-      <p className="px-4 py-2.5 text-xs text-gray-500 bg-gray-900 border-b border-gray-800">
+    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+      <p className="px-4 py-2.5 text-xs text-[#64748b] bg-[#f8fafc] border-b border-[#e2e8f0]">
         Showing {entries.length} {entries.length === 1 ? "item" : "items"}
       </p>
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-900">
+          <tr className="bg-[#f8fafc]">
             <th className={TH}>Return By</th>
             <th className={TH}>Date Logged</th>
             <th className={TH}>PIC</th>
@@ -230,11 +230,11 @@ export default function ReturnsTable({
             <th className={`${TH} text-right`}>Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800">
+        <tbody className="divide-y divide-[#e2e8f0]">
           {entries.map((entry) => (
             <tr
               key={entry.id}
-              className={`hover:bg-gray-800/50 transition-colors ${entry.overdue ? "bg-red-500/5" : ""}`}
+              className={`hover:bg-[#f0f4ff] transition-colors ${entry.overdue ? "bg-red-50/40" : ""}`}
             >
               <td className={`${TD} whitespace-nowrap`}>
                 {isManager ? (
@@ -243,8 +243,8 @@ export default function ReturnsTable({
                   <span
                     className={
                       entry.overdue
-                        ? "text-red-400 font-medium"
-                        : "text-gray-300"
+                        ? "text-[#ef4444] font-medium"
+                        : "text-[#1e293b]"
                     }
                   >
                     {formatDate(entry.return_by_date)}
@@ -254,34 +254,34 @@ export default function ReturnsTable({
                   </span>
                 )}
               </td>
-              <td className={`${TD} text-gray-400 whitespace-nowrap`}>
+              <td className={`${TD} text-[#64748b] whitespace-nowrap`}>
                 {formatDate(entry.logged_at)}
               </td>
               <td className={`${TD} whitespace-nowrap`}>
-                <span className="text-xs font-medium text-gray-300 bg-gray-800 px-2 py-0.5 rounded">
+                <span className="text-xs font-medium text-[#1e3a8a] bg-[#dbeafe] px-2 py-0.5 rounded">
                   {entry.pic_name}
                 </span>
               </td>
               <td
-                className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
               >
                 {entry.stock_id ?? "—"}
               </td>
               <td
-                className={`${TD} text-gray-400 font-mono text-xs whitespace-nowrap`}
+                className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}
               >
                 {entry.barcode}
               </td>
               <td className={`${TD} max-w-[200px]`}>
                 <span
-                  className="block truncate text-white"
+                  className="block truncate text-[#1e293b] font-medium"
                   title={
                     entry.description + (entry.notes ? ` — ${entry.notes}` : "")
                   }
                 >
                   {entry.overdue && (
                     <svg
-                      className="inline w-3.5 h-3.5 text-red-400 mr-1 flex-shrink-0"
+                      className="inline w-3.5 h-3.5 text-[#ef4444] mr-1 flex-shrink-0"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -292,17 +292,17 @@ export default function ReturnsTable({
                 </span>
                 {entry.notes && (
                   <span
-                    className="block truncate text-xs text-gray-500 mt-0.5"
+                    className="block truncate text-xs text-[#94a3b8] mt-0.5"
                     title={entry.notes}
                   >
                     {entry.notes}
                   </span>
                 )}
               </td>
-              <td className={`${TD} text-gray-300 whitespace-nowrap`}>
+              <td className={`${TD} text-[#1e293b] whitespace-nowrap`}>
                 {entry.category}
               </td>
-              <td className={`${TD} text-gray-400 text-xs whitespace-nowrap`}>
+              <td className={`${TD} text-[#64748b] text-xs whitespace-nowrap`}>
                 {entry.uom ?? "—"}
               </td>
               <td className={`${TD} whitespace-nowrap`}>
@@ -313,7 +313,7 @@ export default function ReturnsTable({
                   {entry.return_status !== "returned" && (
                     <button
                       onClick={() => onMarkReturned(entry.id)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-green-400 hover:text-white hover:bg-green-600 border border-green-500/30 hover:border-green-600 transition-colors"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-[#16a34a] hover:text-white hover:bg-[#16a34a] border border-green-200 hover:border-[#16a34a] transition-colors"
                       title="Mark as Returned"
                     >
                       <svg

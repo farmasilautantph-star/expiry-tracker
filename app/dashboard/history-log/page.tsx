@@ -17,7 +17,7 @@ export default function HistoryLogPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] text-gray-500">
+      <div className="flex items-center justify-center min-h-[50vh] text-[#64748b]">
         <svg
           className="w-5 h-5 mr-2 animate-spin"
           fill="none"
@@ -47,8 +47,8 @@ export default function HistoryLogPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">History Log</h1>
-        <p className="text-sm text-gray-400 mt-1">
+        <h1 className="text-2xl font-bold text-[#1e293b]">History Log</h1>
+        <p className="text-sm text-[#64748b] mt-1">
           Full audit trail of all system activity
         </p>
       </div>
