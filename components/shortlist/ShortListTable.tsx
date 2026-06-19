@@ -14,6 +14,7 @@ import {
   EllipsisVerticalIcon,
 } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
+import Modal from "@/components/ui/Modal";
 import { useToast } from "@/hooks/useToast";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
@@ -160,6 +161,267 @@ function InfoRow({
 
 const stop = (e: React.MouseEvent) => e.stopPropagation();
 
+// ─── ReviewPopupContent ────────────────────────────────────────────────────
+// Module-level component (stable identity). Rendered into the Portal Modal.
+function ReviewPopupContent({
+  entry,
+  isManager,
+  currentPicName,
+  onSwitchToSales,
+  onClose,
+  onReviewed,
+  onSell,
+}: {
+  entry: ShortListEntry;
+  isManager: boolean;
+  currentPicName: string;
+  onSwitchToSales?: () => void;
+  onClose: () => void;
+  onReviewed: () => void;
+  onSell: () => void;
+}) {
+  const isSold = entry.item_status === "sold" || entry.quantity === 0;
+  const isPartial =
+    !isSold &&
+    entry.original_qty != null &&
+    entry.quantity > 0 &&
+    !!entry.notes?.includes("unit(s) sold");
+  const canReview =
+    (isManager || entry.pic_name === currentPicName) &&
+    !isSold &&
+    entry.return_status !== "returned";
+  const canSell = (isManager || entry.pic_name === currentPicName) && !isSold;
+  const unitsPreviouslySold =
+    isPartial && entry.original_qty != null ? entry.original_qty - entry.quantity : null;
+
+  return (
+    <div
+      className="bg-white rounded-2xl shadow-xl"
+      style={{ width: 360, padding: 20, border: "1px solid #e2e8f0", maxWidth: "calc(100vw - 32px)" }}
+    >
+      {/* STATE 2: Fully sold */}
+      {isSold && (
+        <>
+          <p className="text-base font-bold text-[#0f172a] mb-1">Item Fully Sold</p>
+          <div className="mb-4" style={{ height: 1, background: "#f1f5f9" }} />
+          <p className="text-sm font-semibold text-[#0f172a] leading-snug mb-3">{entry.description}</p>
+          <div className="rounded-xl px-3 mb-4" style={{ border: "1px solid #e2e8f0" }}>
+            <InfoRow label="Barcode" value={entry.barcode} />
+            <InfoRow label="Sold By" value={entry.sold_by ?? entry.pic_name} />
+            {entry.sold_at && <InfoRow label="Sold On" value={formatDate(entry.sold_at)} />}
+            <InfoRow
+              label="Original Qty"
+              value={
+                entry.original_qty != null
+                  ? `${entry.original_qty} unit${entry.original_qty !== 1 ? "s" : ""}`
+                  : "—"
+              }
+              last
+            />
+          </div>
+          <div className="rounded-xl px-3 py-3 flex items-start gap-2 mb-4" style={{ background: "#dcfce7" }}>
+            <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-[#16a34a]">This item has been fully sold</p>
+              <p className="text-xs text-[#16a34a] opacity-80 mt-0.5">No further action needed.</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+              style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
+            >
+              Close
+            </button>
+            {onSwitchToSales && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onSwitchToSales();
+                }}
+                className="flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+                style={{ background: "#eff6ff", color: "#2563eb" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#dbeafe")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#eff6ff")}
+              >
+                View Sales Record →
+              </button>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* STATE 1 + STATE 3: Active or partial-sold item */}
+      {!isSold && (
+        <>
+          <p className="text-base font-bold text-[#0f172a] mb-1">Item Review</p>
+          <div className="mb-4" style={{ height: 1, background: "#f1f5f9" }} />
+          <p className="text-base font-bold text-[#0f172a] leading-snug mb-3">{entry.description}</p>
+          <div className="rounded-xl px-3 mb-4" style={{ border: "1px solid #e2e8f0" }}>
+            <InfoRow label="Barcode" value={entry.barcode} />
+            <InfoRow label="Qty" value={`${entry.quantity}${entry.uom ? ` ${entry.uom}` : ""}`} />
+            <InfoRow label="Category" value={entry.category} />
+            <InfoRow label="Expiry" value={formatDate(entry.expiry_date)} />
+            <InfoRow label="Days Left" last>
+              <DaysLeftBadge entry={entry} />
+            </InfoRow>
+          </div>
+          {isPartial && unitsPreviouslySold != null && (
+            <div className="rounded-xl px-3 py-3 mb-4" style={{ background: "#fef9c3" }}>
+              <p className="text-xs font-semibold" style={{ color: "#92400e" }}>⚠️ Partial Sale</p>
+              <p className="text-xs mt-0.5" style={{ color: "#92400e" }}>
+                {unitsPreviouslySold} unit{unitsPreviouslySold !== 1 ? "s" : ""} previously sold ·{" "}
+                {entry.quantity} remaining
+              </p>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={onClose}
+              className="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+              style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
+            >
+              Cancel
+            </button>
+            {canSell && (
+              <button
+                onClick={onSell}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
+                style={{ background: "#dbeafe", color: "#2563eb" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#bfdbfe")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#dbeafe")}
+              >
+                <BanknotesIcon className="w-4 h-4" />
+                Mark Sold
+              </button>
+            )}
+            {canReview && (
+              <button
+                onClick={onReviewed}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-colors"
+                style={{ background: "#22c55e" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#16a34a")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#22c55e")}
+              >
+                <CheckIcon className="w-4 h-4" />
+                Reviewed
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── SellModalContent ──────────────────────────────────────────────────────
+// Module-level component (stable identity). Rendered into the Portal Modal.
+function SellModalContent({
+  entry,
+  unitsSold,
+  setUnitsSold,
+  onClose,
+  onConfirm,
+}: {
+  entry: ShortListEntry;
+  unitsSold: number;
+  setUnitsSold: (n: number) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const maxQty = entry.quantity;
+  const remaining = maxQty - unitsSold;
+  const isFullySold = remaining === 0;
+  const isValid = Number.isInteger(unitsSold) && unitsSold >= 1 && unitsSold <= maxQty;
+  const desc =
+    entry.description.length > 40 ? entry.description.slice(0, 40) + "…" : entry.description;
+  const [ey, em, ed] = entry.expiry_date.split("T")[0].split("-");
+  const expiryFmt = `${ed}/${em}/${ey}`;
+
+  return (
+    <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm p-6 space-y-4">
+      <h3 className="text-base font-semibold text-[#1e293b]">Mark Units as Sold</h3>
+      <div className="rounded-xl bg-[#f8fafc] px-4 py-3 space-y-0.5">
+        <p className="text-sm font-semibold text-[#1e293b] leading-snug">{desc}</p>
+        <p className="text-xs text-[#94a3b8]">{entry.category} · Expiry: {expiryFmt}</p>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1">Total Quantity</p>
+        <p className="text-sm text-[#334155] font-medium">
+          {maxQty} unit{maxQty !== 1 ? "s" : ""} available
+        </p>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1.5">
+          Units Sold <span className="text-[#dc2626]">*</span>
+        </label>
+        <input
+          type="number"
+          min={1}
+          max={maxQty}
+          value={unitsSold}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            setUnitsSold(isNaN(v) ? 1 : v);
+          }}
+          className="w-full px-3 py-2 text-sm rounded-xl font-medium text-[#1e293b] outline-none transition-colors"
+          style={{
+            border: isValid ? "1.5px solid #e2e8f0" : "1.5px solid #dc2626",
+            background: isValid ? "white" : "#fff5f5",
+          }}
+          onFocus={(e) => { if (isValid) e.currentTarget.style.borderColor = "#2563eb"; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = isValid ? "#e2e8f0" : "#dc2626"; }}
+          autoFocus
+        />
+        {!isValid && unitsSold > maxQty && (
+          <p className="text-xs text-[#dc2626] mt-1">Cannot exceed available quantity of {maxQty}</p>
+        )}
+      </div>
+      {isValid && (
+        <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "#f1f5f9" }}>
+          <span className="text-xs font-semibold text-[#64748b]">Remaining after this sale:</span>
+          <span className="text-sm font-bold" style={{ color: isFullySold ? "#16a34a" : "#334155" }}>
+            {remaining} unit{remaining !== 1 ? "s" : ""}
+          </span>
+        </div>
+      )}
+      {isValid && (
+        <div
+          className="rounded-xl px-4 py-3 text-xs font-medium"
+          style={isFullySold ? { background: "#dcfce7", color: "#16a34a" } : { background: "#eff6ff", color: "#2563eb" }}
+        >
+          {isFullySold
+            ? "All units sold — item moves to Sales Record"
+            : `Item stays active with ${remaining} unit${remaining !== 1 ? "s" : ""} remaining`}
+        </div>
+      )}
+      <div className="flex justify-end gap-3 pt-1">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={!isValid}
+          className="px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: "#16a34a" }}
+          onMouseEnter={(e) => { if (isValid) (e.currentTarget as HTMLElement).style.background = "#15803d"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#16a34a"; }}
+        >
+          Confirm Sold
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   entries: ShortListEntry[];
   isLoading: boolean;
@@ -209,15 +471,6 @@ export default function ShortListTable({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [openMenuId]);
-
-  // Reset all overlay state on unmount so no fixed div lingers during navigation
-  useEffect(() => {
-    return () => {
-      setOpenMenuId(null);
-      setReviewConfirmEntry(null);
-      setSellConfirmEntry(null);
-    };
-  }, []);
 
   const { sortConfig, handleSort, clearSort, sortData } = useTableSort();
   const { columnFilters, setColumnFilter, clearColumnFilter, clearAllColumnFilters, filterData, getUniqueValues } =
@@ -334,223 +587,33 @@ export default function ShortListTable({
     <>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      {/* ── Row-click popup ───────────────────────────────────────────────── */}
-      {reviewConfirmEntry && (() => {
-        const entry = reviewConfirmEntry;
-        const isSold    = entry.item_status === "sold" || entry.quantity === 0;
-        const isPartial = !isSold
-          && entry.original_qty != null
-          && entry.quantity > 0
-          && !!entry.notes?.includes("unit(s) sold");
-        const canReview = (isManager || entry.pic_name === currentPicName)
-          && !isSold
-          && entry.return_status !== "returned";
-        const canSell = (isManager || entry.pic_name === currentPicName) && !isSold;
-        const unitsPreviouslySold = isPartial && entry.original_qty != null
-          ? entry.original_qty - entry.quantity
-          : null;
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-            style={{ background: "rgba(0,0,0,0.3)" }}
-            onClick={() => setReviewConfirmEntry(null)}
-          >
-            <div
-              className="bg-white rounded-2xl shadow-xl"
-              style={{ width: 360, padding: 20, border: "1px solid #e2e8f0" }}
-              onClick={stop}
-            >
-              {/* STATE 2: Fully sold */}
-              {isSold && (
-                <>
-                  <p className="text-base font-bold text-[#0f172a] mb-1">Item Fully Sold</p>
-                  <div className="mb-4" style={{ height: 1, background: "#f1f5f9" }} />
-                  <p className="text-sm font-semibold text-[#0f172a] leading-snug mb-3">{entry.description}</p>
-                  <div className="rounded-xl px-3 mb-4" style={{ border: "1px solid #e2e8f0" }}>
-                    <InfoRow label="Barcode" value={entry.barcode} />
-                    <InfoRow label="Sold By" value={entry.sold_by ?? entry.pic_name} />
-                    {entry.sold_at && <InfoRow label="Sold On" value={formatDate(entry.sold_at)} />}
-                    <InfoRow
-                      label="Original Qty"
-                      value={entry.original_qty != null
-                        ? `${entry.original_qty} unit${entry.original_qty !== 1 ? "s" : ""}`
-                        : "—"}
-                      last
-                    />
-                  </div>
-                  <div className="rounded-xl px-3 py-3 flex items-start gap-2 mb-4" style={{ background: "#dcfce7" }}>
-                    <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-semibold text-[#16a34a]">This item has been fully sold</p>
-                      <p className="text-xs text-[#16a34a] opacity-80 mt-0.5">No further action needed.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setReviewConfirmEntry(null)}
-                      className="flex-1 px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                      style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
-                    >
-                      Close
-                    </button>
-                    {onSwitchToSales && (
-                      <button
-                        onClick={() => { setReviewConfirmEntry(null); onSwitchToSales(); }}
-                        className="flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
-                        style={{ background: "#eff6ff", color: "#2563eb" }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#dbeafe")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#eff6ff")}
-                      >
-                        View Sales Record →
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
+      {/* ── Row-click popup (portal-based) ──────────────────────────────── */}
+      <Modal isOpen={reviewConfirmEntry !== null} onClose={() => setReviewConfirmEntry(null)}>
+        {reviewConfirmEntry && (
+          <ReviewPopupContent
+            entry={reviewConfirmEntry}
+            isManager={isManager}
+            currentPicName={currentPicName}
+            onSwitchToSales={onSwitchToSales}
+            onClose={() => setReviewConfirmEntry(null)}
+            onReviewed={confirmMarkReviewed}
+            onSell={openSellFromPopup}
+          />
+        )}
+      </Modal>
 
-              {/* STATE 1 + STATE 3: Active or partial-sold item */}
-              {!isSold && (
-                <>
-                  <p className="text-base font-bold text-[#0f172a] mb-1">Item Review</p>
-                  <div className="mb-4" style={{ height: 1, background: "#f1f5f9" }} />
-                  <p className="text-base font-bold text-[#0f172a] leading-snug mb-3">{entry.description}</p>
-                  <div className="rounded-xl px-3 mb-4" style={{ border: "1px solid #e2e8f0" }}>
-                    <InfoRow label="Barcode" value={entry.barcode} />
-                    <InfoRow label="Qty" value={`${entry.quantity}${entry.uom ? ` ${entry.uom}` : ""}`} />
-                    <InfoRow label="Category" value={entry.category} />
-                    <InfoRow label="Expiry" value={formatDate(entry.expiry_date)} />
-                    <InfoRow label="Days Left" last><DaysLeftBadge entry={entry} /></InfoRow>
-                  </div>
-                  {isPartial && unitsPreviouslySold != null && (
-                    <div className="rounded-xl px-3 py-3 mb-4" style={{ background: "#fef9c3" }}>
-                      <p className="text-xs font-semibold" style={{ color: "#92400e" }}>⚠️ Partial Sale</p>
-                      <p className="text-xs mt-0.5" style={{ color: "#92400e" }}>
-                        {unitsPreviouslySold} unit{unitsPreviouslySold !== 1 ? "s" : ""} previously sold
-                        · {entry.quantity} remaining
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setReviewConfirmEntry(null)}
-                      className="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-                      style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
-                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
-                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
-                    >
-                      Cancel
-                    </button>
-                    {canSell && (
-                      <button
-                        onClick={openSellFromPopup}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
-                        style={{ background: "#dbeafe", color: "#2563eb" }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#bfdbfe")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#dbeafe")}
-                      >
-                        <BanknotesIcon className="w-4 h-4" />
-                        Mark Sold
-                      </button>
-                    )}
-                    {canReview && (
-                      <button
-                        onClick={confirmMarkReviewed}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-colors"
-                        style={{ background: "#22c55e" }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#16a34a")}
-                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#22c55e")}
-                      >
-                        <CheckIcon className="w-4 h-4" />
-                        Reviewed
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Sell modal ────────────────────────────────────────────────────── */}
-      {sellConfirmEntry && (() => {
-        const entry = sellConfirmEntry;
-        const maxQty     = entry.quantity;
-        const remaining  = maxQty - unitsSold;
-        const isFullySold = remaining === 0;
-        const isValid    = Number.isInteger(unitsSold) && unitsSold >= 1 && unitsSold <= maxQty;
-        const desc       = entry.description.length > 40 ? entry.description.slice(0, 40) + "…" : entry.description;
-        const [ey, em, ed] = entry.expiry_date.split("T")[0].split("-");
-        const expiryFmt  = `${ed}/${em}/${ey}`;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
-            <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm p-6 space-y-4">
-              <h3 className="text-base font-semibold text-[#1e293b]">Mark Units as Sold</h3>
-              <div className="rounded-xl bg-[#f8fafc] px-4 py-3 space-y-0.5">
-                <p className="text-sm font-semibold text-[#1e293b] leading-snug">{desc}</p>
-                <p className="text-xs text-[#94a3b8]">{entry.category} · Expiry: {expiryFmt}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1">Total Quantity</p>
-                <p className="text-sm text-[#334155] font-medium">{maxQty} unit{maxQty !== 1 ? "s" : ""} available</p>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1.5">
-                  Units Sold <span className="text-[#dc2626]">*</span>
-                </label>
-                <input
-                  type="number" min={1} max={maxQty} value={unitsSold}
-                  onChange={(e) => { const v = parseInt(e.target.value, 10); setUnitsSold(isNaN(v) ? 1 : v); }}
-                  className="w-full px-3 py-2 text-sm rounded-xl font-medium text-[#1e293b] outline-none transition-colors"
-                  style={{ border: isValid ? "1.5px solid #e2e8f0" : "1.5px solid #dc2626", background: isValid ? "white" : "#fff5f5" }}
-                  onFocus={(e) => { if (isValid) e.currentTarget.style.borderColor = "#2563eb"; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = isValid ? "#e2e8f0" : "#dc2626"; }}
-                  autoFocus
-                />
-                {!isValid && unitsSold > maxQty && (
-                  <p className="text-xs text-[#dc2626] mt-1">Cannot exceed available quantity of {maxQty}</p>
-                )}
-              </div>
-              {isValid && (
-                <div className="rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "#f1f5f9" }}>
-                  <span className="text-xs font-semibold text-[#64748b]">Remaining after this sale:</span>
-                  <span className="text-sm font-bold" style={{ color: isFullySold ? "#16a34a" : "#334155" }}>
-                    {remaining} unit{remaining !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              )}
-              {isValid && (
-                <div className="rounded-xl px-4 py-3 text-xs font-medium"
-                  style={isFullySold ? { background: "#dcfce7", color: "#16a34a" } : { background: "#eff6ff", color: "#2563eb" }}>
-                  {isFullySold
-                    ? "All units sold — item moves to Sales Record"
-                    : `Item stays active with ${remaining} unit${remaining !== 1 ? "s" : ""} remaining`}
-                </div>
-              )}
-              <div className="flex justify-end gap-3 pt-1">
-                <button
-                  onClick={() => setSellConfirmEntry(null)}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmSell}
-                  disabled={!isValid}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ background: "#16a34a" }}
-                  onMouseEnter={(e) => { if (isValid) (e.currentTarget as HTMLElement).style.background = "#15803d"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#16a34a"; }}
-                >
-                  Confirm Sold
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* ── Sell modal (portal-based) ───────────────────────────────────── */}
+      <Modal isOpen={sellConfirmEntry !== null} onClose={() => setSellConfirmEntry(null)}>
+        {sellConfirmEntry && (
+          <SellModalContent
+            entry={sellConfirmEntry}
+            unitsSold={unitsSold}
+            setUnitsSold={setUnitsSold}
+            onClose={() => setSellConfirmEntry(null)}
+            onConfirm={confirmSell}
+          />
+        )}
+      </Modal>
 
       {/* Sort/filter toolbar */}
       {hasActiveState && (
