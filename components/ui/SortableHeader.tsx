@@ -38,9 +38,14 @@ export default function SortableHeader({
   const [pending, setPending] = useState<string[]>(activeFilters);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Keep latest activeFilters in a ref so the click-outside handler can read
+  // it without becoming a dependency of the effect. Depending directly on
+  // activeFilters (an array prop) caused an infinite render loop when the
+  // parent passed `... ?? []` and the empty-array reference changed each render.
+  const activeFiltersRef = useRef(activeFilters);
   useEffect(() => {
-    if (!filterOpen) setPending(activeFilters);
-  }, [activeFilters, filterOpen]);
+    activeFiltersRef.current = activeFilters;
+  });
 
   // Close on click outside
   useEffect(() => {
@@ -49,12 +54,12 @@ export default function SortableHeader({
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setFilterOpen(false);
         setSearch("");
-        setPending(activeFilters);
+        setPending(activeFiltersRef.current);
       }
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [filterOpen, activeFilters]);
+  }, [filterOpen]);
 
   function openFilter(e: React.MouseEvent) {
     e.stopPropagation();

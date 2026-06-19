@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ShortListEntry } from "@/hooks/useShortList";
 import { useTableSort } from "@/hooks/useTableSort";
 import { useTableFilter } from "@/hooks/useTableFilter";
@@ -436,6 +436,10 @@ interface Props {
 
 const TH_BASE = "sticky top-0 z-10 px-5 py-3 text-left whitespace-nowrap";
 
+// Stable empty array. Reuse for activeFilters fallback so SortableHeader's
+// effects don't see a fresh `[]` reference on every parent render.
+const EMPTY_FILTER: string[] = [];
+
 export default function ShortListTable({
   entries,
   isLoading,
@@ -490,6 +494,17 @@ export default function ShortListTable({
     const filtered = filterData(augmented as unknown as Record<string, unknown>[]) as typeof augmented;
     return sortData(filtered as unknown as Record<string, unknown>[]) as typeof augmented;
   }, [augmented, filterData, sortData]);
+
+  // Stable per-column filter handler so SortableHeader receives the same
+  // function reference each render.
+  const handleColumnFilter = useCallback(
+    (col: string, vals: string[]) => setColumnFilter(col, vals),
+    [setColumnFilter],
+  );
+  const onFilterPic      = useCallback((v: string[]) => handleColumnFilter("pic_name", v),     [handleColumnFilter]);
+  const onFilterCategory = useCallback((v: string[]) => handleColumnFilter("category", v),     [handleColumnFilter]);
+  const onFilterUom      = useCallback((v: string[]) => handleColumnFilter("uom", v),          [handleColumnFilter]);
+  const onFilterReturn   = useCallback((v: string[]) => handleColumnFilter("return_label", v), [handleColumnFilter]);
 
   const hasActiveSort    = !!sortConfig.column;
   const hasActiveFilters = Object.keys(columnFilters).length > 0;
@@ -663,8 +678,8 @@ export default function ShortListTable({
                   <th className={TH_BASE} style={colBg("pic_name")}>
                     <SortableHeader label="PIC" column="pic_name" sortConfig={sortConfig} onSort={handleSort}
                       filterable filterValues={picValues}
-                      activeFilters={columnFilters["pic_name"] ?? []}
-                      onFilter={(v) => setColumnFilter("pic_name", v)} />
+                      activeFilters={columnFilters["pic_name"] ?? EMPTY_FILTER}
+                      onFilter={onFilterPic} />
                   </th>
                   <th className={TH_BASE} style={colBg("stock_id")}>
                     <SortableHeader label="Stock ID" column="stock_id" sortConfig={sortConfig} onSort={handleSort} />
@@ -678,14 +693,14 @@ export default function ShortListTable({
                   <th className={TH_BASE} style={colBg("category")}>
                     <SortableHeader label="Category" column="category" sortConfig={sortConfig} onSort={handleSort}
                       filterable filterValues={categoryValues}
-                      activeFilters={columnFilters["category"] ?? []}
-                      onFilter={(v) => setColumnFilter("category", v)} />
+                      activeFilters={columnFilters["category"] ?? EMPTY_FILTER}
+                      onFilter={onFilterCategory} />
                   </th>
                   <th className={TH_BASE} style={{ background: "#f8fafc" }}>
                     <SortableHeader label="UOM" column="uom" sortConfig={sortConfig} onSort={handleSort}
                       filterable filterValues={uomValues}
-                      activeFilters={columnFilters["uom"] ?? []}
-                      onFilter={(v) => setColumnFilter("uom", v)} />
+                      activeFilters={columnFilters["uom"] ?? EMPTY_FILTER}
+                      onFilter={onFilterUom} />
                   </th>
                   <th className={TH_BASE} style={colBg("quantity")}>
                     <SortableHeader label="Qty" column="quantity" sortConfig={sortConfig} onSort={handleSort} />
@@ -699,8 +714,8 @@ export default function ShortListTable({
                   <th className={TH_BASE} style={{ background: "#f8fafc" }}>
                     <SortableHeader label="Return" column="return_label" sortConfig={sortConfig} onSort={handleSort}
                       filterable filterValues={returnValues}
-                      activeFilters={columnFilters["return_label"] ?? []}
-                      onFilter={(v) => setColumnFilter("return_label", v)} />
+                      activeFilters={columnFilters["return_label"] ?? EMPTY_FILTER}
+                      onFilter={onFilterReturn} />
                   </th>
                   <th className={TH_BASE} style={{ background: "#f8fafc", width: 40 }} />
                 </tr>
