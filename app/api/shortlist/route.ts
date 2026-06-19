@@ -16,8 +16,15 @@ interface ExpiryRow {
   notes: string | null;
   stock_id: string | null;
   uom: string | null;
+  quantity: number;
   return_status: string | null;
   return_by_date: string | null;
+  original_qty: number | null;
+  sold_at: string | null;
+  sold_by: string | null;
+  item_status: "active" | "sold" | "completed";
+  last_reviewed_at: string | null;
+  last_reviewed_by: string | null;
 }
 
 interface RawRow extends ExpiryRow {

@@ -154,6 +154,7 @@ export default function ShortListPage() {
           onDelete={handleDelete}
           onAddOffer={handleAddOffer}
           onRefresh={refresh}
+          onSwitchToSales={() => setActiveTab("sales")}
         />
       ) : (
         <SalesRecord

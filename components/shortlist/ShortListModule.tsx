@@ -28,6 +28,7 @@ interface Props {
   onDelete: (id: number) => Promise<void>;
   onAddOffer: (data: OfferFormData) => Promise<void>;
   onRefresh: () => Promise<void>;
+  onSwitchToSales?: () => void;
 }
 
 export default function ShortListModule({
@@ -44,6 +45,7 @@ export default function ShortListModule({
   onDelete,
   onAddOffer,
   onRefresh,
+  onSwitchToSales,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
   const [offeringEntry, setOfferingEntry] = useState<ShortListEntry | null>(
@@ -110,6 +112,7 @@ export default function ShortListModule({
         onDeleteRequest={handleDeleteRequest}
         onOfferRequest={setOfferingEntry}
         onMarkReviewed={onRefresh}
+        onSwitchToSales={onSwitchToSales}
       />
 
       {isManager && (
