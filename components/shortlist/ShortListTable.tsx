@@ -16,9 +16,9 @@ import { useToast } from "@/hooks/useToast";
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
 const BADGE_STYLE: Record<Urgency, { bg: string; color: string; dotColor: string; fontWeight: number }> = {
-  expired:  { bg: "#dc2626", color: "#ffffff", dotColor: "#ffffff", fontWeight: 700 },
-  critical: { bg: "#ea580c", color: "#ffffff", dotColor: "#ffffff", fontWeight: 700 },
-  warning:  { bg: "#fef3c7", color: "#92400e", dotColor: "#92400e", fontWeight: 600 },
+  expired:  { bg: "#fee2e2", color: "#dc2626", dotColor: "#dc2626", fontWeight: 600 },
+  critical: { bg: "#ffedd5", color: "#ea580c", dotColor: "#ea580c", fontWeight: 600 },
+  warning:  { bg: "#fef9c3", color: "#ca8a04", dotColor: "#ca8a04", fontWeight: 600 },
   safe:     { bg: "#dcfce7", color: "#16a34a", dotColor: "#16a34a", fontWeight: 600 },
 };
 
