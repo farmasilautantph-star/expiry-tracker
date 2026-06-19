@@ -6,9 +6,15 @@ Core rules that govern how the Expiry Tracker behaves.
 | Status | Condition | Colour |
 |--------|-----------|--------|
 | Expired | expiry_date < today | 🔴 Red |
-| Critical | expiry_date ≤ 7 days from today | 🟠 Orange |
-| Warning | expiry_date 8–30 days from today | 🟡 Yellow |
-| Safe | expiry_date > 30 days from today | 🟢 Green |
+| Critical | 0–89 days from today | 🟠 Orange |
+| Warning | 90–240 days from today | 🟡 Yellow |
+| Safe | > 240 days from today | 🟢 Green |
+
+Days-left badge display:
+- Expired → "Expired"
+- 0 days → "Today"
+- 1–30 days → "Xd left"
+- > 30 days → "Xm left" (rounded months)
 
 ## Reminder Rules
 - Stock reminder: includes all items with status Expired or Critical

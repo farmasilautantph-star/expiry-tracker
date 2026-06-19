@@ -109,9 +109,9 @@ export default function ShortListFilters({
         >
           <option value="">All Statuses</option>
           <option value="expired">Expired</option>
-          <option value="critical">Critical (7d)</option>
-          <option value="warning">Warning (30d)</option>
-          <option value="safe">Safe</option>
+          <option value="critical">Critical (&lt; 3 months)</option>
+          <option value="warning">Warning (3–8 months)</option>
+          <option value="safe">Safe (&gt; 8 months)</option>
         </select>
         <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
       </div>

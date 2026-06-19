@@ -83,6 +83,21 @@ Own the SQLite database schema, migrations, and data integrity for the Expiry Tr
 - Use `CREATE TABLE IF NOT EXISTS`
 - Test migration on fresh DB before committing
 
+## Urgency Thresholds
+| Status | Condition |
+|--------|-----------|
+| Expired | days_left < 0 |
+| Critical | 0 ≤ days_left < 90 |
+| Warning | 90 ≤ days_left ≤ 240 |
+| Safe | days_left > 240 |
+
+These thresholds must be consistent across:
+- `app/api/shortlist/route.ts` (calcUrgency)
+- `app/api/expiry/stats/route.ts`
+- `app/api/dashboard/weekly/route.ts` (SQL CASE)
+- `scripts/expiry-check.ts`
+- `components/expiry/ExpiryTable.tsx` (getUrgency)
+
 ## Integrity Checks
 Run `/check-db` to verify:
 - All expected tables exist

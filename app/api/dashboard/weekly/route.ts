@@ -34,10 +34,10 @@ export async function GET(req: NextRequest) {
       (8 - CAST((julianday('now') - julianday(logged_at)) / 7 AS INTEGER)) AS week_num,
       SUM(CASE WHEN date(expiry_date) < date('now') THEN 1 ELSE 0 END) AS expired,
       SUM(CASE WHEN date(expiry_date) >= date('now')
-               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) <= 7
+               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) < 90
                THEN 1 ELSE 0 END) AS critical,
-      SUM(CASE WHEN CAST(julianday(expiry_date) - julianday('now') AS INTEGER) > 7
-               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) <= 30
+      SUM(CASE WHEN CAST(julianday(expiry_date) - julianday('now') AS INTEGER) >= 90
+               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) <= 240
                THEN 1 ELSE 0 END) AS warning
     FROM expiry_logs
     WHERE logged_at >= datetime('now', '-56 days')

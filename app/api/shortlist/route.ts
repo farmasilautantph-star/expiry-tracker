@@ -51,9 +51,9 @@ function calcUrgency(expiryDate: string): {
 
   let urgency: Urgency;
   if (days_left < 0) urgency = "expired";
-  else if (days_left <= 7) urgency = "critical";
-  else if (days_left <= 30) urgency = "warning";
-  else urgency = "safe";
+  else if (days_left < 90) urgency = "critical";   // 0–89 days
+  else if (days_left <= 240) urgency = "warning";  // 90–240 days
+  else urgency = "safe";                            // >240 days
 
   return { days_left, urgency };
 }

@@ -32,10 +32,10 @@ const rows = db
 const today = new Date();
 today.setHours(0, 0, 0, 0);
 
-const in7 = new Date(today);
-in7.setDate(today.getDate() + 7);
-const in30 = new Date(today);
-in30.setDate(today.getDate() + 30);
+const in90 = new Date(today);
+in90.setDate(today.getDate() + 90);
+const in240 = new Date(today);
+in240.setDate(today.getDate() + 240);
 
 const buckets = {
   expired: [] as ExpiryRow[],
@@ -48,8 +48,8 @@ for (const row of rows) {
   const d = new Date(row.expiry_date);
   d.setHours(0, 0, 0, 0);
   if (d < today) buckets.expired.push(row);
-  else if (d <= in7) buckets.critical.push(row);
-  else if (d <= in30) buckets.warning.push(row);
+  else if (d < in90) buckets.critical.push(row);
+  else if (d <= in240) buckets.warning.push(row);
   else buckets.safe.push(row);
 }
 
@@ -75,7 +75,7 @@ if (buckets.expired.length > 0) {
 }
 
 if (buckets.critical.length > 0) {
-  console.log(`\n🟠 CRITICAL — ≤7 days (${buckets.critical.length})`);
+  console.log(`\n🟠 CRITICAL — <90 days (${buckets.critical.length})`);
   for (const r of buckets.critical) {
     const days = daysUntil(r.expiry_date);
     console.log(
@@ -85,7 +85,7 @@ if (buckets.critical.length > 0) {
 }
 
 if (buckets.warning.length > 0) {
-  console.log(`\n🟡 WARNING — ≤30 days (${buckets.warning.length})`);
+  console.log(`\n🟡 WARNING — 90–240 days (${buckets.warning.length})`);
   for (const r of buckets.warning) {
     const days = daysUntil(r.expiry_date);
     console.log(
@@ -95,7 +95,7 @@ if (buckets.warning.length > 0) {
 }
 
 if (buckets.safe.length > 0) {
-  console.log(`\n🟢 SAFE — >30 days (${buckets.safe.length})`);
+  console.log(`\n🟢 SAFE — >240 days (${buckets.safe.length})`);
   for (const r of buckets.safe) {
     const days = daysUntil(r.expiry_date);
     console.log(

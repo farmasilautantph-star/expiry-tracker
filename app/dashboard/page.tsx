@@ -197,21 +197,21 @@ export default function DashboardPage() {
           <StatCard
             label="CRITICAL"
             value={stats?.critical ?? null}
-            description="Expiring within 7 days"
+            description="Expiring within 3 months"
             color="#ea580c"
             trend={weeklyTrend?.critical}
           />
           <StatCard
             label="WARNING"
             value={stats?.warning ?? null}
-            description="Expiring in 8–30 days"
+            description="3 to 8 months left"
             color="#d97706"
             trend={weeklyTrend?.warning}
           />
           <StatCard
             label="SAFE"
             value={stats?.safe ?? null}
-            description="More than 30 days left"
+            description="More than 8 months left"
             color="#16a34a"
             trendInverse
           />

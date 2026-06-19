@@ -87,9 +87,10 @@ const TD = "px-5 py-3.5 font-medium";
 interface Props {
   isManager: boolean;
   picName: string;
+  onCountChange?: (count: number) => void;
 }
 
-export default function CompletedItemsTable({ isManager, picName }: Props) {
+export default function CompletedItemsTable({ isManager, picName, onCountChange }: Props) {
   const [entries, setEntries] = useState<CompletedEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +115,7 @@ export default function CompletedItemsTable({ isManager, picName }: Props) {
       const json = await res.json();
       if (!json.success) throw new Error(json.error ?? "Unknown error");
       setEntries(json.data);
+      onCountChange?.(json.data.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {

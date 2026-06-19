@@ -32,11 +32,11 @@ export async function GET(req: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const in7 = new Date(today);
-  in7.setDate(today.getDate() + 7);
+  const in90 = new Date(today);
+  in90.setDate(today.getDate() + 90);
 
-  const in30 = new Date(today);
-  in30.setDate(today.getDate() + 30);
+  const in240 = new Date(today);
+  in240.setDate(today.getDate() + 240);
 
   let expired = 0;
   let critical = 0;
@@ -49,12 +49,12 @@ export async function GET(req: NextRequest) {
 
     if (d < today) {
       expired++;
-    } else if (d <= in7) {
-      critical++;
-    } else if (d <= in30) {
-      warning++;
+    } else if (d < in90) {
+      critical++;   // 0–89 days
+    } else if (d <= in240) {
+      warning++;    // 90–240 days
     } else {
-      safe++;
+      safe++;       // >240 days
     }
   }
 

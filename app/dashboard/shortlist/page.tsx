@@ -11,6 +11,7 @@ import type { OfferFormData } from "@/hooks/useOffers";
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
   const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
+  const [completedCount, setCompletedCount] = useState<number | null>(null);
   const {
     entries,
     counts,
@@ -98,31 +99,34 @@ export default function ShortListPage() {
       </div>
 
       {/* Tab nav */}
-      <div className="flex border-b border-[#e2e8f0] gap-6">
+      <div className="flex border-b border-[#e2e8f0]">
         <button
           onClick={() => setActiveTab("active")}
-          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
             activeTab === "active"
               ? "border-[#2563eb] text-[#2563eb]"
-              : "border-transparent text-[#64748b] hover:text-[#334155]"
+              : "border-transparent text-[#94a3b8] hover:text-[#475569]"
           }`}
         >
-          Active Items{" "}
-          {counts.total > 0 && (
-            <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
-              {counts.total}
-            </span>
-          )}
+          Item Status
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
+            {counts.total}
+          </span>
         </button>
         <button
           onClick={() => setActiveTab("completed")}
-          className={`pb-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+          className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
             activeTab === "completed"
               ? "border-[#2563eb] text-[#2563eb]"
-              : "border-transparent text-[#64748b] hover:text-[#334155]"
+              : "border-transparent text-[#94a3b8] hover:text-[#475569]"
           }`}
         >
           Completed Items
+          {completedCount !== null && (
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
+              {completedCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -151,7 +155,11 @@ export default function ShortListPage() {
           onRefresh={refresh}
         />
       ) : (
-        <CompletedItemsTable isManager={isManager} picName={user.picName} />
+        <CompletedItemsTable
+          isManager={isManager}
+          picName={user.picName}
+          onCountChange={setCompletedCount}
+        />
       )}
     </div>
   );

@@ -15,11 +15,11 @@ import { useToast } from "@/hooks/useToast";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
-const BADGE_STYLE: Record<Urgency, { bg: string; color: string }> = {
-  expired: { bg: "#fee2e2", color: "#dc2626" },
-  critical: { bg: "#ffedd5", color: "#ea580c" },
-  warning: { bg: "#fef3c7", color: "#d97706" },
-  safe: { bg: "#dcfce7", color: "#16a34a" },
+const BADGE_STYLE: Record<Urgency, { bg: string; color: string; dotColor: string; fontWeight: number }> = {
+  expired:  { bg: "#dc2626", color: "#ffffff", dotColor: "#ffffff", fontWeight: 700 },
+  critical: { bg: "#ea580c", color: "#ffffff", dotColor: "#ffffff", fontWeight: 700 },
+  warning:  { bg: "#fef3c7", color: "#92400e", dotColor: "#92400e", fontWeight: 600 },
+  safe:     { bg: "#dcfce7", color: "#16a34a", dotColor: "#16a34a", fontWeight: 600 },
 };
 
 function Dot({ color }: { color: string }) {
@@ -34,13 +34,13 @@ function Dot({ color }: { color: string }) {
 function StatusBadge({ status, urgency }: { status: string; urgency?: Urgency }) {
   const style = urgency
     ? BADGE_STYLE[urgency]
-    : { bg: "#f1f5f9", color: "#475569" };
+    : { bg: "#f1f5f9", color: "#475569", dotColor: "#94a3b8", fontWeight: 600 };
   return (
     <span
       className="badge"
-      style={{ background: style.bg, color: style.color }}
+      style={{ background: style.bg, color: style.color, fontWeight: style.fontWeight }}
     >
-      <Dot color={style.color} />
+      <Dot color={style.dotColor} />
       {status}
     </span>
   );
@@ -71,19 +71,21 @@ function formatDate(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+function formatDaysLeft(days_left: number): string {
+  if (days_left < 0) return "Expired";
+  if (days_left === 0) return "Today";
+  if (days_left <= 30) return `${days_left}d left`;
+  return `${Math.round(days_left / 30)}m left`;
+}
+
 function DaysLeftBadge({ entry }: { entry: ShortListEntry }) {
   const { days_left, urgency } = entry;
   const u = urgency as Urgency;
   const style = BADGE_STYLE[u] ?? BADGE_STYLE.safe;
-  let label: string;
-  if (days_left < 0) label = `${Math.abs(days_left)}d ago`;
-  else if (days_left === 0) label = "Today";
-  else label = `${days_left}d`;
-
   return (
-    <span className="badge" style={{ background: style.bg, color: style.color }}>
-      <Dot color={style.color} />
-      {label}
+    <span className="badge" style={{ background: style.bg, color: style.color, fontWeight: style.fontWeight }}>
+      <Dot color={style.dotColor} />
+      {formatDaysLeft(days_left)}
     </span>
   );
 }

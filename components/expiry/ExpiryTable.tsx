@@ -26,16 +26,16 @@ type Urgency = "expired" | "critical" | "warning" | "safe";
 
 function getUrgency(days: number): Urgency {
   if (days < 0) return "expired";
-  if (days <= 7) return "critical";
-  if (days <= 30) return "warning";
+  if (days < 90) return "critical";
+  if (days <= 240) return "warning";
   return "safe";
 }
 
-const BADGE_STYLE: Record<Urgency, { bg: string; color: string }> = {
-  expired: { bg: "#fee2e2", color: "#dc2626" },
-  critical: { bg: "#ffedd5", color: "#ea580c" },
-  warning: { bg: "#fef3c7", color: "#d97706" },
-  safe: { bg: "#dcfce7", color: "#16a34a" },
+const BADGE_STYLE: Record<Urgency, { bg: string; color: string; dotColor: string; fontWeight: number }> = {
+  expired:  { bg: "#dc2626", color: "#ffffff", dotColor: "#ffffff", fontWeight: 700 },
+  critical: { bg: "#ea580c", color: "#ffffff", dotColor: "#ffffff", fontWeight: 700 },
+  warning:  { bg: "#fef3c7", color: "#92400e", dotColor: "#92400e", fontWeight: 600 },
+  safe:     { bg: "#dcfce7", color: "#16a34a", dotColor: "#16a34a", fontWeight: 600 },
 };
 
 function Dot({ color }: { color: string }) {
@@ -58,13 +58,14 @@ function DaysLeftBadge({ expiryDate }: { expiryDate: string }) {
   const style = BADGE_STYLE[urgency];
 
   let label: string;
-  if (days < 0) label = `${Math.abs(days)}d ago`;
+  if (days < 0) label = "Expired";
   else if (days === 0) label = "Today";
-  else label = `${days}d`;
+  else if (days <= 30) label = `${days}d left`;
+  else label = `${Math.round(days / 30)}m left`;
 
   return (
-    <span className="badge" style={{ background: style.bg, color: style.color }}>
-      <Dot color={style.color} />
+    <span className="badge" style={{ background: style.bg, color: style.color, fontWeight: style.fontWeight }}>
+      <Dot color={style.dotColor} />
       {label}
     </span>
   );
