@@ -184,6 +184,7 @@ export default function ShortListTable({
   const [reviewingIds, setReviewingIds] = useState<Set<number>>(new Set());
   const [justReviewedIds, setJustReviewedIds] = useState<Set<number>>(new Set());
   const [sellingIds, setSellingIds] = useState<Set<number>>(new Set());
+  const [sellConfirmEntry, setSellConfirmEntry] = useState<ShortListEntry | null>(null);
   const { toasts, showSuccess, showError, dismiss } = useToast();
 
   async function handleMarkReviewed(id: number) {
@@ -210,10 +211,13 @@ export default function ShortListTable({
   }
 
   async function handleMarkSold(entry: ShortListEntry) {
-    const confirmed = window.confirm(
-      `Mark "${entry.description}" as sold? This will move it to Completed Items.`,
-    );
-    if (!confirmed) return;
+    setSellConfirmEntry(entry);
+  }
+
+  async function confirmSell() {
+    if (!sellConfirmEntry) return;
+    const entry = sellConfirmEntry;
+    setSellConfirmEntry(null);
     setSellingIds((prev) => { const s = new Set(prev); s.add(entry.id); return s; });
     try {
       const res = await fetch(`/api/expiry/${entry.id}/sell`, { method: "POST" });
@@ -256,6 +260,37 @@ export default function ShortListTable({
   return (
     <>
     <Toast toasts={toasts} onDismiss={dismiss} />
+
+    {/* Sell confirm modal */}
+    {sellConfirmEntry && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
+        <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm p-6 space-y-5">
+          <h3 className="text-base font-semibold text-[#1e293b]">Confirm Item Sold</h3>
+          <p className="text-sm text-[#64748b]">
+            Mark{" "}
+            <span className="font-semibold text-[#334155]">
+              {sellConfirmEntry.description}
+            </span>{" "}
+            as fully sold? This will move it to Completed.
+          </p>
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              onClick={() => setSellConfirmEntry(null)}
+              className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmSell}
+              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#16a34a] hover:bg-[#15803d] transition-colors"
+            >
+              Confirm Sold
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>

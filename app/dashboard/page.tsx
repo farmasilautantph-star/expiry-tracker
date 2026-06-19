@@ -8,13 +8,11 @@ import ExpiryForm from "@/components/expiry/ExpiryForm";
 import SystemHealthCard from "@/components/dashboard/SystemHealthCard";
 import StaleItemsCard from "@/components/dashboard/StaleItemsCard";
 import CompletionRateCard from "@/components/dashboard/CompletionRateCard";
+import WeeklyExpiryChart from "@/components/dashboard/WeeklyExpiryChart";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 import {
   ClipboardDocumentListIcon,
   PlusIcon,
-  ExclamationTriangleIcon,
-  ClockIcon,
-  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
 interface Stats {
@@ -24,56 +22,63 @@ interface Stats {
   safe: number;
 }
 
+interface WeeklyData {
+  week: string;
+  expired: number;
+  critical: number;
+  warning: number;
+}
+
+interface Trend {
+  expired: number;
+  critical: number;
+  warning: number;
+}
+
 interface StatCardProps {
   label: string;
   value: number | null;
   description: string;
-  topBorderColor: string;
-  gradientBg: string;
-  labelColor: string;
-  valueColor: string;
-  iconBg: string;
-  icon: React.ReactNode;
+  color: string;
+  trend?: number;
+  trendInverse?: boolean;
 }
 
-function StatCard({
-  label,
-  value,
-  description,
-  topBorderColor,
-  gradientBg,
-  labelColor,
-  valueColor,
-  iconBg,
-  icon,
-}: StatCardProps) {
+function TrendBadge({ value, inverse = false }: { value: number; inverse?: boolean }) {
+  const isUp = value > 0;
+  const isGood = inverse ? isUp : !isUp;
+  const color = value === 0 ? "#94a3b8" : isGood ? "#16a34a" : "#dc2626";
+  const arrow = value > 0 ? "↑" : value < 0 ? "↓" : "—";
+  return (
+    <span className="text-xs font-bold flex items-center gap-0.5" style={{ color }}>
+      {arrow} {Math.abs(value)}%
+    </span>
+  );
+}
+
+function StatCard({ label, value, description, color, trend, trendInverse }: StatCardProps) {
   return (
     <div
-      className="rounded-2xl p-5 min-h-[120px] shadow-sm"
+      className="rounded-2xl bg-white p-5 shadow-sm relative"
       style={{
-        background: gradientBg,
-        borderTop: `4px solid ${topBorderColor}`,
-        border: `1px solid #e2e8f0`,
-        borderTopColor: topBorderColor,
+        border: "1px solid #e2e8f0",
+        borderBottom: `4px solid ${color}`,
       }}
     >
-      <div className="flex items-start justify-between mb-3">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-[0.08em]"
-          style={{ color: labelColor }}
-        >
-          {label}
-        </p>
-        <div
-          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: iconBg, color: topBorderColor }}
-        >
-          {icon}
+      {trend !== undefined && (
+        <div className="absolute top-4 right-4">
+          <TrendBadge value={trend} inverse={trendInverse} />
         </div>
-      </div>
+      )}
       <p
-        className="font-black leading-none"
-        style={{ fontSize: "48px", color: valueColor }}
+        className="text-[10px] font-semibold uppercase tracking-[0.1em]"
+        style={{ color }}
+      >
+        {label}
+      </p>
+      <p
+        className="font-black leading-none mt-2"
+        style={{ fontSize: "48px", color }}
       >
         {value === null ? (
           <span className="inline-block w-12 h-10 bg-[#f1f5f9] animate-pulse rounded" />
@@ -93,6 +98,9 @@ export default function DashboardPage() {
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsError, setStatsError] = useState(false);
+  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
+  const [weeklyTrend, setWeeklyTrend] = useState<Trend | null>(null);
+  const [weeklyLoading, setWeeklyLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
 
   const fetchStats = useCallback(() => {
@@ -107,14 +115,30 @@ export default function DashboardPage() {
       .catch(() => setStatsError(true));
   }, []);
 
+  const fetchWeekly = useCallback(() => {
+    setWeeklyLoading(true);
+    fetch("/api/dashboard/weekly")
+      .then((res) => (res.ok ? res.json() : Promise.reject()))
+      .then((data) => {
+        if (data?.success) {
+          setWeeklyData(data.weeks);
+          setWeeklyTrend(data.trend);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setWeeklyLoading(false));
+  }, []);
+
   useEffect(() => {
     fetchStats();
-  }, [fetchStats]);
+    fetchWeekly();
+  }, [fetchStats, fetchWeekly]);
 
   async function handleAddEntry(data: ExpiryFormData) {
     await addEntry(data);
     setFormOpen(false);
     fetchStats();
+    fetchWeekly();
   }
 
   return (
@@ -167,71 +191,52 @@ export default function DashboardPage() {
             label="EXPIRED"
             value={stats?.expired ?? null}
             description="Past expiry date"
-            topBorderColor="#ef4444"
-            gradientBg="linear-gradient(to bottom, white, #fff5f5)"
-            labelColor="#ef4444"
-            valueColor="#ef4444"
-            iconBg="rgba(239,68,68,0.12)"
-            icon={<ExclamationTriangleIcon className="w-4 h-4" />}
+            color="#ef4444"
+            trend={weeklyTrend?.expired}
           />
           <StatCard
             label="CRITICAL"
             value={stats?.critical ?? null}
             description="Expiring within 7 days"
-            topBorderColor="#ea580c"
-            gradientBg="linear-gradient(to bottom, white, #fff7ed)"
-            labelColor="#ea580c"
-            valueColor="#ea580c"
-            iconBg="rgba(234,88,12,0.12)"
-            icon={<ClockIcon className="w-4 h-4" />}
+            color="#ea580c"
+            trend={weeklyTrend?.critical}
           />
           <StatCard
             label="WARNING"
             value={stats?.warning ?? null}
             description="Expiring in 8–30 days"
-            topBorderColor="#d97706"
-            gradientBg="linear-gradient(to bottom, white, #fefce8)"
-            labelColor="#d97706"
-            valueColor="#d97706"
-            iconBg="rgba(217,119,6,0.12)"
-            icon={<ClockIcon className="w-4 h-4" />}
+            color="#d97706"
+            trend={weeklyTrend?.warning}
           />
           <StatCard
             label="SAFE"
             value={stats?.safe ?? null}
             description="More than 30 days left"
-            topBorderColor="#16a34a"
-            gradientBg="linear-gradient(to bottom, white, #f0fdf4)"
-            labelColor="#16a34a"
-            valueColor="#16a34a"
-            iconBg="rgba(22,163,74,0.12)"
-            icon={<CheckCircleIcon className="w-4 h-4" />}
+            color="#16a34a"
+            trendInverse
           />
         </div>
       )}
 
-      {/* Health row */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3">
-          <StaleItemsCard
-            items={healthData?.staleItems ?? []}
-            isLoading={healthLoading}
-          />
-        </div>
-        <div className="xl:col-span-2">
-          <SystemHealthCard
-            data={healthData?.systemHealth ?? null}
-            isLoading={healthLoading}
-          />
-        </div>
+      {/* Priority row: System Health | Items Needing Review | Completion Rate */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <SystemHealthCard
+          data={healthData?.systemHealth ?? null}
+          isLoading={healthLoading}
+        />
+        <StaleItemsCard
+          items={healthData?.staleItems ?? []}
+          isLoading={healthLoading}
+        />
+        <CompletionRateCard
+          rates={healthData?.completionRates ?? []}
+          isManager={isManager}
+          isLoading={healthLoading}
+        />
       </div>
 
-      {/* Completion rate */}
-      <CompletionRateCard
-        rates={healthData?.completionRates ?? []}
-        isManager={isManager}
-        isLoading={healthLoading}
-      />
+      {/* Weekly chart */}
+      <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} />
 
       {/* ExpiryForm modal */}
       <ExpiryForm

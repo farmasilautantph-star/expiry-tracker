@@ -15,7 +15,7 @@ import {
   ArrowRightOnRectangleIcon,
   BellIcon,
   Bars3Icon,
-  XMarkIcon,
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavSection {
@@ -114,19 +114,8 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
         <div className="flex items-center gap-3 text-[#64748b]">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-            />
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
           <span className="text-sm">Loading…</span>
         </div>
@@ -136,34 +125,35 @@ export default function DashboardLayout({
 
   if (!user) return null;
 
-  // Non-null assertion: we've confirmed user is not null above
   const currentUser = user;
   const pageTitle = PAGE_TITLES[pathname] ?? "Dashboard";
   const userInitial = (currentUser.picName?.charAt(0) ?? currentUser.username.charAt(0)).toUpperCase();
 
   function SidebarContent() {
     return (
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full bg-white">
         {/* Logo */}
         <div
-          className="flex items-center gap-3 px-4 py-0 flex-shrink-0"
+          className="flex items-center gap-3 px-5 flex-shrink-0"
           style={{
             height: "72px",
-            background: "#172d4a",
-            borderBottom: "1px solid rgba(255,255,255,0.08)",
+            borderBottom: "1px solid #e2e8f0",
           }}
         >
-          <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center flex-shrink-0">
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ background: "#eff6ff" }}
+          >
             <ClipboardDocumentListIcon className="w-5 h-5 text-[#2563eb]" />
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-none">Expiry Tracker</p>
-            <p className="text-[#93c5fd] text-xs font-medium mt-0.5">Outlet Inventory</p>
+            <p className="text-[#0f172a] font-bold text-sm leading-none">Expiry Tracker</p>
+            <p className="text-[#64748b] text-xs font-medium mt-0.5">Outlet Inventory</p>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-2">
+        <nav className="flex-1 overflow-y-auto py-3">
           {NAV_SECTIONS.map((section) => {
             const visibleItems = section.items.filter(
               (item) => !item.managerOnly || isManager,
@@ -172,8 +162,8 @@ export default function DashboardLayout({
             return (
               <div key={section.label}>
                 <p
-                  className="px-4 pt-5 pb-2 text-[10px] font-semibold uppercase tracking-[0.12em]"
-                  style={{ color: "#93c5fd" }}
+                  className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                  style={{ color: "#94a3b8" }}
                 >
                   {section.label}
                 </p>
@@ -185,39 +175,27 @@ export default function DashboardLayout({
                       href={item.href}
                       onClick={() => setMobileSidebarOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 mx-2 px-3 py-2.5 rounded-xl text-sm transition-all",
+                        "flex items-center gap-3 pl-5 pr-4 py-2.5 text-sm transition-all border-l-[3px]",
                         isActive
-                          ? "text-white font-semibold"
-                          : "font-medium",
+                          ? "font-semibold"
+                          : "font-medium hover:bg-[#f8fafc]",
                       )}
                       style={
                         isActive
                           ? {
-                              background: "#2563eb",
-                              boxShadow: "0 2px 8px rgba(37,99,235,0.4)",
-                              color: "white",
+                              borderLeftColor: "#2563eb",
+                              background: "#eff6ff",
+                              color: "#2563eb",
                             }
                           : {
-                              color: "#cbd5e1",
+                              borderLeftColor: "transparent",
+                              color: "#64748b",
                             }
                       }
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          (e.currentTarget as HTMLElement).style.background =
-                            "rgba(255,255,255,0.06)";
-                          (e.currentTarget as HTMLElement).style.color = "white";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          (e.currentTarget as HTMLElement).style.background = "";
-                          (e.currentTarget as HTMLElement).style.color = "#cbd5e1";
-                        }
-                      }}
                     >
                       <span
                         className="flex-shrink-0"
-                        style={{ color: isActive ? "white" : "#64748b" }}
+                        style={{ color: isActive ? "#2563eb" : "#94a3b8" }}
                       >
                         {item.icon}
                       </span>
@@ -233,7 +211,7 @@ export default function DashboardLayout({
         {/* User section */}
         <div
           className="px-4 py-4 flex-shrink-0"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
+          style={{ borderTop: "1px solid #e2e8f0" }}
         >
           <div className="flex items-center gap-3">
             <div
@@ -243,24 +221,17 @@ export default function DashboardLayout({
               {userInitial}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate">
+              <p className="text-[#0f172a] text-sm font-semibold truncate">
                 {currentUser.picName || currentUser.username}
               </p>
-              <p className="text-[#93c5fd] text-xs font-medium capitalize">
+              <p className="text-[#64748b] text-xs font-medium capitalize">
                 {currentUser.role}
               </p>
             </div>
             <button
               onClick={logout}
               title="Sign out"
-              className="p-1.5 rounded-lg transition-colors"
-              style={{ color: "#64748b" }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#ef4444";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#64748b";
-              }}
+              className="p-1.5 rounded-lg transition-colors text-[#94a3b8] hover:text-[#ef4444]"
             >
               <ArrowRightOnRectangleIcon className="w-[18px] h-[18px]" />
             </button>
@@ -276,8 +247,9 @@ export default function DashboardLayout({
       <aside
         className="hidden lg:flex flex-col w-64 flex-shrink-0"
         style={{
-          background: "#1e3a5f",
-          boxShadow: "2px 0 8px rgba(0,0,0,0.12)",
+          background: "#ffffff",
+          boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
+          borderRight: "1px solid #e2e8f0",
         }}
       >
         <SidebarContent />
@@ -293,8 +265,8 @@ export default function DashboardLayout({
           <aside
             className="relative w-64 flex flex-col flex-shrink-0 z-10"
             style={{
-              background: "#1e3a5f",
-              boxShadow: "2px 0 8px rgba(0,0,0,0.12)",
+              background: "#ffffff",
+              boxShadow: "2px 0 12px rgba(0,0,0,0.12)",
             }}
           >
             <SidebarContent />
@@ -306,15 +278,15 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
         <header
-          className="flex items-center justify-between px-6 flex-shrink-0 bg-white"
+          className="flex items-center px-6 flex-shrink-0 bg-white relative"
           style={{
-            height: "64px",
+            height: "72px",
             borderBottom: "1px solid #e2e8f0",
             boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
           }}
         >
-          <div className="flex items-center gap-3">
-            {/* Mobile hamburger */}
+          {/* Left: hamburger + title */}
+          <div className="flex items-center gap-3 w-48 flex-shrink-0">
             <button
               className="lg:hidden p-2 rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors"
               onClick={() => setMobileSidebarOpen(true)}
@@ -327,16 +299,31 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Bell */}
+          {/* Center: search */}
+          <div className="flex-1 flex justify-center">
+            <div className="relative hidden sm:block">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+              <input
+                type="text"
+                placeholder="Search items, barcodes..."
+                className="pl-9 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] w-72"
+                style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  color: "#0f172a",
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Right: bell + avatar */}
+          <div className="flex items-center gap-2 w-48 justify-end flex-shrink-0">
             <button
               className="flex items-center justify-center rounded-full transition-colors text-[#64748b] hover:bg-[#f1f5f9]"
               style={{ width: "36px", height: "36px" }}
             >
               <BellIcon className="w-5 h-5" />
             </button>
-
-            {/* User avatar */}
             <div className="flex items-center gap-2.5 pl-2 border-l border-[#e2e8f0]">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-semibold text-[#0f172a] leading-none">
