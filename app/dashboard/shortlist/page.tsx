@@ -4,14 +4,14 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
-import CompletedItemsTable from "@/components/shortlist/CompletedItemsTable";
+import SalesRecord from "@/components/shortlist/SalesRecord";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 import type { OfferFormData } from "@/hooks/useOffers";
 
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
-  const [activeTab, setActiveTab] = useState<"active" | "completed">("active");
-  const [completedCount, setCompletedCount] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "sales">("active");
+  const [salesCount, setSalesCount] = useState<number | null>(null);
   const {
     entries,
     counts,
@@ -63,9 +63,7 @@ export default function ShortListPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[#1e293b]">
-            Item Short List
-          </h2>
+          <h2 className="text-xl font-semibold text-[#1e293b]">Item Short List</h2>
           <p className="text-sm text-[#64748b] mt-0.5">
             {isManager
               ? "All logged expiry items across all PICs."
@@ -114,17 +112,20 @@ export default function ShortListPage() {
           </span>
         </button>
         <button
-          onClick={() => setActiveTab("completed")}
+          onClick={() => setActiveTab("sales")}
           className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
-            activeTab === "completed"
+            activeTab === "sales"
               ? "border-[#2563eb] text-[#2563eb]"
               : "border-transparent text-[#94a3b8] hover:text-[#475569]"
           }`}
         >
-          Completed Items
-          {completedCount !== null && (
-            <span className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
-              {completedCount}
+          Sales Record
+          {salesCount !== null && (
+            <span
+              className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold"
+              title={`${salesCount} sale${salesCount !== 1 ? "s" : ""} this month`}
+            >
+              {salesCount}
             </span>
           )}
         </button>
@@ -155,10 +156,10 @@ export default function ShortListPage() {
           onRefresh={refresh}
         />
       ) : (
-        <CompletedItemsTable
+        <SalesRecord
           isManager={isManager}
           picName={user.picName}
-          onCountChange={setCompletedCount}
+          onCountChange={setSalesCount}
         />
       )}
     </div>
