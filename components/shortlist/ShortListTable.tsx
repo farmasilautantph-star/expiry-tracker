@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { ShortListEntry } from "@/hooks/useShortList";
+import { useTableSort } from "@/hooks/useTableSort";
+import { useTableFilter } from "@/hooks/useTableFilter";
+import SortableHeader from "@/components/ui/SortableHeader";
 import {
   PencilSquareIcon,
   TrashIcon,
@@ -21,6 +24,27 @@ const BADGE_STYLE: Record<Urgency, { bg: string; color: string; dotColor: string
   warning:  { bg: "#fef9c3", color: "#ca8a04", dotColor: "#ca8a04", fontWeight: 600 },
   safe:     { bg: "#dcfce7", color: "#16a34a", dotColor: "#16a34a", fontWeight: 600 },
 };
+
+// Human-readable labels for sort/filter toolbar
+const COLUMN_LABELS: Record<string, string> = {
+  logged_at: "Date Logged",
+  pic_name: "PIC",
+  stock_id: "Stock ID",
+  barcode: "Barcode",
+  description: "Description",
+  category: "Category",
+  uom: "UOM",
+  quantity: "Qty",
+  expiry_date: "Expiry Date",
+  days_left: "Days Left",
+  return_label: "Return",
+};
+
+function getReturnLabel(status: string | null): string {
+  if (!status) return "—";
+  if (status === "pending") return "Return";
+  return "Non-Return";
+}
 
 function Dot({ color }: { color: string }) {
   return (
@@ -169,9 +193,8 @@ interface Props {
   onMarkReviewed?: (id: number) => Promise<void>;
 }
 
-const TH =
-  "sticky top-0 z-10 bg-[#f8fafc] px-5 py-3 text-left text-[11px] uppercase font-semibold text-[#64748b] tracking-[0.08em] whitespace-nowrap";
-const TD = "px-5 py-3.5 font-medium";
+const TH_BASE =
+  "sticky top-0 z-10 px-5 py-3 text-left whitespace-nowrap";
 
 export default function ShortListTable({
   entries,
@@ -187,7 +210,42 @@ export default function ShortListTable({
   const [justReviewedIds, setJustReviewedIds] = useState<Set<number>>(new Set());
   const [sellingIds, setSellingIds] = useState<Set<number>>(new Set());
   const [sellConfirmEntry, setSellConfirmEntry] = useState<ShortListEntry | null>(null);
-  const { toasts, showSuccess, showError, dismiss } = useToast();
+  const [unitsSold, setUnitsSold] = useState(1);
+  const { toasts, showSuccess, showError, showInfo, dismiss } = useToast();
+
+  const { sortConfig, handleSort, clearSort, sortData } = useTableSort();
+  const { columnFilters, setColumnFilter, clearColumnFilter, clearAllColumnFilters, filterData, getUniqueValues } =
+    useTableFilter();
+
+  // Augment entries with derived display field for return filter
+  const augmented = useMemo(
+    () => entries.map((e) => ({ ...e, return_label: getReturnLabel(e.return_status) })),
+    [entries],
+  );
+
+  // Unique values for each filterable column (computed from ALL entries, not filtered)
+  const picValues = useMemo(() => getUniqueValues(augmented, "pic_name"), [augmented, getUniqueValues]);
+  const categoryValues = useMemo(() => getUniqueValues(augmented, "category"), [augmented, getUniqueValues]);
+  const uomValues = useMemo(() => getUniqueValues(augmented, "uom"), [augmented, getUniqueValues]);
+  const returnValues = useMemo(() => getUniqueValues(augmented, "return_label"), [augmented, getUniqueValues]);
+
+  // Apply column filters then sort
+  const processedEntries = useMemo(() => {
+    const filtered = filterData(augmented as unknown as Record<string, unknown>[]) as typeof augmented;
+    return sortData(filtered as unknown as Record<string, unknown>[]) as typeof augmented;
+  }, [augmented, filterData, sortData]);
+
+  const hasActiveSort = !!sortConfig.column;
+  const hasActiveFilters = Object.keys(columnFilters).length > 0;
+  const hasActiveState = hasActiveSort || hasActiveFilters;
+
+  function colBg(col: string): React.CSSProperties {
+    return sortConfig.column === col ? { background: "#eff6ff" } : { background: "#f8fafc" };
+  }
+
+  function cellBg(col: string): React.CSSProperties {
+    return sortConfig.column === col ? { background: "#fafcff" } : {};
+  }
 
   async function handleMarkReviewed(id: number) {
     setReviewingIds((prev) => { const s = new Set(prev); s.add(id); return s; });
@@ -196,39 +254,41 @@ export default function ShortListTable({
       if (!res.ok) throw new Error("Failed to mark reviewed");
       setJustReviewedIds((prev) => { const s = new Set(prev); s.add(id); return s; });
       setTimeout(() => {
-        setJustReviewedIds((prev) => {
-          const s = new Set(prev);
-          s.delete(id);
-          return s;
-        });
+        setJustReviewedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
       }, 3000);
       await onMarkReviewed?.(id);
     } finally {
-      setReviewingIds((prev) => {
-        const s = new Set(prev);
-        s.delete(id);
-        return s;
-      });
+      setReviewingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
     }
   }
 
-  async function handleMarkSold(entry: ShortListEntry) {
+  function handleMarkSold(entry: ShortListEntry) {
     setSellConfirmEntry(entry);
+    setUnitsSold(1);
   }
 
   async function confirmSell() {
     if (!sellConfirmEntry) return;
     const entry = sellConfirmEntry;
+    const sold = unitsSold;
     setSellConfirmEntry(null);
     setSellingIds((prev) => { const s = new Set(prev); s.add(entry.id); return s; });
     try {
-      const res = await fetch(`/api/expiry/${entry.id}/sell`, { method: "POST" });
+      const res = await fetch(`/api/expiry/${entry.id}/sell`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ units_sold: sold }),
+      });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
-      showSuccess("Item marked as sold");
+      if (json.fully_sold) {
+        showSuccess("Item marked as fully sold");
+      } else {
+        showInfo(`${sold} unit(s) sold. ${json.remaining} remaining`);
+      }
       await onMarkReviewed?.(entry.id);
-    } catch {
-      showError("Failed to mark as sold");
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Failed to mark as sold");
     } finally {
       setSellingIds((prev) => { const s = new Set(prev); s.delete(entry.id); return s; });
     }
@@ -261,268 +321,481 @@ export default function ShortListTable({
 
   return (
     <>
-    <Toast toasts={toasts} onDismiss={dismiss} />
+      <Toast toasts={toasts} onDismiss={dismiss} />
 
-    {/* Sell confirm modal */}
-    {sellConfirmEntry && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
-        <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm p-6 space-y-5">
-          <h3 className="text-base font-semibold text-[#1e293b]">Confirm Item Sold</h3>
-          <p className="text-sm text-[#64748b]">
-            Mark{" "}
-            <span className="font-semibold text-[#334155]">
-              {sellConfirmEntry.description}
-            </span>{" "}
-            as fully sold? This will move it to Completed.
-          </p>
-          <div className="flex justify-end gap-3 pt-1">
-            <button
-              onClick={() => setSellConfirmEntry(null)}
-              className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmSell}
-              className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#16a34a] hover:bg-[#15803d] transition-colors"
-            >
-              Confirm Sold
-            </button>
+      {/* Sell modal */}
+      {sellConfirmEntry && (() => {
+        const maxQty = sellConfirmEntry.quantity;
+        const remaining = maxQty - unitsSold;
+        const isFullySold = remaining === 0;
+        const isValid = Number.isInteger(unitsSold) && unitsSold >= 1 && unitsSold <= maxQty;
+        const desc = sellConfirmEntry.description.length > 40
+          ? sellConfirmEntry.description.slice(0, 40) + "…"
+          : sellConfirmEntry.description;
+        const [ey, em, ed] = sellConfirmEntry.expiry_date.split("T")[0].split("-");
+        const expiryFmt = `${ed}/${em}/${ey}`;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
+            <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-sm p-6 space-y-4">
+              <h3 className="text-base font-semibold text-[#1e293b]">Mark Units as Sold</h3>
+
+              {/* Item info */}
+              <div className="rounded-xl bg-[#f8fafc] px-4 py-3 space-y-0.5">
+                <p className="text-sm font-semibold text-[#1e293b] leading-snug">{desc}</p>
+                <p className="text-xs text-[#94a3b8]">
+                  {sellConfirmEntry.category} · Expiry: {expiryFmt}
+                </p>
+              </div>
+
+              {/* Available qty */}
+              <div>
+                <p className="text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1">Total Quantity</p>
+                <p className="text-sm text-[#334155] font-medium">{maxQty} unit{maxQty !== 1 ? "s" : ""} available</p>
+              </div>
+
+              {/* Units sold input */}
+              <div>
+                <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide mb-1.5">
+                  Units Sold <span className="text-[#dc2626]">*</span>
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={maxQty}
+                  value={unitsSold}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setUnitsSold(isNaN(v) ? 1 : v);
+                  }}
+                  className="w-full px-3 py-2 text-sm rounded-xl font-medium text-[#1e293b] outline-none transition-colors"
+                  style={{
+                    border: isValid ? "1.5px solid #e2e8f0" : "1.5px solid #dc2626",
+                    background: isValid ? "white" : "#fff5f5",
+                  }}
+                  onFocus={(e) => { if (isValid) e.currentTarget.style.borderColor = "#2563eb"; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = isValid ? "#e2e8f0" : "#dc2626"; }}
+                  autoFocus
+                />
+                {!isValid && unitsSold > maxQty && (
+                  <p className="text-xs text-[#dc2626] mt-1">
+                    Cannot exceed available quantity of {maxQty}
+                  </p>
+                )}
+              </div>
+
+              {/* Remaining display */}
+              {isValid && (
+                <div className="rounded-xl px-4 py-3 flex items-center justify-between"
+                  style={{ background: "#f1f5f9" }}>
+                  <span className="text-xs font-semibold text-[#64748b]">Remaining after this sale:</span>
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: isFullySold ? "#16a34a" : "#334155" }}
+                  >
+                    {remaining} unit{remaining !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              )}
+
+              {/* Outcome info box */}
+              {isValid && (
+                <div
+                  className="rounded-xl px-4 py-3 text-xs font-medium"
+                  style={
+                    isFullySold
+                      ? { background: "#dcfce7", color: "#16a34a" }
+                      : { background: "#eff6ff", color: "#2563eb" }
+                  }
+                >
+                  {isFullySold
+                    ? "All units sold — item will move to Completed"
+                    : `Item stays active with ${remaining} unit${remaining !== 1 ? "s" : ""} remaining`}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-1">
+                <button
+                  onClick={() => setSellConfirmEntry(null)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmSell}
+                  disabled={!isValid}
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ background: "#16a34a" }}
+                  onMouseEnter={(e) => { if (isValid) (e.currentTarget as HTMLElement).style.background = "#15803d"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#16a34a"; }}
+                >
+                  Confirm Sold
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    )}
+        );
+      })()}
 
-    <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-      <table className="w-full text-sm">
-        <thead>
-          <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-            <th className={TH}>Date Logged</th>
-            <th className={TH}>PIC</th>
-            <th className={TH}>Stock ID</th>
-            <th className={TH}>Barcode</th>
-            <th className={`${TH} max-w-[200px]`}>Description</th>
-            <th className={TH}>Category</th>
-            <th className={TH}>UOM</th>
-            <th className={TH}>Qty</th>
-            <th className={TH}>Expiry Date</th>
-            <th className={TH}>Days Left</th>
-            <th className={TH}>Return</th>
-            <th className={TH}>Return By</th>
-            <th className={TH}>Offered</th>
-            <th className={TH}>Last Review</th>
-            <th className={TH}>Status</th>
-            <th className={TH}>Review</th>
-            {isManager && <th className={`${TH} text-right`}>Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => {
-            const urgency = entry.urgency as Urgency;
-            const canReview = isManager || entry.pic_name === currentPicName;
-            const isReviewing = reviewingIds.has(entry.id);
-            const justReviewed = justReviewedIds.has(entry.id);
-            const review = calcReviewInfo(entry);
-            const canSell =
-              (entry.item_status === "active" || entry.item_status === undefined) &&
-              (isManager || entry.pic_name === currentPicName);
-            const isSelling = sellingIds.has(entry.id);
-
-            return (
-              <tr
-                key={entry.id}
-                className="transition-colors duration-150"
-                style={{ borderBottom: "1px solid #f1f5f9" }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "#f8fafc")
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "")
-                }
+      {/* Active sort + filter toolbar */}
+      {hasActiveState && (
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl bg-[#f8fafc] border border-[#e2e8f0] text-xs">
+          {hasActiveSort && sortConfig.column && (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium"
+              style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }}
+            >
+              Sorted: {COLUMN_LABELS[sortConfig.column] ?? sortConfig.column}{" "}
+              ({sortConfig.direction === "asc" ? "A→Z" : "Z→A"})
+              <button
+                onClick={clearSort}
+                className="ml-0.5 font-bold leading-none hover:opacity-70"
               >
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>
-                  {formatDate(entry.logged_at)}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <span
-                    className="badge"
-                    style={{ background: "#dbeafe", color: "#2563eb" }}
-                  >
-                    {entry.pic_name}
-                  </span>
-                </td>
-                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
-                  {entry.stock_id ?? "—"}
-                </td>
-                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
-                  {entry.barcode}
-                </td>
-                <td className={`${TD} max-w-[200px]`}>
-                  <span
-                    className="block truncate text-[#334155] font-medium"
-                    title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
-                  >
-                    {entry.description}
-                  </span>
-                  {entry.notes && (
-                    <span className="block truncate text-xs text-[#94a3b8] mt-0.5" title={entry.notes}>
-                      {entry.notes}
-                    </span>
-                  )}
-                </td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>
-                  {entry.category}
-                </td>
-                <td className={`${TD} text-[#334155] text-xs whitespace-nowrap`}>
-                  {entry.uom ?? "—"}
-                </td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>
-                  {entry.quantity}
-                </td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>
-                  {formatDate(entry.expiry_date)}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <DaysLeftBadge entry={entry} />
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <ReturnBadge status={entry.return_status} />
-                </td>
-                <td className={`${TD} text-[#334155] text-xs whitespace-nowrap`}>
-                  {entry.return_status === "pending" && entry.return_by_date
-                    ? formatDate(entry.return_by_date)
-                    : "—"}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <OfferBadge entry={entry} />
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <span className={`text-xs font-medium ${justReviewed ? "text-[#16a34a]" : review.colorClass}`}>
-                    {justReviewed ? "Just now" : review.label}
-                  </span>
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <span
-                    className="badge"
-                    style={{
-                      background: justReviewed ? "#dcfce7" : review.statusBg,
-                      color: justReviewed ? "#16a34a" : review.statusColor,
-                    }}
-                  >
-                    <Dot color={justReviewed ? "#16a34a" : review.statusColor} />
-                    {justReviewed ? "Up to date" : review.statusLabel}
-                  </span>
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <div className="flex items-center gap-1">
-                    {canReview &&
-                      entry.return_status !== "returned" &&
-                      entry.quantity > 0 && (
-                        <button
-                          onClick={() => handleMarkReviewed(entry.id)}
-                          disabled={isReviewing || justReviewed}
-                          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          style={{ color: "#16a34a" }}
-                          title="Mark Reviewed"
-                          onMouseEnter={(e) =>
-                            ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
-                          }
-                          onMouseLeave={(e) =>
-                            ((e.currentTarget as HTMLElement).style.background = "")
-                          }
-                        >
-                          {isReviewing ? (
-                            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                          ) : (
-                            <CheckIcon className="w-4 h-4" />
-                          )}
-                        </button>
-                      )}
-                    {canSell && (
-                      <button
-                        onClick={() => handleMarkSold(entry)}
-                        disabled={isSelling}
-                        className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{ color: "#16a34a" }}
-                        title="Mark as Sold"
-                        onMouseEnter={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
-                        }
-                        onMouseLeave={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background = "")
-                        }
-                      >
-                        {isSelling ? (
-                          <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                        ) : (
-                          <BanknotesIcon className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </td>
+                ×
+              </button>
+            </span>
+          )}
+          {Object.entries(columnFilters).map(([col, vals]) => (
+            <span
+              key={col}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium"
+              style={{ background: "#eff6ff", color: "#2563eb", border: "1px solid #bfdbfe" }}
+            >
+              {COLUMN_LABELS[col] ?? col}: {vals.join(", ")}
+              <button
+                onClick={() => clearColumnFilter(col)}
+                className="ml-0.5 font-bold leading-none hover:opacity-70"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <button
+            onClick={() => { clearSort(); clearAllColumnFilters(); }}
+            className="ml-auto font-medium text-[#94a3b8] hover:text-[#334155] transition-colors"
+          >
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* No results after column filter */}
+      {processedEntries.length === 0 && hasActiveFilters && (
+        <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm flex flex-col items-center justify-center py-12 text-center">
+          <DocumentTextIcon className="w-10 h-10 text-[#cbd5e1] mb-2" />
+          <p className="text-sm text-[#94a3b8]">No items match the active column filters.</p>
+          <button
+            onClick={clearAllColumnFilters}
+            className="mt-2 text-xs text-[#2563eb] hover:underline"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
+      {processedEntries.length > 0 && (
+        <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+
+                <th className={TH_BASE} style={colBg("logged_at")}>
+                  <SortableHeader label="Date Logged" column="logged_at" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                <th className={TH_BASE} style={colBg("pic_name")}>
+                  <SortableHeader
+                    label="PIC" column="pic_name" sortConfig={sortConfig} onSort={handleSort}
+                    filterable filterValues={picValues}
+                    activeFilters={columnFilters["pic_name"] ?? []}
+                    onFilter={(v) => setColumnFilter("pic_name", v)}
+                  />
+                </th>
+
+                <th className={TH_BASE} style={colBg("stock_id")}>
+                  <SortableHeader label="Stock ID" column="stock_id" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                <th className={TH_BASE} style={colBg("barcode")}>
+                  <SortableHeader label="Barcode" column="barcode" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                <th className={`${TH_BASE} max-w-[200px]`} style={colBg("description")}>
+                  <SortableHeader label="Description" column="description" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                <th className={TH_BASE} style={colBg("category")}>
+                  <SortableHeader
+                    label="Category" column="category" sortConfig={sortConfig} onSort={handleSort}
+                    filterable filterValues={categoryValues}
+                    activeFilters={columnFilters["category"] ?? []}
+                    onFilter={(v) => setColumnFilter("category", v)}
+                  />
+                </th>
+
+                {/* UOM — filterable only (no sort) */}
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <SortableHeader
+                    label="UOM" column="uom" sortConfig={sortConfig} onSort={handleSort}
+                    filterable filterValues={uomValues}
+                    activeFilters={columnFilters["uom"] ?? []}
+                    onFilter={(v) => setColumnFilter("uom", v)}
+                  />
+                </th>
+
+                <th className={TH_BASE} style={colBg("quantity")}>
+                  <SortableHeader label="Qty" column="quantity" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                <th className={TH_BASE} style={colBg("expiry_date")}>
+                  <SortableHeader label="Expiry Date" column="expiry_date" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                <th className={TH_BASE} style={colBg("days_left")}>
+                  <SortableHeader label="Days Left" column="days_left" sortConfig={sortConfig} onSort={handleSort} />
+                </th>
+
+                {/* Return — filterable only */}
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <SortableHeader
+                    label="Return" column="return_label" sortConfig={sortConfig} onSort={handleSort}
+                    filterable filterValues={returnValues}
+                    activeFilters={columnFilters["return_label"] ?? []}
+                    onFilter={(v) => setColumnFilter("return_label", v)}
+                  />
+                </th>
+
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-[#64748b]">Return By</span>
+                </th>
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-[#64748b]">Offered</span>
+                </th>
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-[#64748b]">Last Review</span>
+                </th>
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-[#64748b]">Status</span>
+                </th>
+                <th className={TH_BASE} style={{ background: "#f8fafc" }}>
+                  <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-[#64748b]">Review</span>
+                </th>
                 {isManager && (
-                  <td className={`${TD} whitespace-nowrap`}>
-                    <div className="flex items-center justify-end gap-1">
-                      {entry.total_offered < entry.quantity && (
-                        <button
-                          onClick={() => onOfferRequest(entry)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                          style={{ color: "#2563eb" }}
-                          title={`Offer to Outlet — ${entry.quantity - entry.total_offered} unit${entry.quantity - entry.total_offered === 1 ? "" : "s"} remaining`}
-                          onMouseEnter={(e) =>
-                            ((e.currentTarget as HTMLElement).style.background = "#dbeafe")
-                          }
-                          onMouseLeave={(e) =>
-                            ((e.currentTarget as HTMLElement).style.background = "")
-                          }
-                        >
-                          <TagIcon className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onEditRequest(entry)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                        style={{ color: "#2563eb" }}
-                        title="Edit"
-                        onMouseEnter={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
-                        }
-                        onMouseLeave={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background = "")
-                        }
-                      >
-                        <PencilSquareIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => onDeleteRequest(entry)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-                        style={{ color: "#dc2626" }}
-                        title="Delete"
-                        onMouseEnter={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background = "#fee2e2")
-                        }
-                        onMouseLeave={(e) =>
-                          ((e.currentTarget as HTMLElement).style.background = "")
-                        }
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
+                  <th className={TH_BASE} style={{ background: "#f8fafc", textAlign: "right" }}>
+                    <span className="text-[11px] uppercase tracking-[0.08em] font-semibold text-[#64748b]">Actions</span>
+                  </th>
                 )}
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+            </thead>
+            <tbody>
+              {processedEntries.map((entry) => {
+                const urgency = entry.urgency as Urgency;
+                const canReview = isManager || entry.pic_name === currentPicName;
+                const isReviewing = reviewingIds.has(entry.id);
+                const justReviewed = justReviewedIds.has(entry.id);
+                const review = calcReviewInfo(entry);
+                const canSell =
+                  (entry.item_status === "active" || entry.item_status === undefined) &&
+                  (isManager || entry.pic_name === currentPicName);
+                const isSelling = sellingIds.has(entry.id);
+
+                return (
+                  <tr
+                    key={entry.id}
+                    className="transition-colors duration-150"
+                    style={{ borderBottom: "1px solid #f1f5f9" }}
+                    onMouseEnter={(e) =>
+                      ((e.currentTarget as HTMLElement).style.background = "#f8fafc")
+                    }
+                    onMouseLeave={(e) =>
+                      ((e.currentTarget as HTMLElement).style.background = "")
+                    }
+                  >
+                    <td className="px-5 py-3.5 font-medium text-[#334155] whitespace-nowrap" style={cellBg("logged_at")}>
+                      {formatDate(entry.logged_at)}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={cellBg("pic_name")}>
+                      <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>
+                        {entry.pic_name}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-[#334155] font-mono text-xs whitespace-nowrap" style={cellBg("stock_id")}>
+                      {entry.stock_id ?? "—"}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-[#334155] font-mono text-xs whitespace-nowrap" style={cellBg("barcode")}>
+                      {entry.barcode}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium max-w-[200px]" style={cellBg("description")}>
+                      <span
+                        className="block truncate text-[#334155] font-medium"
+                        title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
+                      >
+                        {entry.description}
+                      </span>
+                      {entry.notes && (
+                        <span className="block truncate text-xs text-[#94a3b8] mt-0.5" title={entry.notes}>
+                          {entry.notes}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-[#334155] whitespace-nowrap" style={cellBg("category")}>
+                      {entry.category}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-[#334155] text-xs whitespace-nowrap">
+                      {entry.uom ?? "—"}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={cellBg("quantity")}>
+                      <span className="text-[#334155]">{entry.quantity}</span>
+                      {entry.notes?.includes("unit(s) sold") && (
+                        <span className="block text-[10px] text-[#94a3b8] leading-tight">partial</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-[#334155] whitespace-nowrap" style={cellBg("expiry_date")}>
+                      {formatDate(entry.expiry_date)}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={cellBg("days_left")}>
+                      <DaysLeftBadge entry={entry} />
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap">
+                      <ReturnBadge status={entry.return_status} />
+                    </td>
+                    <td className="px-5 py-3.5 font-medium text-[#334155] text-xs whitespace-nowrap">
+                      {entry.return_status === "pending" && entry.return_by_date
+                        ? formatDate(entry.return_by_date)
+                        : "—"}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap">
+                      <OfferBadge entry={entry} />
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap">
+                      <span className={`text-xs font-medium ${justReviewed ? "text-[#16a34a]" : review.colorClass}`}>
+                        {justReviewed ? "Just now" : review.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap">
+                      <span
+                        className="badge"
+                        style={{
+                          background: justReviewed ? "#dcfce7" : review.statusBg,
+                          color: justReviewed ? "#16a34a" : review.statusColor,
+                        }}
+                      >
+                        <Dot color={justReviewed ? "#16a34a" : review.statusColor} />
+                        {justReviewed ? "Up to date" : review.statusLabel}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 font-medium whitespace-nowrap">
+                      <div className="flex items-center gap-1">
+                        {canReview &&
+                          entry.return_status !== "returned" &&
+                          entry.quantity > 0 && (
+                            <button
+                              onClick={() => handleMarkReviewed(entry.id)}
+                              disabled={isReviewing || justReviewed}
+                              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              style={{ color: "#16a34a" }}
+                              title="Mark Reviewed"
+                              onMouseEnter={(e) =>
+                                ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
+                              }
+                              onMouseLeave={(e) =>
+                                ((e.currentTarget as HTMLElement).style.background = "")
+                              }
+                            >
+                              {isReviewing ? (
+                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                </svg>
+                              ) : (
+                                <CheckIcon className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+                        {canSell && (
+                          <button
+                            onClick={() => handleMarkSold(entry)}
+                            disabled={isSelling}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ color: "#16a34a" }}
+                            title="Mark as Sold"
+                            onMouseEnter={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "#dcfce7")
+                            }
+                            onMouseLeave={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "")
+                            }
+                          >
+                            {isSelling ? (
+                              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <BanknotesIcon className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                    {isManager && (
+                      <td className="px-5 py-3.5 font-medium whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          {entry.total_offered < entry.quantity && (
+                            <button
+                              onClick={() => onOfferRequest(entry)}
+                              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                              style={{ color: "#2563eb" }}
+                              title={`Offer to Outlet — ${entry.quantity - entry.total_offered} unit${entry.quantity - entry.total_offered === 1 ? "" : "s"} remaining`}
+                              onMouseEnter={(e) =>
+                                ((e.currentTarget as HTMLElement).style.background = "#dbeafe")
+                              }
+                              onMouseLeave={(e) =>
+                                ((e.currentTarget as HTMLElement).style.background = "")
+                              }
+                            >
+                              <TagIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onEditRequest(entry)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                            style={{ color: "#2563eb" }}
+                            title="Edit"
+                            onMouseEnter={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
+                            }
+                            onMouseLeave={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "")
+                            }
+                          >
+                            <PencilSquareIcon className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteRequest(entry)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+                            style={{ color: "#dc2626" }}
+                            title="Delete"
+                            onMouseEnter={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "#fee2e2")
+                            }
+                            onMouseLeave={(e) =>
+                              ((e.currentTarget as HTMLElement).style.background = "")
+                            }
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

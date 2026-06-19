@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { CheckCircleIcon, XCircleIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 
 export interface ToastMessage {
   id: string;
-  type: "success" | "error";
+  type: "success" | "error" | "info";
   message: string;
 }
 
@@ -45,22 +45,19 @@ function ToastItem({
     return () => clearTimeout(timer);
   }, [toast.id, toast.type, onDismiss]);
 
-  const isSuccess = toast.type === "success";
+  const styles = {
+    success: { wrap: "bg-[#dcfce7] border-[#16a34a] text-[#166534]", icon: <CheckCircleIcon className="w-4 h-4 flex-shrink-0 text-[#16a34a]" /> },
+    error:   { wrap: "bg-[#fee2e2] border-[#dc2626] text-[#991b1b]", icon: <XCircleIcon className="w-4 h-4 flex-shrink-0 text-[#dc2626]" /> },
+    info:    { wrap: "bg-[#eff6ff] border-[#2563eb] text-[#1e40af]", icon: <InformationCircleIcon className="w-4 h-4 flex-shrink-0 text-[#2563eb]" /> },
+  };
+  const s = styles[toast.type];
   return (
     <div
       className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium transition-all duration-300 ${
         visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
-      } ${
-        isSuccess
-          ? "bg-[#dcfce7] border-[#16a34a] text-[#166534]"
-          : "bg-[#fee2e2] border-[#dc2626] text-[#991b1b]"
-      }`}
+      } ${s.wrap}`}
     >
-      {isSuccess ? (
-        <CheckCircleIcon className="w-4 h-4 flex-shrink-0 text-[#16a34a]" />
-      ) : (
-        <XCircleIcon className="w-4 h-4 flex-shrink-0 text-[#dc2626]" />
-      )}
+      {s.icon}
       {toast.message}
     </div>
   );

@@ -103,11 +103,13 @@ export function useShortList(): UseShortListReturn {
       if (!json.success) throw new Error(json.error ?? "Unknown error");
 
       let data: ShortListEntry[] = json.data;
-      if (f.return_status) {
-        data =
-          f.return_status === "none"
-            ? data.filter((e) => !e.return_status)
-            : data.filter((e) => e.return_status === f.return_status);
+      if (f.return_status === "none") {
+        data = data.filter((e) => !e.return_status);
+      } else if (f.return_status === "returnable") {
+        // any tracked return (pending, returned, returning, not_approved — not null and not non-returnable)
+        data = data.filter((e) => e.return_status && e.return_status !== "non-returnable");
+      } else if (f.return_status) {
+        data = data.filter((e) => e.return_status === f.return_status);
       }
 
       setEntries(data);

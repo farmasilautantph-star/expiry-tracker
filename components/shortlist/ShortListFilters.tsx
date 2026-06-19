@@ -158,6 +158,8 @@ export default function ShortListFilters({
         >
           <option value="">All Returns</option>
           <option value="returnable">Returnable</option>
+          <option value="pending">Pending</option>
+          <option value="returned">Returned</option>
           <option value="non-returnable">Non-Returnable</option>
           <option value="none">Not Set</option>
         </select>

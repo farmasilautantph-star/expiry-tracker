@@ -15,9 +15,14 @@ export function useToast() {
     setToasts((prev) => [...prev, { id, type: "error", message }]);
   }, []);
 
+  const showInfo = useCallback((message: string) => {
+    const id = Math.random().toString(36).slice(2);
+    setToasts((prev) => [...prev, { id, type: "info", message }]);
+  }, []);
+
   const dismiss = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  return { toasts, showSuccess, showError, dismiss };
+  return { toasts, showSuccess, showError, showInfo, dismiss };
 }
