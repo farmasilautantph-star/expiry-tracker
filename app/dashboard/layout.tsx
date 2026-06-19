@@ -16,6 +16,7 @@ import {
   BellIcon,
   Bars3Icon,
   MagnifyingGlassIcon,
+  QrCodeIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavSection {
@@ -73,6 +74,16 @@ const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+  {
+    label: "TOOLS",
+    items: [
+      {
+        label: "Activity Log",
+        href: "/dashboard/activity-log",
+        icon: <QrCodeIcon className="w-5 h-5" />,
+      },
+    ],
+  },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -82,6 +93,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/offers": "Offer Ke Outlet",
   "/dashboard/history-log": "History Log",
   "/dashboard/expiry": "Log New Expiry",
+  "/dashboard/activity-log": "Activity Log",
 };
 
 function formatDate(date: Date): string {
