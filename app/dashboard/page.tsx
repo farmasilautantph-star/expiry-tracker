@@ -14,6 +14,8 @@ import {
   ClipboardDocumentListIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 interface Stats {
   expired: number;
@@ -93,7 +95,8 @@ function StatCard({ label, value, description, color, trend, trendInverse }: Sta
 
 export default function DashboardPage() {
   const { user, isManager } = useAuth();
-  const { addEntry } = useExpiry();
+  const { addEntry, refresh } = useExpiry();
+  const { toasts, showSuccess, dismiss } = useToast();
   const { healthData, isLoading: healthLoading } = useDashboardHealth();
 
   const [stats, setStats] = useState<Stats | null>(null);
@@ -186,54 +189,70 @@ export default function DashboardPage() {
           Failed to load expiry stats. Please refresh.
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard
-            label="EXPIRED"
-            value={stats?.expired ?? null}
-            description="Past expiry date"
-            color="#ef4444"
-            trend={weeklyTrend?.expired}
-          />
-          <StatCard
-            label="CRITICAL"
-            value={stats?.critical ?? null}
-            description="Expiring within 3 months"
-            color="#ea580c"
-            trend={weeklyTrend?.critical}
-          />
-          <StatCard
-            label="WARNING"
-            value={stats?.warning ?? null}
-            description="3 to 8 months left"
-            color="#d97706"
-            trend={weeklyTrend?.warning}
-          />
-          <StatCard
-            label="SAFE"
-            value={stats?.safe ?? null}
-            description="More than 8 months left"
-            color="#16a34a"
-            trendInverse
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <StatCard
+              label="EXPIRED"
+              value={stats?.expired ?? null}
+              description="Past expiry date"
+              color="#ef4444"
+              trend={weeklyTrend?.expired}
+            />
+            <StatCard
+              label="CRITICAL"
+              value={stats?.critical ?? null}
+              description="Expiring within 3 months"
+              color="#ea580c"
+              trend={weeklyTrend?.critical}
+            />
+            <StatCard
+              label="WARNING"
+              value={stats?.warning ?? null}
+              description="3 to 8 months left"
+              color="#d97706"
+              trend={weeklyTrend?.warning}
+            />
+            <StatCard
+              label="SAFE"
+              value={stats?.safe ?? null}
+              description="More than 8 months left"
+              color="#16a34a"
+              trendInverse
+            />
+          </div>
+          <p className="text-xs text-[#94a3b8] text-right mt-1">
+            {isManager ? "Showing all staff items" : "Showing your items only"}
+          </p>
+        </>
       )}
 
-      {/* Priority row: System Health | Items Needing Review | Completion Rate */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      {/* INVENTORY HEALTH section */}
+      <p className="text-xs font-semibold uppercase tracking-wider text-[#94a3b8] mb-3">
+        Inventory Health
+      </p>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <SystemHealthCard
           data={healthData?.systemHealth ?? null}
           isLoading={healthLoading}
+          isManager={isManager}
         />
         <StaleItemsCard
           items={healthData?.staleItems ?? []}
           isLoading={healthLoading}
-        />
-        <CompletionRateCard
-          rates={healthData?.completionRates ?? []}
-          isManager={isManager}
-          isLoading={healthLoading}
+          reviewDeadline={healthData?.reviewDeadline}
         />
       </div>
+
+      {/* STAFF COMPLIANCE section */}
+      <p className="text-xs font-semibold uppercase tracking-wider text-[#94a3b8] mb-3">
+        Staff Compliance
+      </p>
+      <CompletionRateCard
+        rates={healthData?.completionRates ?? []}
+        isManager={isManager}
+        isLoading={healthLoading}
+        reviewDeadline={healthData?.reviewDeadline}
+      />
 
       {/* Weekly chart */}
       <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} />
@@ -245,7 +264,14 @@ export default function DashboardPage() {
         editingEntry={null}
         picName={user?.picName ?? user?.username ?? ""}
         onSubmit={handleAddEntry}
+        onAddStockSuccess={({ additionalQty, newQty }) => {
+          setFormOpen(false);
+          refresh();
+          fetchStats();
+          showSuccess(`Stock updated! +${additionalQty} unit(s) added. New total: ${newQty} units`);
+        }}
       />
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

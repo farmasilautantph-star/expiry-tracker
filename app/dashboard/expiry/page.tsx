@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useExpiry, ExpiryEntry } from "@/hooks/useExpiry";
 import ExpiryModule from "@/components/expiry/ExpiryModule";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 const CATEGORIES = [
   "MOM & BABY",
@@ -17,8 +19,9 @@ const CATEGORIES = [
 
 export default function ExpiryPage() {
   const { user, isManager } = useAuth();
-  const { entries, isLoading, error, addEntry, editEntry, deleteEntry } =
+  const { entries, isLoading, error, addEntry, editEntry, deleteEntry, refresh } =
     useExpiry();
+  const { toasts, showSuccess, dismiss } = useToast();
 
   const [showForm, setShowForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ExpiryEntry | null>(null);
@@ -216,7 +219,12 @@ export default function ExpiryPage() {
         showForm={showForm}
         onCloseForm={closeForm}
         editingEntry={editingEntry}
+        onAddStockSuccess={({ additionalQty, newQty }) => {
+          refresh();
+          showSuccess(`Stock updated! +${additionalQty} unit(s) added. New total: ${newQty} units`);
+        }}
       />
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

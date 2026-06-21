@@ -11,6 +11,14 @@ export interface StaleItem {
   last_reviewed_at: string | null;
   days_since_review: number;
   review_status: string;
+  missed_sunday: string;
+}
+
+export interface ReviewDeadline {
+  lastSunday: string;
+  nextSunday: string;
+  prevSunday: string;
+  timezone: string;
 }
 
 export interface CompletionRate {
@@ -24,15 +32,19 @@ export interface CompletionRate {
 
 export interface SystemHealth {
   score: number;
+  label: string;
+  color: string;
   totalActive: number;
-  upToDate: number;
-  needsReview: number;
-  criticalStale: number;
-  resolved: number;
+  expired:  { count: number; penalty: number };
+  critical: { count: number; penalty: number };
+  warning:  { count: number; penalty: number };
+  safe:     { count: number; penalty: number };
+  totalPenalty: number;
 }
 
 export interface HealthData {
   systemHealth: SystemHealth;
+  reviewDeadline: ReviewDeadline;
   staleItems: StaleItem[];
   completionRates: CompletionRate[];
 }

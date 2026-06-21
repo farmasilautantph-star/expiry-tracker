@@ -48,6 +48,7 @@ interface UseExpiryReturn {
   addEntry: (data: ExpiryFormData) => Promise<void>;
   editEntry: (id: number, data: ExpiryFormData) => Promise<void>;
   deleteEntry: (id: number) => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
 export function useExpiry(): UseExpiryReturn {
@@ -107,5 +108,5 @@ export function useExpiry(): UseExpiryReturn {
     await fetchEntries();
   }
 
-  return { entries, isLoading, error, addEntry, editEntry, deleteEntry };
+  return { entries, isLoading, error, addEntry, editEntry, deleteEntry, refresh: fetchEntries };
 }

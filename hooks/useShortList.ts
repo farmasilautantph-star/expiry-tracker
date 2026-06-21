@@ -22,9 +22,11 @@ export interface ShortListEntry {
   sold_by: string | null;
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
+  last_reviewed_display: string | null;
   item_status: "active" | "sold" | "completed";
   days_left: number;
   urgency: "expired" | "critical" | "warning" | "safe";
+  review_status: "pending" | "needs_review" | "critical_stale";
   offer_status:
     | "not-offered"
     | "offered"

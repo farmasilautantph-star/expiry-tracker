@@ -108,6 +108,25 @@ function buildTimeline(
     }
 
     if (h.action === "UPDATE") {
+      // Stock addition event
+      const stockAddedM = desc.match(/^\+(\d+) unit\(s\) added to .+\. Reason: (.+)\. New total: (\d+) units$/);
+      if (stockAddedM) {
+        const added = parseInt(stockAddedM[1]);
+        const reason = stockAddedM[2];
+        const total = parseInt(stockAddedM[3]);
+        events.push({
+          id: `ev-${idx++}`,
+          date: h.timestamp,
+          event_type: "stock_added",
+          title: "Stock Added",
+          description: `+${added} unit${added !== 1 ? "s" : ""} added by ${h.pic_name}\nReason: ${reason}\nNew total: ${total} unit${total !== 1 ? "s" : ""}`,
+          pic_name: h.pic_name,
+          color: "#2563eb",
+          icon: "plus-circle",
+        });
+        continue;
+      }
+
       if (desc.includes("Marked as reviewed by")) {
         const m = desc.match(/Marked as reviewed by (.+)/);
         events.push({

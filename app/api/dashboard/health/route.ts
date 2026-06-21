@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import getDb from "@/lib/db";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import {
+  getSundayReviewStatus,
+  getNextSundayDisplay,
+  getLastSundayDisplay,
+  getPreviousSundayDisplay,
+} from "@/lib/sunday-deadline";
 
 interface ExpiryRow {
   id: number;
@@ -13,6 +19,15 @@ interface ExpiryRow {
   quantity: number;
   return_status: string | null;
   last_reviewed_at: string | null;
+  expiry_date: string;
+}
+
+function daysUntilExpiry(expiryDate: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const exp = new Date(expiryDate);
+  exp.setHours(0, 0, 0, 0);
+  return Math.ceil((exp.getTime() - today.getTime()) / 86_400_000);
 }
 
 function calcDaysSince(isoDate: string): number {
@@ -23,49 +38,30 @@ function calcDaysSince(isoDate: string): number {
   return Math.floor((today.getTime() - ref.getTime()) / 86_400_000);
 }
 
-function computeReviewStatus(
-  row: ExpiryRow,
-): { status: string; days_since_review: number } {
-  if (row.return_status === "returned" || row.quantity === 0) {
-    return { status: "resolved", days_since_review: 0 };
-  }
-  const ref = row.last_reviewed_at ?? row.logged_at;
-  const days = calcDaysSince(ref);
-
-  let status: string;
-  if (days <= 7) status = "pending";
-  else if (days <= 14) status = "needs_review";
-  else status = "critical_stale";
-
-  return { status, days_since_review: days };
+function scoreLabel(score: number): { label: string; color: string } {
+  if (score >= 80) return { label: "Good",      color: "#16a34a" };
+  if (score >= 60) return { label: "Monitor",   color: "#ca8a04" };
+  if (score >= 40) return { label: "Attention", color: "#ea580c" };
+  return               { label: "Critical",  color: "#dc2626" };
 }
 
 export async function GET(req: NextRequest) {
   const token = getTokenFromRequest(req);
   if (!token) {
-    return NextResponse.json(
-      { success: false, error: "Unauthorized" },
-      { status: 401 },
-    );
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   let user;
   try {
     user = await verifyToken(token);
   } catch {
-    return NextResponse.json(
-      { success: false, error: "Unauthorized" },
-      { status: 401 },
-    );
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
   const db = getDb();
 
-  const conditions: string[] = [];
+  const conditions: string[] = ["item_status = 'active'"];
   const bindings: (string | number)[] = [];
-
-  // Only consider active items for health scoring
-  conditions.push("item_status = 'active'");
 
   if (user.role !== "manager") {
     conditions.push("pic_id = ?");
@@ -77,42 +73,53 @@ export async function GET(req: NextRequest) {
   const rows = db
     .prepare(
       `SELECT id, description, barcode, category, pic_name, pic_id,
-              logged_at, quantity, return_status, last_reviewed_at
-       FROM expiry_logs
-       ${where}
-       ORDER BY logged_at DESC`,
+              logged_at, quantity, return_status, last_reviewed_at, expiry_date
+       FROM expiry_logs ${where} ORDER BY logged_at DESC`,
     )
     .all(...bindings) as unknown as ExpiryRow[];
 
-  const annotated = rows.map((row) => {
-    const { status, days_since_review } = computeReviewStatus(row);
-    return { ...row, computed_status: status, days_since_review };
+  // ── Urgency-based health score ─────────────────────────────────────────────
+  let expiredCount  = 0;
+  let criticalCount = 0;
+  let warningCount  = 0;
+  let safeCount     = 0;
+
+  for (const row of rows) {
+    const daysLeft = daysUntilExpiry(row.expiry_date);
+    if (daysLeft < 0)         expiredCount++;
+    else if (daysLeft < 90)   criticalCount++;
+    else if (daysLeft <= 240) warningCount++;
+    else                      safeCount++;
+  }
+
+  const totalActive  = rows.length;
+  const totalPenalty = expiredCount * 10 + criticalCount * 5 + warningCount * 1;
+  const score        = Math.max(0, Math.round(100 - totalPenalty));
+  const { label, color } = scoreLabel(score);
+
+  // ── Sunday-rule review compliance ─────────────────────────────────────────
+  const lastSundayStr = getLastSundayDisplay();
+  const prevSundayStr = getPreviousSundayDisplay();
+
+  type ReviewStatus = "pending" | "needs_review" | "critical_stale";
+
+  interface Annotated extends ExpiryRow {
+    computed_status: ReviewStatus;
+    days_since_review: number;
+    missed_sunday: string;
+  }
+
+  const annotated: Annotated[] = rows.map((row) => {
+    const status = getSundayReviewStatus(row.last_reviewed_at, row.logged_at) as ReviewStatus;
+    const ref = row.last_reviewed_at ?? row.logged_at;
+    const days_since_review = calcDaysSince(ref);
+    const missed_sunday =
+      status === "critical_stale" ? prevSundayStr : lastSundayStr;
+    return { ...row, computed_status: status, days_since_review, missed_sunday };
   });
 
-  const totalActive = annotated.filter(
-    (r) => r.computed_status !== "resolved",
-  ).length;
-  const upToDate = annotated.filter(
-    (r) => r.computed_status === "pending",
-  ).length;
-  const needsReview = annotated.filter(
-    (r) => r.computed_status === "needs_review",
-  ).length;
-  const criticalStale = annotated.filter(
-    (r) => r.computed_status === "critical_stale",
-  ).length;
-  const resolved = annotated.filter(
-    (r) => r.computed_status === "resolved",
-  ).length;
-  const score =
-    totalActive === 0 ? 100 : Math.round((upToDate / totalActive) * 100);
-
   const staleItems = annotated
-    .filter(
-      (r) =>
-        r.computed_status === "needs_review" ||
-        r.computed_status === "critical_stale",
-    )
+    .filter((r) => r.computed_status === "needs_review" || r.computed_status === "critical_stale")
     .sort((a, b) => b.days_since_review - a.days_since_review)
     .slice(0, 10)
     .map((r) => ({
@@ -124,31 +131,22 @@ export async function GET(req: NextRequest) {
       last_reviewed_at: r.last_reviewed_at,
       days_since_review: r.days_since_review,
       review_status: r.computed_status,
+      missed_sunday: r.missed_sunday,
     }));
 
+  // ── Per-PIC completion rates ───────────────────────────────────────────────
   const picMap = new Map<
     string,
-    {
-      total: number;
-      reviewed_on_time: number;
-      needs_review: number;
-      critical_stale: number;
-    }
+    { total: number; reviewed_on_time: number; needs_review: number; critical_stale: number }
   >();
 
   for (const r of annotated) {
-    if (r.computed_status === "resolved") continue;
     if (!picMap.has(r.pic_name)) {
-      picMap.set(r.pic_name, {
-        total: 0,
-        reviewed_on_time: 0,
-        needs_review: 0,
-        critical_stale: 0,
-      });
+      picMap.set(r.pic_name, { total: 0, reviewed_on_time: 0, needs_review: 0, critical_stale: 0 });
     }
     const pic = picMap.get(r.pic_name)!;
     pic.total++;
-    if (r.computed_status === "pending") pic.reviewed_on_time++;
+    if (r.computed_status === "pending")        pic.reviewed_on_time++;
     else if (r.computed_status === "needs_review") pic.needs_review++;
     else if (r.computed_status === "critical_stale") pic.critical_stale++;
   }
@@ -161,40 +159,25 @@ export async function GET(req: NextRequest) {
       needs_review: stats.needs_review,
       critical_stale: stats.critical_stale,
       completion_rate:
-        stats.total === 0
-          ? 100
-          : Math.round((stats.reviewed_on_time / stats.total) * 100),
+        stats.total === 0 ? 100 : Math.round((stats.reviewed_on_time / stats.total) * 100),
     }))
     .sort((a, b) => a.pic_name.localeCompare(b.pic_name));
 
-  // Completion stats
-  const today = new Date().toISOString().split("T")[0];
+  // ── Completion activity stats ──────────────────────────────────────────────
+  const today       = new Date().toISOString().split("T")[0];
   const currentMonth = today.slice(0, 7);
-
   interface CountRow { cnt: number }
 
   const completedTodayRow = db
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM expiry_logs
-       WHERE item_status IN ('sold','completed')
-         AND DATE(completed_at) = ?`,
-    )
+    .prepare(`SELECT COUNT(*) AS cnt FROM expiry_logs WHERE item_status IN ('sold','completed') AND DATE(completed_at) = ?`)
     .get(today) as unknown as CountRow;
 
   const soldThisMonthRow = db
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM expiry_logs
-       WHERE completed_via = 'sold'
-         AND strftime('%Y-%m', completed_at) = ?`,
-    )
+    .prepare(`SELECT COUNT(*) AS cnt FROM expiry_logs WHERE completed_via = 'sold' AND strftime('%Y-%m', completed_at) = ?`)
     .get(currentMonth) as unknown as CountRow;
 
   const returnedThisMonthRow = db
-    .prepare(
-      `SELECT COUNT(*) AS cnt FROM expiry_logs
-       WHERE completed_via = 'returned'
-         AND strftime('%Y-%m', completed_at) = ?`,
-    )
+    .prepare(`SELECT COUNT(*) AS cnt FROM expiry_logs WHERE completed_via = 'returned' AND strftime('%Y-%m', completed_at) = ?`)
     .get(currentMonth) as unknown as CountRow;
 
   return NextResponse.json({
@@ -202,16 +185,25 @@ export async function GET(req: NextRequest) {
     data: {
       systemHealth: {
         score,
+        label,
+        color,
         totalActive,
-        upToDate,
-        needsReview,
-        criticalStale,
-        resolved,
+        expired:  { count: expiredCount,  penalty: expiredCount  * 10 },
+        critical: { count: criticalCount, penalty: criticalCount * 5  },
+        warning:  { count: warningCount,  penalty: warningCount  * 1  },
+        safe:     { count: safeCount,     penalty: 0                  },
+        totalPenalty,
+      },
+      reviewDeadline: {
+        lastSunday:  lastSundayStr,
+        nextSunday:  getNextSundayDisplay(),
+        prevSunday:  prevSundayStr,
+        timezone:    "Malaysia Time (GMT+8)",
       },
       staleItems,
       completionRates,
-      completedToday: completedTodayRow?.cnt ?? 0,
-      soldThisMonth: soldThisMonthRow?.cnt ?? 0,
+      completedToday:    completedTodayRow?.cnt    ?? 0,
+      soldThisMonth:     soldThisMonthRow?.cnt     ?? 0,
       returnedThisMonth: returnedThisMonthRow?.cnt ?? 0,
     },
   });

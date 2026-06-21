@@ -22,6 +22,15 @@ Days-left badge display:
 - Reminders only sent by Manager role
 - Dev environment: log to console, never send real email
 
+## Review Deadline Rules
+- Deadline: Every Sunday 11:59 PM Malaysia Time (GMT+8)
+- Up to date (`pending`): reviewed after last Sunday 23:59:59 MYT
+- Needs Review (`needs_review`): not reviewed since last Sunday (missed by 1 week)
+- Critical (`critical_stale`): not reviewed since 2 Sundays ago (missed 2+ weeks)
+- Manager reviews dashboard every Monday morning
+- Staff must update all active items before Sunday midnight MYT
+- Timezone: Asia/Kuala_Lumpur (UTC+8, no DST)
+
 ## History Log Rules
 - Every CREATE, UPDATE, DELETE must write to `history_log`
 - Log the PIC who performed the action

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import getDb from "@/lib/db";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import { getSundayReviewStatus } from "@/lib/sunday-deadline";
 
 export type Urgency = "expired" | "critical" | "warning" | "safe";
 
@@ -36,6 +37,8 @@ interface RawRow extends ExpiryRow {
 export interface ShortListEntry extends ExpiryRow {
   days_left: number;
   urgency: Urgency;
+  review_status: "pending" | "needs_review" | "critical_stale";
+  last_reviewed_display: string | null;
   offer_status:
     | "not-offered"
     | "offered"
@@ -44,6 +47,19 @@ export interface ShortListEntry extends ExpiryRow {
     | "completed";
   offer_id: number | null;
   total_offered: number;
+}
+
+function formatReviewedAt(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 function calcUrgency(expiryDate: string): {
@@ -137,6 +153,8 @@ export async function GET(req: NextRequest) {
   let entries: ShortListEntry[] = rows.map((row) => ({
     ...row,
     ...calcUrgency(row.expiry_date),
+    review_status: getSundayReviewStatus(row.last_reviewed_at, row.logged_at) as ShortListEntry["review_status"],
+    last_reviewed_display: formatReviewedAt(row.last_reviewed_at),
     offer_status:
       (row.offer_status as ShortListEntry["offer_status"]) ?? "not-offered",
     offer_id: row.offer_id ?? null,

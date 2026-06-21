@@ -15,8 +15,9 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  let user;
   try {
-    await verifyToken(token);
+    user = await verifyToken(token);
   } catch {
     return NextResponse.json(
       { success: false, error: "Unauthorized" },
@@ -25,18 +26,20 @@ export async function GET(req: NextRequest) {
   }
 
   const db = getDb();
+
+  const whereClause =
+    user.role !== "manager"
+      ? "WHERE item_status = 'active' AND pic_id = ?"
+      : "WHERE item_status = 'active'";
+  const params: (string | number)[] =
+    user.role !== "manager" ? [user.userId] : [];
+
   const rows = db
-    .prepare("SELECT expiry_date FROM expiry_logs")
-    .all() as unknown as ExpiryRow[];
+    .prepare(`SELECT expiry_date FROM expiry_logs ${whereClause}`)
+    .all(...params) as unknown as ExpiryRow[];
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
-  const in90 = new Date(today);
-  in90.setDate(today.getDate() + 90);
-
-  const in240 = new Date(today);
-  in240.setDate(today.getDate() + 240);
 
   let expired = 0;
   let critical = 0;
@@ -46,16 +49,12 @@ export async function GET(req: NextRequest) {
   for (const row of rows) {
     const d = new Date(row.expiry_date);
     d.setHours(0, 0, 0, 0);
+    const daysLeft = Math.ceil((d.getTime() - today.getTime()) / 86_400_000);
 
-    if (d < today) {
-      expired++;
-    } else if (d < in90) {
-      critical++;   // 0–89 days
-    } else if (d <= in240) {
-      warning++;    // 90–240 days
-    } else {
-      safe++;       // >240 days
-    }
+    if (daysLeft < 0)          expired++;
+    else if (daysLeft < 90)    critical++;
+    else if (daysLeft <= 240)  warning++;
+    else                       safe++;
   }
 
   return NextResponse.json({

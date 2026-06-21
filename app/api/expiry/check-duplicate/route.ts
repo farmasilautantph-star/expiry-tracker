@@ -2,7 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import getDb from "@/lib/db";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
-interface DuplicateRow {
+interface ExistsRow {
+  id: number;
+  description: string;
+  barcode: string;
+  expiry_date: string;
+  quantity: number;
+  pic_name: string;
+  logged_at: string;
+  category: string;
+  uom: string | null;
+}
+
+interface WarnRow {
   description: string;
   barcode: string;
   expiry_date: string;
@@ -29,11 +41,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Managers bypass duplicate check entirely
-  if (user.role === "manager") {
-    return NextResponse.json({ success: true, data: { type: "clear" } });
-  }
-
   const body = await req.json().catch(() => null);
   const { stock_id, barcode, description, expiry_date } = body ?? {};
 
@@ -42,57 +49,90 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getDb();
-  const conditions: string[] = [];
-  const params: (string | number)[] = [];
+
+  // Check for exact duplicate: same barcode/stock_id + same expiry, any PIC
+  const exactConditions: string[] = [];
+  const exactParams: (string | number)[] = [];
 
   if (barcode?.trim()) {
-    conditions.push("(barcode = ? AND pic_id = ?)");
-    params.push(barcode.trim(), user.userId);
+    exactConditions.push("barcode = ?");
+    exactParams.push(barcode.trim());
   }
   if (stock_id?.trim()) {
-    conditions.push("(stock_id = ? AND pic_id = ?)");
-    params.push(stock_id.trim(), user.userId);
+    exactConditions.push("stock_id = ?");
+    exactParams.push(stock_id.trim());
+  }
+
+  if (exactConditions.length > 0) {
+    const exactRow = db
+      .prepare(
+        `SELECT id, description, barcode, expiry_date, quantity, pic_name, logged_at, category, uom
+         FROM expiry_logs
+         WHERE (${exactConditions.join(" OR ")})
+           AND expiry_date LIKE ?
+         ORDER BY logged_at DESC
+         LIMIT 1`,
+      )
+      .get(...exactParams, `${expiry_date}%`) as unknown as ExistsRow | undefined;
+
+    if (exactRow) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          type: "exists",
+          existing: {
+            id: exactRow.id,
+            description: exactRow.description,
+            barcode: exactRow.barcode,
+            expiry_date: exactRow.expiry_date.split("T")[0],
+            current_qty: exactRow.quantity,
+            pic_name: exactRow.pic_name,
+            logged_at: exactRow.logged_at.split("T")[0],
+            category: exactRow.category,
+            uom: exactRow.uom ?? "",
+          },
+        },
+      });
+    }
+  }
+
+  // Check for same item different expiry (warning) — barcode or description match
+  const warnConditions: string[] = [];
+  const warnParams: (string | number)[] = [];
+
+  if (barcode?.trim()) {
+    warnConditions.push("barcode = ?");
+    warnParams.push(barcode.trim());
+  }
+  if (stock_id?.trim()) {
+    warnConditions.push("stock_id = ?");
+    warnParams.push(stock_id.trim());
   }
   if (description?.trim()) {
-    conditions.push("(LOWER(description) = LOWER(?) AND pic_id = ?)");
-    params.push(description.trim(), user.userId);
+    warnConditions.push("LOWER(description) = LOWER(?)");
+    warnParams.push(description.trim());
   }
 
-  const rows = db
-    .prepare(
-      `SELECT description, barcode, expiry_date, logged_at, pic_name
-       FROM expiry_logs
-       WHERE ${conditions.join(" OR ")}
-       ORDER BY logged_at DESC
-       LIMIT 5`,
-    )
-    .all(...params) as unknown as DuplicateRow[];
-
-  if (rows.length === 0) {
+  if (warnConditions.length === 0) {
     return NextResponse.json({ success: true, data: { type: "clear" } });
   }
 
-  // Exact date match → block
-  const exact = rows.find((r) => r.expiry_date.startsWith(expiry_date));
-  if (exact) {
-    return NextResponse.json({
-      success: true,
-      data: {
-        type: "exact",
-        message: "Duplicate detected",
-        existing: {
-          description: exact.description,
-          barcode: exact.barcode,
-          expiry_date: exact.expiry_date.split("T")[0],
-          logged_at: exact.logged_at.split("T")[0],
-          pic_name: exact.pic_name,
-        },
-      },
-    });
+  const warnRows = db
+    .prepare(
+      `SELECT description, barcode, expiry_date, logged_at, pic_name
+       FROM expiry_logs
+       WHERE (${warnConditions.join(" OR ")})
+         AND expiry_date NOT LIKE ?
+       ORDER BY logged_at DESC
+       LIMIT 5`,
+    )
+    .all(...warnParams, `${expiry_date}%`) as unknown as WarnRow[];
+
+  if (warnRows.length === 0) {
+    return NextResponse.json({ success: true, data: { type: "clear" } });
   }
 
-  // Different date → warn
-  const warn = rows[0];
+  const warn = warnRows[0];
   return NextResponse.json({
     success: true,
     data: {

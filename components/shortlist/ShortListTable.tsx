@@ -12,13 +12,16 @@ import {
   DocumentTextIcon,
   BanknotesIcon,
   EllipsisVerticalIcon,
+  ExclamationTriangleIcon,
+  XCircleIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/hooks/useToast";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
-type ReviewStatus = "pending" | "needs_review" | "critical_stale" | "resolved";
+type ReviewStatus = "pending" | "needs_review" | "critical_stale";
 
 const BADGE_STYLE: Record<Urgency, { bg: string; color: string; dotColor: string; fontWeight: number }> = {
   expired:  { bg: "#fee2e2", color: "#dc2626", dotColor: "#dc2626", fontWeight: 600 },
@@ -49,16 +52,7 @@ function getReturnLabel(status: string | null): string {
 
 function getRowStatus(entry: ShortListEntry, justReviewed: boolean): ReviewStatus {
   if (justReviewed) return "pending";
-  if (entry.return_status === "returned" || entry.quantity === 0) return "resolved";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const ref = entry.last_reviewed_at ?? entry.logged_at;
-  const refDate = new Date(ref);
-  refDate.setHours(0, 0, 0, 0);
-  const days = Math.floor((today.getTime() - refDate.getTime()) / 86_400_000);
-  if (days <= 7) return "pending";
-  if (days <= 14) return "needs_review";
-  return "critical_stale";
+  return entry.review_status ?? "pending";
 }
 
 function getFirstCellBorderStyle(status: ReviewStatus): React.CSSProperties {
@@ -66,7 +60,6 @@ function getFirstCellBorderStyle(status: ReviewStatus): React.CSSProperties {
     case "pending":        return { borderLeft: "3px solid #22c55e" };
     case "needs_review":   return { borderLeft: "3px solid #eab308" };
     case "critical_stale": return { borderLeft: "3px solid #ef4444" };
-    default:               return { borderLeft: "3px solid #e2e8f0" };
   }
 }
 
@@ -74,6 +67,51 @@ function getRowBgStyle(status: ReviewStatus): React.CSSProperties {
   if (status === "needs_review")   return { background: "rgba(254,252,232,0.5)" };
   if (status === "critical_stale") return { background: "rgba(255,245,245,0.5)" };
   return {};
+}
+
+function ReviewStatusLine({ entry, justReviewed }: { entry: ShortListEntry; justReviewed: boolean }) {
+  if (justReviewed) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#16a34a" }}>
+        <CheckIcon className="w-3 h-3 flex-shrink-0" />
+        Just reviewed
+      </span>
+    );
+  }
+  if (entry.return_status === "returned" || entry.quantity === 0) return null;
+
+  const { review_status, last_reviewed_at, last_reviewed_display } = entry;
+
+  if (review_status === "pending") {
+    if (last_reviewed_at && last_reviewed_display) {
+      return (
+        <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#16a34a" }}>
+          <CheckIcon className="w-3 h-3 flex-shrink-0" />
+          {last_reviewed_display}
+        </span>
+      );
+    }
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#94a3b8" }}>
+        <ClockIcon className="w-3 h-3 flex-shrink-0" />
+        Never reviewed
+      </span>
+    );
+  }
+  if (review_status === "needs_review") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#ca8a04" }}>
+        <ExclamationTriangleIcon className="w-3 h-3 flex-shrink-0" />
+        Not reviewed this week
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#dc2626" }}>
+      <XCircleIcon className="w-3 h-3 flex-shrink-0" />
+      Missed 2+ Sundays
+    </span>
+  );
 }
 
 function Dot({ color }: { color: string }) {
@@ -177,9 +215,13 @@ function ReviewPopupContent({
   currentPicName: string;
   onSwitchToSales?: () => void;
   onClose: () => void;
-  onReviewed: () => void;
+  onReviewed: () => Promise<void>;
   onSell: () => void;
 }) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const isSold = entry.item_status === "sold" || entry.quantity === 0;
   const isPartial =
     !isSold &&
@@ -193,6 +235,28 @@ function ReviewPopupContent({
   const canSell = (isManager || entry.pic_name === currentPicName) && !isSold;
   const unitsPreviouslySold =
     isPartial && entry.original_qty != null ? entry.original_qty - entry.quantity : null;
+
+  async function handleReviewed() {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await onReviewed();
+      const now = new Date().toLocaleString("en-MY", {
+        timeZone: "Asia/Kuala_Lumpur",
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+      setConfirmedAt(now);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to mark reviewed");
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <div
@@ -278,41 +342,78 @@ function ReviewPopupContent({
               </p>
             </div>
           )}
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
-              style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
-            >
-              Cancel
-            </button>
-            {canSell && (
+
+          {/* Confirmation state */}
+          {confirmedAt ? (
+            <>
+              <div className="rounded-xl px-3 py-3 flex items-start gap-2 mb-3" style={{ background: "#dcfce7" }}>
+                <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-[#16a34a]">Reviewed ✓</p>
+                  <p className="text-xs text-[#16a34a] opacity-80 mt-0.5">{confirmedAt}</p>
+                </div>
+              </div>
               <button
-                onClick={onSell}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
-                style={{ background: "#dbeafe", color: "#2563eb" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#bfdbfe")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#dbeafe")}
+                onClick={onClose}
+                className="w-full px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+                style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
               >
-                <BanknotesIcon className="w-4 h-4" />
-                Mark Sold
+                Close
               </button>
-            )}
-            {canReview && (
-              <button
-                onClick={onReviewed}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-colors"
-                style={{ background: "#22c55e" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#16a34a")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#22c55e")}
-              >
-                <CheckIcon className="w-4 h-4" />
-                Reviewed
-              </button>
-            )}
-          </div>
+            </>
+          ) : (
+            <>
+              {saveError && (
+                <p className="text-xs text-[#dc2626] mb-3">{saveError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={onClose}
+                  className="px-3 py-2 rounded-xl text-sm font-medium transition-colors"
+                  style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
+                >
+                  Cancel
+                </button>
+                {canSell && (
+                  <button
+                    onClick={onSell}
+                    disabled={isSaving}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
+                    style={{ background: "#dbeafe", color: "#2563eb" }}
+                    onMouseEnter={(e) => { if (!isSaving) (e.currentTarget as HTMLElement).style.background = "#bfdbfe"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#dbeafe"; }}
+                  >
+                    <BanknotesIcon className="w-4 h-4" />
+                    Mark Sold
+                  </button>
+                )}
+                {canReview && (
+                  <button
+                    onClick={handleReviewed}
+                    disabled={isSaving}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-80"
+                    style={{ background: "#22c55e" }}
+                    onMouseEnter={(e) => { if (!isSaving) (e.currentTarget as HTMLElement).style.background = "#16a34a"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#22c55e"; }}
+                  >
+                    {isSaving ? (
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <CheckIcon className="w-4 h-4" />
+                    )}
+                    {isSaving ? "Saving…" : "Reviewed"}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
@@ -517,22 +618,16 @@ export default function ShortListTable({
     return sortConfig.column === col ? { background: "#fafcff" } : {};
   }
 
-  async function confirmMarkReviewed() {
-    if (!reviewConfirmEntry) return;
-    const id = reviewConfirmEntry.id;
-    setReviewConfirmEntry(null);
+  async function confirmMarkReviewed(id: number): Promise<void> {
     setReviewingIds((prev) => { const s = new Set(prev); s.add(id); return s; });
     try {
       const res = await fetch(`/api/expiry/${id}/review`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to mark reviewed");
       setJustReviewedIds((prev) => { const s = new Set(prev); s.add(id); return s; });
-      showSuccess("Item marked as reviewed");
       setTimeout(() => {
         setJustReviewedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
       }, 5000);
       await onMarkReviewed?.(id);
-    } catch (err) {
-      showError(err instanceof Error ? err.message : "Failed to mark reviewed");
     } finally {
       setReviewingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
     }
@@ -611,7 +706,7 @@ export default function ShortListTable({
             currentPicName={currentPicName}
             onSwitchToSales={onSwitchToSales}
             onClose={() => setReviewConfirmEntry(null)}
-            onReviewed={confirmMarkReviewed}
+            onReviewed={() => confirmMarkReviewed(reviewConfirmEntry.id)}
             onSell={openSellFromPopup}
           />
         )}
@@ -767,6 +862,7 @@ export default function ShortListTable({
                         style={{ ...cellBg("logged_at"), ...firstCellBorder }}
                       >
                         {formatDate(entry.logged_at)}
+                        <ReviewStatusLine entry={entry} justReviewed={justReviewed} />
                       </td>
                       <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={cellBg("pic_name")}>
                         <span
@@ -920,10 +1016,9 @@ export default function ShortListTable({
           {/* Legend */}
           <div className="flex flex-wrap gap-4 mt-1">
             {[
-              { color: "#22c55e", label: "Up to date" },
-              { color: "#eab308", label: "Needs review" },
-              { color: "#ef4444", label: "Critical" },
-              { color: "#94a3b8", label: "Resolved" },
+              { color: "#22c55e", label: "Reviewed this week" },
+              { color: "#eab308", label: "Not reviewed (missed Sunday)" },
+              { color: "#ef4444", label: "Critical (missed 2+ Sundays)" },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div className="w-[3px] h-3.5 rounded-full flex-shrink-0" style={{ background: color }} />

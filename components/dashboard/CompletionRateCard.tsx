@@ -1,16 +1,18 @@
 "use client";
 
-import type { CompletionRate } from "@/hooks/useDashboardHealth";
+import type { CompletionRate, ReviewDeadline } from "@/hooks/useDashboardHealth";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import { getLastSundayDisplay, getNextSundayDisplay } from "@/lib/sunday-deadline";
 
 interface Props {
   rates: CompletionRate[];
   isManager: boolean;
   isLoading: boolean;
+  reviewDeadline?: ReviewDeadline;
 }
 
 function rateColor(rate: number): string {
@@ -23,18 +25,13 @@ function RateIcon({ rate }: { rate: number }) {
   if (rate >= 80)
     return <CheckCircleIcon className="w-4 h-4" style={{ color: "#22c55e" }} />;
   if (rate >= 60)
-    return (
-      <ExclamationCircleIcon className="w-4 h-4" style={{ color: "#eab308" }} />
-    );
+    return <ExclamationCircleIcon className="w-4 h-4" style={{ color: "#eab308" }} />;
   return <XCircleIcon className="w-4 h-4" style={{ color: "#ef4444" }} />;
 }
 
 function ProgressBar({ rate, height = 12 }: { rate: number; height?: number }) {
   return (
-    <div
-      className="rounded-full overflow-hidden"
-      style={{ height, background: "#f1f5f9" }}
-    >
+    <div className="rounded-full overflow-hidden" style={{ height, background: "#f1f5f9" }}>
       <div
         className="h-full rounded-full transition-all duration-500"
         style={{ width: `${rate}%`, background: rateColor(rate) }}
@@ -43,17 +40,20 @@ function ProgressBar({ rate, height = 12 }: { rate: number; height?: number }) {
   );
 }
 
-export default function CompletionRateCard({
-  rates,
-  isManager,
-  isLoading,
-}: Props) {
+export default function CompletionRateCard({ rates, isManager, isLoading, reviewDeadline }: Props) {
   const myRate = !isManager ? rates[0] : undefined;
+  const lastSunday = reviewDeadline?.lastSunday ?? getLastSundayDisplay();
+  const nextSunday = reviewDeadline?.nextSunday ?? getNextSundayDisplay();
 
   return (
     <div className="rounded-2xl bg-white shadow-sm p-6" style={{ border: "1px solid #e2e8f0" }}>
-      <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider mb-4">
-        {isManager ? "STAFF COMPLETION RATES" : "MY COMPLETION RATE"}
+      <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
+        {isManager ? "Staff Review Compliance" : "My Review Compliance"}
+      </p>
+      <p className="text-xs text-[#94a3b8] mb-4">
+        {isManager
+          ? "Staff review compliance — Sunday deadline"
+          : "Items reviewed before Sunday deadline"}
       </p>
 
       {isLoading ? (
@@ -87,13 +87,9 @@ export default function CompletionRateCard({
           )}
         </div>
       ) : !isManager && !myRate ? (
-        <p className="text-sm text-[#94a3b8] text-center py-4">
-          No active items to track.
-        </p>
+        <p className="text-sm text-[#94a3b8] text-center py-4">No active items to track.</p>
       ) : rates.length === 0 ? (
-        <p className="text-sm text-[#94a3b8] text-center py-4">
-          No active items to track.
-        </p>
+        <p className="text-sm text-[#94a3b8] text-center py-4">No active items to track.</p>
       ) : (
         <div className="space-y-4">
           {rates.map((r) => (
@@ -105,13 +101,13 @@ export default function CompletionRateCard({
                 >
                   {r.pic_name.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-semibold text-[#0f172a] flex-1">
-                  {r.pic_name}
-                </span>
-                <span
-                  className="text-sm font-black"
-                  style={{ color: rateColor(r.completion_rate) }}
-                >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-[#0f172a]">{r.pic_name}</p>
+                  <p className="text-xs text-[#94a3b8]">
+                    {r.reviewed_on_time} of {r.total} items reviewed before Sunday deadline
+                  </p>
+                </div>
+                <span className="text-sm font-black" style={{ color: rateColor(r.completion_rate) }}>
                   {r.completion_rate}%
                 </span>
                 <RateIcon rate={r.completion_rate} />
@@ -120,6 +116,13 @@ export default function CompletionRateCard({
             </div>
           ))}
         </div>
+      )}
+
+      {/* Weekly deadline context */}
+      {!isLoading && (
+        <p className="text-xs text-[#94a3b8] mt-4 pt-3" style={{ borderTop: "1px solid #f1f5f9" }}>
+          Week: {lastSunday} → {nextSunday}
+        </p>
       )}
     </div>
   );

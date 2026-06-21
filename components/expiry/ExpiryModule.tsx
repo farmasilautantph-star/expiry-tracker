@@ -16,6 +16,7 @@ interface Props {
   showForm: boolean;
   onCloseForm: () => void;
   editingEntry: ExpiryEntry | null;
+  onAddStockSuccess?: (result: { additionalQty: number; newQty: number }) => void;
 }
 
 export default function ExpiryModule({
@@ -29,6 +30,7 @@ export default function ExpiryModule({
   showForm,
   onCloseForm,
   editingEntry: externalEditingEntry,
+  onAddStockSuccess,
 }: Props) {
   const [localEditingEntry, setLocalEditingEntry] =
     useState<ExpiryEntry | null>(null);
@@ -93,6 +95,7 @@ export default function ExpiryModule({
         editingEntry={activeEditingEntry}
         picName={picName}
         onSubmit={handleSubmit}
+        onAddStockSuccess={onAddStockSuccess}
       />
     </>
   );
