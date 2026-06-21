@@ -46,17 +46,17 @@ const NAV_SECTIONS: NavSection[] = [
     label: "TRACKING",
     items: [
       {
-        label: "Item Short List",
+        label: "Expiry Monitor",
         href: "/dashboard/shortlist",
         icon: <ListBulletIcon className="w-5 h-5" />,
       },
       {
-        label: "Return List",
+        label: "Return Management",
         href: "/dashboard/returns",
         icon: <ArrowUturnLeftIcon className="w-5 h-5" />,
       },
       {
-        label: "Offer Ke Outlet",
+        label: "Outlet Offers",
         href: "/dashboard/offers",
         icon: <BuildingStorefrontIcon className="w-5 h-5" />,
       },
@@ -77,7 +77,7 @@ const NAV_SECTIONS: NavSection[] = [
     label: "TOOLS",
     items: [
       {
-        label: "Activity Log",
+        label: "Item Timeline",
         href: "/dashboard/activity-log",
         icon: <QrCodeIcon className="w-5 h-5" />,
       },
@@ -87,12 +87,12 @@ const NAV_SECTIONS: NavSection[] = [
 
 const PAGE_TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
-  "/dashboard/shortlist": "Item Short List",
-  "/dashboard/returns": "Return List",
-  "/dashboard/offers": "Offer Ke Outlet",
+  "/dashboard/shortlist": "Expiry Monitor",
+  "/dashboard/returns": "Return Management",
+  "/dashboard/offers": "Outlet Offers",
   "/dashboard/history-log": "History Log",
   "/dashboard/expiry": "Log New Expiry",
-  "/dashboard/activity-log": "Activity Log",
+  "/dashboard/activity-log": "Item Timeline",
 };
 
 function formatDate(date: Date): string {

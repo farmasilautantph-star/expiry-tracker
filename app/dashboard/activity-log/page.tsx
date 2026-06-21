@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { useActivityLog } from "@/hooks/useActivityLog";
 import ActivitySearchBar from "@/components/activity/ActivitySearchBar";
@@ -21,6 +22,8 @@ export default function ActivityLogPage() {
     clearSearch,
   } = useActivityLog();
 
+  useEffect(() => { document.title = "Item Timeline | Expiry Tracker"; }, []);
+
   const showBigHeader = !searchResult && !isLoading && !error;
   const showSelector =
     !!searchResult?.found && searchResult.multiple && selectedEntryId === null;
@@ -41,10 +44,10 @@ export default function ActivityLogPage() {
             <MagnifyingGlassIcon className="w-8 h-8 text-[#2563eb]" />
           </div>
           <h2 className="text-xl font-bold text-[#0f172a] mb-1">
-            Track Item Activity
+            Item Timeline
           </h2>
           <p className="text-sm text-[#94a3b8] mb-6">
-            Search by barcode to view the full timeline for any item.
+            Track full item journey by barcode
           </p>
           <ActivitySearchBar
             barcode={barcode}

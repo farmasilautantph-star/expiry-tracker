@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useReturns } from "@/hooks/useReturns";
 import ReturnsModule from "@/components/returns/ReturnsModule";
@@ -18,6 +18,7 @@ function currentMonthValue(): MonthValue {
 
 export default function ReturnsPage() {
   const { user, isManager } = useAuth();
+  useEffect(() => { document.title = "Return Management | Expiry Tracker"; }, []);
   const [tab, setTab] = useState<"active" | "history">("active");
   const [activeMonth, setActiveMonth] = useState<MonthValue | null>(null);
   const [historyMonth, setHistoryMonth] = useState<MonthValue | null>(currentMonthValue());
@@ -70,11 +71,9 @@ export default function ReturnsPage() {
     <div className="space-y-5">
       {/* Page header */}
       <div>
-        <h2 className="text-xl font-semibold text-[#1e293b]">Return List</h2>
+        <h2 className="text-xl font-semibold text-[#1e293b]">Return Management</h2>
         <p className="text-sm text-[#64748b] mt-0.5">
-          {isManager
-            ? "All returnable items across all PICs."
-            : `Returnable items logged by you (${user.picName}).`}
+          Monitor and manage item returns
         </p>
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useOffers } from "@/hooks/useOffers";
 import ActiveOffersTab from "@/components/offers/ActiveOffersTab";
@@ -9,6 +9,8 @@ import OfferHistoryTab from "@/components/offers/OfferHistoryTab";
 export default function OffersPage() {
   const { user, isManager } = useAuth();
   const [tab, setTab] = useState<"active" | "history">("active");
+
+  useEffect(() => { document.title = "Outlet Offers | Expiry Tracker"; }, []);
 
   const {
     entries,
@@ -34,11 +36,9 @@ export default function OffersPage() {
     <div className="space-y-5">
       {/* Page header */}
       <div>
-        <h2 className="text-xl font-semibold text-[#1e293b]">Offer Ke Outlet</h2>
+        <h2 className="text-xl font-semibold text-[#1e293b]">Outlet Offers</h2>
         <p className="text-sm text-[#64748b] mt-0.5">
-          {isManager
-            ? "Manage outlet offers across all items."
-            : "Items offered to outlets from your inventory."}
+          Track items offered to outlets
         </p>
       </div>
 

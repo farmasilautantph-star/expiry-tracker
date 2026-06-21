@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
@@ -23,6 +23,8 @@ export default function ShortListPage() {
     activeFilterCount,
     refresh,
   } = useShortList();
+
+  useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
 
   if (!user) return null;
 
@@ -63,11 +65,9 @@ export default function ShortListPage() {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-[#1e293b]">Item Short List</h2>
+          <h2 className="text-xl font-semibold text-[#1e293b]">Expiry Monitor</h2>
           <p className="text-sm text-[#64748b] mt-0.5">
-            {isManager
-              ? "All logged expiry items across all PICs."
-              : `Your logged expiry items (${user.picName}).`}
+            Track and manage short-expiry items
           </p>
         </div>
 
