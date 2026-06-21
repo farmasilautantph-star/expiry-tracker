@@ -20,6 +20,9 @@ interface Props {
   activeFilterCount: number;
   isManager: boolean;
   picOptions: string[];
+  mode: "active" | "history";
+  historyMonth?: string;
+  onHistoryMonthChange?: (month: string) => void;
 }
 
 const SELECT_CLS =
@@ -35,7 +38,7 @@ function monthLabel(ym: string): string {
 function buildMonthOptions(): string[] {
   const months: string[] = [];
   const now = new Date();
-  for (let i = -3; i <= 6; i++) {
+  for (let i = -6; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
     const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     months.push(ym);
@@ -52,44 +55,78 @@ export default function ReturnsFilters({
   activeFilterCount,
   isManager,
   picOptions,
+  mode,
+  historyMonth,
+  onHistoryMonthChange,
 }: Props) {
+  const focusStyle = (e: React.FocusEvent<HTMLSelectElement | HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = "#2563eb";
+    e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.1)";
+  };
+  const blurStyle = (e: React.FocusEvent<HTMLSelectElement | HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = "#e2e8f0";
+    e.currentTarget.style.boxShadow = "";
+  };
+
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      {/* Month */}
-      <div className="relative">
-        <select
-          value={filters.month}
-          onChange={(e) => setFilter("month", e.target.value)}
-          className={SELECT_CLS}
-          style={{ borderRadius: "10px" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.1)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = ""; }}
-        >
-          <option value="">All Months</option>
-          {MONTH_OPTIONS.map((ym) => (
-            <option key={ym} value={ym}>{monthLabel(ym)}</option>
-          ))}
-        </select>
-        <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
-      </div>
+      {/* History: month filter on completed_at */}
+      {mode === "history" && onHistoryMonthChange && (
+        <div className="relative">
+          <select
+            value={historyMonth ?? ""}
+            onChange={(e) => onHistoryMonthChange(e.target.value)}
+            className={SELECT_CLS}
+            style={{ borderRadius: "10px" }}
+            onFocus={focusStyle}
+            onBlur={blurStyle}
+          >
+            <option value="">All Months</option>
+            {MONTH_OPTIONS.map((ym) => (
+              <option key={ym} value={ym}>{monthLabel(ym)}</option>
+            ))}
+          </select>
+          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+        </div>
+      )}
 
-      {/* Status */}
-      <div className="relative">
-        <select
-          value={filters.status}
-          onChange={(e) => setFilter("status", e.target.value)}
-          className={SELECT_CLS}
-          style={{ borderRadius: "10px" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.1)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = ""; }}
-        >
-          <option value="">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="overdue">Overdue</option>
-          <option value="returned">Returned</option>
-        </select>
-        <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
-      </div>
+      {/* Active: status filter */}
+      {mode === "active" && (
+        <div className="relative">
+          <select
+            value={filters.status}
+            onChange={(e) => setFilter("status", e.target.value)}
+            className={SELECT_CLS}
+            style={{ borderRadius: "10px" }}
+            onFocus={focusStyle}
+            onBlur={blurStyle}
+          >
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="overdue">Overdue</option>
+          </select>
+          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+        </div>
+      )}
+
+      {/* History: status filter */}
+      {mode === "history" && (
+        <div className="relative">
+          <select
+            value={filters.status}
+            onChange={(e) => setFilter("status", e.target.value)}
+            className={SELECT_CLS}
+            style={{ borderRadius: "10px" }}
+            onFocus={focusStyle}
+            onBlur={blurStyle}
+          >
+            <option value="">All Statuses</option>
+            <option value="returned">Returned</option>
+            <option value="not_approved">Not Approved</option>
+          </select>
+          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+        </div>
+      )}
 
       {/* Category */}
       <div className="relative">
@@ -98,8 +135,8 @@ export default function ReturnsFilters({
           onChange={(e) => setFilter("category", e.target.value)}
           className={SELECT_CLS}
           style={{ borderRadius: "10px" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.1)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = ""; }}
+          onFocus={focusStyle}
+          onBlur={blurStyle}
         >
           <option value="">All Categories</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -115,8 +152,8 @@ export default function ReturnsFilters({
             onChange={(e) => setFilter("pic", e.target.value)}
             className={SELECT_CLS}
             style={{ borderRadius: "10px" }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.1)"; }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = ""; }}
+            onFocus={focusStyle}
+            onBlur={blurStyle}
           >
             <option value="">All PICs</option>
             {picOptions.map((p) => <option key={p} value={p}>{p}</option>)}
@@ -135,8 +172,8 @@ export default function ReturnsFilters({
           onChange={(e) => setFilter("search", e.target.value)}
           className="w-full pl-9 pr-4 py-2 text-sm text-[#0f172a] bg-white placeholder-[#94a3b8] transition-colors focus:outline-none"
           style={{ border: "1px solid #e2e8f0", borderRadius: "10px" }}
-          onFocus={(e) => { e.currentTarget.style.borderColor = "#2563eb"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.1)"; }}
-          onBlur={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = ""; }}
+          onFocus={focusStyle}
+          onBlur={blurStyle}
         />
         {filters.search && (
           <button
@@ -151,18 +188,20 @@ export default function ReturnsFilters({
       </div>
 
       {/* Clear */}
-      {activeFilterCount > 0 && (
+      {(activeFilterCount > 0 || (historyMonth && mode === "history")) && (
         <button
-          onClick={clearFilters}
+          onClick={() => { clearFilters(); onHistoryMonthChange?.(""); }}
           className="flex items-center gap-1.5 text-sm transition-colors"
           style={{ color: "#64748b" }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#ef4444")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#64748b")}
         >
           Clear
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-xs font-semibold" style={{ background: "#2563eb" }}>
-            {activeFilterCount}
-          </span>
+          {activeFilterCount > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-xs font-semibold" style={{ background: "#2563eb" }}>
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       )}
     </div>

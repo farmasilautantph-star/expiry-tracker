@@ -203,11 +203,73 @@ function buildTimeline(
         });
         continue;
       }
+
+      // Return status transitions — new format
+      if (desc.startsWith("Return completed for")) {
+        events.push({
+          id: `ev-${idx++}`,
+          date: h.timestamp,
+          event_type: "return_completed",
+          title: "Returned to Warehouse",
+          description: `Successfully returned by ${h.pic_name}`,
+          pic_name: h.pic_name,
+          color: "#16a34a",
+          icon: "check",
+        });
+        continue;
+      }
+      if (desc.startsWith("Return not approved for")) {
+        const notesM = desc.match(/\. Notes: (.+)$/);
+        events.push({
+          id: `ev-${idx++}`,
+          date: h.timestamp,
+          event_type: "return_not_approved",
+          title: "Return Not Approved",
+          description: `Return rejected by ${h.pic_name}${notesM ? ". " + notesM[1] : ""}`,
+          pic_name: h.pic_name,
+          color: "#dc2626",
+          icon: "x-circle",
+        });
+        continue;
+      }
+
+      // Return status transitions — old format (pre-simplification)
+      const oldReturnM = desc.match(/Return status updated to (\w+) by (.+)/);
+      if (oldReturnM) {
+        const status = oldReturnM[1];
+        if (status === "returned") {
+          events.push({
+            id: `ev-${idx++}`,
+            date: h.timestamp,
+            event_type: "return_completed",
+            title: "Returned to Warehouse",
+            description: `Successfully returned by ${h.pic_name}`,
+            pic_name: h.pic_name,
+            color: "#16a34a",
+            icon: "check",
+          });
+        } else if (status === "not_approved") {
+          events.push({
+            id: `ev-${idx++}`,
+            date: h.timestamp,
+            event_type: "return_not_approved",
+            title: "Return Not Approved",
+            description: `Return rejected by ${h.pic_name}`,
+            pic_name: h.pic_name,
+            color: "#dc2626",
+            icon: "x-circle",
+          });
+        }
+        continue;
+      }
     }
   }
 
-  // ── Return status events from entry fields ──────────────────────────────────
-  const returnDate = entry.completed_at ?? entry.last_updated_at ?? entry.logged_at;
+  // ── Return events from entry fields (field-based, for items without history_log return events) ──
+  // Only emit these if history_log didn't already produce return events
+  const hasReturnHistoryEvents = events.some((e) =>
+    ["returning", "return_completed", "return_not_approved"].includes(e.event_type),
+  );
 
   if (entry.return_by_date) {
     events.push({
@@ -222,41 +284,31 @@ function buildTimeline(
     });
   }
 
-  if (entry.return_status === "pending") {
-    events.push({
-      id: `ev-${idx++}`,
-      date: entry.last_updated_at ?? entry.logged_at,
-      event_type: "return_pending",
-      title: "Return Pending",
-      description: "Awaiting return to warehouse",
-      pic_name: entry.pic_name,
-      color: "#d97706",
-      icon: "clock",
-    });
-  } else if (entry.return_status === "returned" || entry.completed_via === "returned") {
-    events.push({
-      id: `ev-${idx++}`,
-      date: returnDate,
-      event_type: "return_completed",
-      title: "Returned to Warehouse",
-      description: `Successfully returned by ${entry.pic_name}`,
-      pic_name: entry.pic_name,
-      color: "#16a34a",
-      icon: "check",
-    });
-  }
-
-  if (entry.completed_via === "return_not_approved") {
-    events.push({
-      id: `ev-${idx++}`,
-      date: returnDate,
-      event_type: "return_not_approved",
-      title: "Return Not Approved",
-      description: `Return rejected.${entry.return_notes ? " " + entry.return_notes : ""}`,
-      pic_name: entry.pic_name,
-      color: "#dc2626",
-      icon: "x-circle",
-    });
+  if (!hasReturnHistoryEvents) {
+    const returnDate = entry.completed_at ?? entry.last_updated_at ?? entry.logged_at;
+    if (entry.return_status === "returned" || entry.completed_via === "returned") {
+      events.push({
+        id: `ev-${idx++}`,
+        date: returnDate,
+        event_type: "return_completed",
+        title: "Returned to Warehouse",
+        description: `Successfully returned by ${entry.pic_name}`,
+        pic_name: entry.pic_name,
+        color: "#16a34a",
+        icon: "check",
+      });
+    } else if (entry.completed_via === "return_not_approved") {
+      events.push({
+        id: `ev-${idx++}`,
+        date: returnDate,
+        event_type: "return_not_approved",
+        title: "Return Not Approved",
+        description: `Return rejected.${entry.return_notes ? " " + entry.return_notes : ""}`,
+        pic_name: entry.pic_name,
+        color: "#dc2626",
+        icon: "x-circle",
+      });
+    }
   }
 
   // ── Offer events ────────────────────────────────────────────────────────────

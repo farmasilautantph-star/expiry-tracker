@@ -16,6 +16,8 @@ export interface ReturnRow {
   uom: string | null;
   return_status: string;
   return_by_date: string | null;
+  return_notes: string | null;
+  completed_at: string | null;
   overdue: boolean;
 }
 
@@ -48,7 +50,9 @@ export async function GET(req: NextRequest) {
   const db = getDb();
   const today = new Date().toISOString().split("T")[0];
 
-  const conditions: string[] = ["return_status IN ('pending', 'returned')"];
+  const conditions: string[] = [
+    "return_status IN ('pending', 'returned', 'not_approved')",
+  ];
   const bindings: (string | number)[] = [];
 
   if (user.role !== "manager") {
@@ -64,21 +68,41 @@ export async function GET(req: NextRequest) {
     bindings.push(category);
   }
 
-  if (month) {
-    conditions.push("strftime('%Y-%m', return_by_date) = ?");
-    bindings.push(month);
-  }
-
-  if (statusFilter === "returned") {
+  // Status filter — applied on top of base condition
+  if (statusFilter === "pending") {
+    conditions.push("return_status = 'pending'");
+    conditions.push("(return_by_date IS NULL OR return_by_date >= ?)");
+    bindings.push(today);
+  } else if (statusFilter === "returned") {
     conditions.push("return_status = 'returned'");
+  } else if (statusFilter === "not_approved") {
+    conditions.push("return_status = 'not_approved'");
   } else if (statusFilter === "overdue") {
     conditions.push("return_status = 'pending'");
     conditions.push("return_by_date < ?");
     bindings.push(today);
-  } else if (statusFilter === "pending") {
+  } else if (statusFilter === "active") {
     conditions.push("return_status = 'pending'");
-    conditions.push("(return_by_date IS NULL OR return_by_date >= ?)");
-    bindings.push(today);
+  } else if (statusFilter === "history") {
+    conditions.push("return_status IN ('returned', 'not_approved')");
+  }
+
+  // Month filter: for history statuses filter by completed_at; for active by return_by_date
+  if (month) {
+    const isHistoryFilter =
+      statusFilter === "returned" ||
+      statusFilter === "not_approved" ||
+      statusFilter === "history";
+
+    if (isHistoryFilter) {
+      conditions.push("strftime('%Y-%m', COALESCE(completed_at, logged_at)) = ?");
+    } else {
+      // For active items: include those with no return_by_date (don't exclude them)
+      conditions.push(
+        "(return_by_date IS NULL OR strftime('%Y-%m', return_by_date) = ?)",
+      );
+    }
+    bindings.push(month);
   }
 
   if (search) {
@@ -90,7 +114,7 @@ export async function GET(req: NextRequest) {
   }
 
   const where = `WHERE ${conditions.join(" AND ")}`;
-  const sql = `SELECT * FROM expiry_logs ${where} ORDER BY return_by_date ASC, logged_at DESC`;
+  const sql = `SELECT * FROM expiry_logs ${where} ORDER BY return_by_date ASC NULLS LAST, logged_at DESC`;
 
   type ExpiryRow = Omit<ReturnRow, "overdue">;
   const rows = db.prepare(sql).all(...bindings) as unknown as ExpiryRow[];
@@ -103,9 +127,16 @@ export async function GET(req: NextRequest) {
       r.return_by_date < today,
   }));
 
-  const counts = { pending: 0, overdue: 0, returned: 0, total: entries.length };
+  const counts = {
+    pending: 0,
+    overdue: 0,
+    returned: 0,
+    not_approved: 0,
+    total: entries.length,
+  };
   for (const e of entries) {
     if (e.return_status === "returned") counts.returned++;
+    else if (e.return_status === "not_approved") counts.not_approved++;
     else if (e.overdue) counts.overdue++;
     else counts.pending++;
   }

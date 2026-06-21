@@ -12,9 +12,11 @@ import type {
 
 interface Props {
   entries: ReturnEntry[];
+  allEntries: ReturnEntry[];
   counts: ReturnCounts;
   isLoading: boolean;
   isManager: boolean;
+  mode: "active" | "history";
   filters: ReturnFilters;
   setFilter: <K extends keyof ReturnFilters>(
     key: K,
@@ -22,35 +24,43 @@ interface Props {
   ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
-  onMarkReturned: (id: number) => Promise<void>;
+  historyMonth?: string;
+  onHistoryMonthChange?: (month: string) => void;
+  onMarkReturned: (id: number, notes?: string) => Promise<void>;
+  onMarkNotApproved: (id: number, notes?: string) => Promise<void>;
   onUpdateReturnDate: (id: number, date: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
 }
 
 export default function ReturnsModule({
   entries,
+  allEntries,
   counts,
   isLoading,
   isManager,
+  mode,
   filters,
   setFilter,
   clearFilters,
   activeFilterCount,
+  historyMonth,
+  onHistoryMonthChange,
   onMarkReturned,
+  onMarkNotApproved,
   onUpdateReturnDate,
   onRefresh,
 }: Props) {
   const picOptions = useMemo(() => {
     const seen = new Set<string>();
     const names: string[] = [];
-    for (const e of entries) {
+    for (const e of allEntries) {
       if (!seen.has(e.pic_name)) {
         seen.add(e.pic_name);
         names.push(e.pic_name);
       }
     }
     return names.sort();
-  }, [entries]);
+  }, [allEntries]);
 
   return (
     <div className="space-y-4">
@@ -61,6 +71,9 @@ export default function ReturnsModule({
         activeFilterCount={activeFilterCount}
         isManager={isManager}
         picOptions={picOptions}
+        mode={mode}
+        historyMonth={historyMonth}
+        onHistoryMonthChange={onHistoryMonthChange}
       />
 
       <ReturnsSummary counts={counts} isLoading={isLoading} />
@@ -69,7 +82,9 @@ export default function ReturnsModule({
         entries={entries}
         isLoading={isLoading}
         isManager={isManager}
+        mode={mode}
         onMarkReturned={onMarkReturned}
+        onMarkNotApproved={onMarkNotApproved}
         onUpdateReturnDate={onUpdateReturnDate}
         onRefresh={onRefresh}
       />

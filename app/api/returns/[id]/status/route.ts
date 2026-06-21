@@ -7,14 +7,9 @@ interface ExpiryRow {
   pic_id: number;
   pic_name: string;
   description: string;
+  barcode: string;
   return_status: string | null;
 }
-
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  returning: ["*"], // any → returning
-  not_approved: ["*"], // any → not_approved
-  returned: ["returning"], // only returning → returned
-};
 
 export async function PUT(
   req: NextRequest,
@@ -47,7 +42,7 @@ export async function PUT(
   const db = getDb();
   const existing = db
     .prepare(
-      "SELECT id, pic_id, pic_name, description, return_status FROM expiry_logs WHERE id = ?",
+      "SELECT id, pic_id, pic_name, description, barcode, return_status FROM expiry_logs WHERE id = ?",
     )
     .get(id) as unknown as ExpiryRow | undefined;
 
@@ -69,67 +64,66 @@ export async function PUT(
     return_notes?: string;
   };
 
-  if (!["returning", "returned", "not_approved"].includes(return_status))
+  if (!["returned", "not_approved"].includes(return_status))
     return NextResponse.json(
-      { success: false, error: "Invalid return_status" },
+      { success: false, error: "Invalid status. Use returned or not_approved" },
       { status: 400 },
     );
-
-  // Validate transition
-  const allowedFrom = VALID_TRANSITIONS[return_status];
-  const currentStatus = existing.return_status ?? "pending";
-  if (
-    !allowedFrom.includes("*") &&
-    !allowedFrom.includes(currentStatus)
-  ) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: `Cannot transition from '${currentStatus}' to '${return_status}'`,
-      },
-      { status: 400 },
-    );
-  }
 
   const now = new Date().toISOString();
-
-  db.prepare(
-    `UPDATE expiry_logs SET return_status = ?, return_notes = ?, last_updated_at = ? WHERE id = ?`,
-  ).run(return_status, return_notes ?? null, now, id);
 
   if (return_status === "returned") {
     db.prepare(
       `UPDATE expiry_logs
-       SET item_status = 'completed',
+       SET return_status = 'returned',
+           return_notes = ?,
+           item_status = 'completed',
            completed_via = 'returned',
            completed_at = ?,
-           review_status = 'resolved'
+           review_status = 'resolved',
+           last_updated_at = ?
        WHERE id = ?`,
-    ).run(now, id);
-  }
+    ).run(return_notes ?? null, now, now, id);
 
-  if (return_status === "not_approved") {
+    db.prepare(
+      `INSERT INTO history_log
+         (action, module, record_id, pic_id, pic_name, description, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      "UPDATE",
+      "expiry",
+      id,
+      user.userId,
+      user.picName,
+      `Return completed for ${existing.description} (Barcode: ${existing.barcode}) by ${existing.pic_name}`,
+      now,
+    );
+  } else {
     db.prepare(
       `UPDATE expiry_logs
-       SET completed_via = 'return_not_approved',
-           completed_at = ?
+       SET return_status = 'not_approved',
+           return_notes = ?,
+           completed_via = 'return_not_approved',
+           completed_at = ?,
+           review_status = 'resolved',
+           last_updated_at = ?
        WHERE id = ?`,
-    ).run(now, id);
-  }
+    ).run(return_notes ?? null, now, now, id);
 
-  db.prepare(
-    `INSERT INTO history_log
-       (action, module, record_id, pic_id, pic_name, description, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    "UPDATE",
-    "expiry",
-    id,
-    user.userId,
-    user.picName,
-    `Return status updated to ${return_status} by ${user.picName}`,
-    now,
-  );
+    db.prepare(
+      `INSERT INTO history_log
+         (action, module, record_id, pic_id, pic_name, description, timestamp)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      "UPDATE",
+      "expiry",
+      id,
+      user.userId,
+      user.picName,
+      `Return not approved for ${existing.description} by ${existing.pic_name}${return_notes ? `. Notes: ${return_notes}` : ""}`,
+      now,
+    );
+  }
 
   const entry = db.prepare("SELECT * FROM expiry_logs WHERE id = ?").get(id);
   return NextResponse.json({ success: true, data: entry });

@@ -19,9 +19,10 @@ import {
 import Toast from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/hooks/useToast";
+import { getDaysUntilSunday } from "@/lib/sunday-deadline-client";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
-type ReviewStatus = "pending" | "needs_review" | "critical_stale";
+type ReviewStatus = "pending" | "early_alert" | "last_chance" | "needs_review" | "critical_stale" | "resolved";
 
 const BADGE_STYLE: Record<Urgency, { bg: string; color: string; dotColor: string; fontWeight: number }> = {
   expired:  { bg: "#fee2e2", color: "#dc2626", dotColor: "#dc2626", fontWeight: 600 },
@@ -50,34 +51,30 @@ function getReturnLabel(status: string | null): string {
   return "Non-Return";
 }
 
-function getRowStatus(entry: ShortListEntry, justReviewed: boolean): ReviewStatus {
-  if (justReviewed) return "pending";
+function getRowStatus(entry: ShortListEntry): ReviewStatus {
   return entry.review_status ?? "pending";
 }
 
 function getFirstCellBorderStyle(status: ReviewStatus): React.CSSProperties {
   switch (status) {
     case "pending":        return { borderLeft: "3px solid #22c55e" };
-    case "needs_review":   return { borderLeft: "3px solid #eab308" };
-    case "critical_stale": return { borderLeft: "3px solid #ef4444" };
+    case "early_alert":    return { borderLeft: "3px solid #eab308" };
+    case "last_chance":    return { borderLeft: "3px solid #ea580c" };
+    case "needs_review":   return { borderLeft: "3px solid #ef4444" };
+    case "critical_stale": return { borderLeft: "3px solid #991b1b" };
+    default:               return { borderLeft: "3px solid #e2e8f0" };
   }
 }
 
 function getRowBgStyle(status: ReviewStatus): React.CSSProperties {
-  if (status === "needs_review")   return { background: "rgba(254,252,232,0.5)" };
-  if (status === "critical_stale") return { background: "rgba(255,245,245,0.5)" };
+  if (status === "early_alert")    return { background: "rgba(254,252,232,0.4)" };
+  if (status === "last_chance")    return { background: "rgba(255,237,213,0.5)" };
+  if (status === "needs_review")   return { background: "rgba(254,226,226,0.4)" };
+  if (status === "critical_stale") return { background: "rgba(254,226,226,0.6)" };
   return {};
 }
 
-function ReviewStatusLine({ entry, justReviewed }: { entry: ShortListEntry; justReviewed: boolean }) {
-  if (justReviewed) {
-    return (
-      <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#16a34a" }}>
-        <CheckIcon className="w-3 h-3 flex-shrink-0" />
-        Just reviewed
-      </span>
-    );
-  }
+function ReviewStatusLine({ entry }: { entry: ShortListEntry }) {
   if (entry.return_status === "returned" || entry.quantity === 0) return null;
 
   const { review_status, last_reviewed_at, last_reviewed_display } = entry;
@@ -98,16 +95,33 @@ function ReviewStatusLine({ entry, justReviewed }: { entry: ShortListEntry; just
       </span>
     );
   }
-  if (review_status === "needs_review") {
+  if (review_status === "early_alert") {
+    const daysLeft = getDaysUntilSunday();
     return (
       <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#ca8a04" }}>
+        <ClockIcon className="w-3 h-3 flex-shrink-0" />
+        Review in {daysLeft} day{daysLeft !== 1 ? "s" : ""}
+      </span>
+    );
+  }
+  if (review_status === "last_chance") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5 animate-pulse" style={{ color: "#ea580c" }}>
         <ExclamationTriangleIcon className="w-3 h-3 flex-shrink-0" />
-        Not reviewed this week
+        Review today!
+      </span>
+    );
+  }
+  if (review_status === "needs_review") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#dc2626" }}>
+        <XCircleIcon className="w-3 h-3 flex-shrink-0" />
+        Missed Sunday
       </span>
     );
   }
   return (
-    <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#dc2626" }}>
+    <span className="flex items-center gap-1 text-[10px] font-medium mt-0.5" style={{ color: "#991b1b" }}>
       <XCircleIcon className="w-3 h-3 flex-shrink-0" />
       Missed 2+ Sundays
     </span>
@@ -200,7 +214,8 @@ function InfoRow({
 const stop = (e: React.MouseEvent) => e.stopPropagation();
 
 // ─── ReviewPopupContent ────────────────────────────────────────────────────
-// Module-level component (stable identity). Rendered into the Portal Modal.
+// Module-level component (stable identity). All review state lives in the
+// parent ShortListTable so it survives any isLoading re-renders.
 function ReviewPopupContent({
   entry,
   isManager,
@@ -209,19 +224,23 @@ function ReviewPopupContent({
   onClose,
   onReviewed,
   onSell,
+  isSaving,
+  reviewSuccess,
+  reviewTimestamp,
+  reviewError,
 }: {
   entry: ShortListEntry;
   isManager: boolean;
   currentPicName: string;
   onSwitchToSales?: () => void;
   onClose: () => void;
-  onReviewed: () => Promise<void>;
+  onReviewed: () => void;
   onSell: () => void;
+  isSaving: boolean;
+  reviewSuccess: boolean;
+  reviewTimestamp: string | null;
+  reviewError: string | null;
 }) {
-  const [isSaving, setIsSaving] = useState(false);
-  const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
   const isSold = entry.item_status === "sold" || entry.quantity === 0;
   const isPartial =
     !isSold &&
@@ -235,28 +254,6 @@ function ReviewPopupContent({
   const canSell = (isManager || entry.pic_name === currentPicName) && !isSold;
   const unitsPreviouslySold =
     isPartial && entry.original_qty != null ? entry.original_qty - entry.quantity : null;
-
-  async function handleReviewed() {
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      await onReviewed();
-      const now = new Date().toLocaleString("en-MY", {
-        timeZone: "Asia/Kuala_Lumpur",
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-      setConfirmedAt(now);
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to mark reviewed");
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   return (
     <div
@@ -302,10 +299,7 @@ function ReviewPopupContent({
             </button>
             {onSwitchToSales && (
               <button
-                onClick={() => {
-                  onClose();
-                  onSwitchToSales();
-                }}
+                onClick={() => { onClose(); onSwitchToSales(); }}
                 className="flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-colors"
                 style={{ background: "#eff6ff", color: "#2563eb" }}
                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#dbeafe")}
@@ -343,14 +337,20 @@ function ReviewPopupContent({
             </div>
           )}
 
-          {/* Confirmation state */}
-          {confirmedAt ? (
+          {/* Confirmation state — driven by parent state, survives re-renders */}
+          {reviewSuccess ? (
             <>
               <div className="rounded-xl px-3 py-3 flex items-start gap-2 mb-3" style={{ background: "#dcfce7" }}>
                 <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs font-semibold text-[#16a34a]">Reviewed ✓</p>
-                  <p className="text-xs text-[#16a34a] opacity-80 mt-0.5">{confirmedAt}</p>
+                  <p className="text-xs font-semibold text-[#16a34a]">Marked as Reviewed ✓</p>
+                  {entry.pic_name && (
+                    <p className="text-xs text-[#16a34a] mt-0.5">{entry.pic_name}</p>
+                  )}
+                  {reviewTimestamp && (
+                    <p className="text-xs text-[#16a34a] opacity-80 mt-0.5">{reviewTimestamp}</p>
+                  )}
+                  <p className="text-xs text-[#16a34a] opacity-60 mt-0.5">Malaysia Time (GMT+8)</p>
                 </div>
               </div>
               <button
@@ -365,8 +365,8 @@ function ReviewPopupContent({
             </>
           ) : (
             <>
-              {saveError && (
-                <p className="text-xs text-[#dc2626] mb-3">{saveError}</p>
+              {reviewError && (
+                <p className="text-xs text-[#dc2626] mb-3">{reviewError}</p>
               )}
               <div className="flex gap-2">
                 <button
@@ -393,7 +393,7 @@ function ReviewPopupContent({
                 )}
                 {canReview && (
                   <button
-                    onClick={handleReviewed}
+                    onClick={onReviewed}
                     disabled={isSaving}
                     className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold text-white transition-colors disabled:opacity-80"
                     style={{ background: "#22c55e" }}
@@ -551,8 +551,16 @@ export default function ShortListTable({
   onMarkReviewed,
   onSwitchToSales,
 }: Props) {
-  const [reviewingIds, setReviewingIds]       = useState<Set<number>>(new Set());
-  const [justReviewedIds, setJustReviewedIds] = useState<Set<number>>(new Set());
+  // Local overrides: optimistic updates that survive parent re-fetches
+  const [localOverrides, setLocalOverrides] = useState<Map<number, Partial<ShortListEntry>>>(new Map());
+
+  // Review popup state lives HERE (not inside ReviewPopupContent) so it
+  // survives any isLoading early-return that would unmount the modal
+  const [isReviewSaving, setIsReviewSaving]   = useState(false);
+  const [reviewSuccess, setReviewSuccess]     = useState(false);
+  const [reviewTimestamp, setReviewTimestamp] = useState<string | null>(null);
+  const [reviewError, setReviewError]         = useState<string | null>(null);
+
   const [sellingIds, setSellingIds]           = useState<Set<number>>(new Set());
   const [sellConfirmEntry, setSellConfirmEntry]     = useState<ShortListEntry | null>(null);
   const [reviewConfirmEntry, setReviewConfirmEntry] = useState<ShortListEntry | null>(null);
@@ -582,8 +590,12 @@ export default function ShortListTable({
     useTableFilter();
 
   const augmented = useMemo(
-    () => entries.map((e) => ({ ...e, return_label: getReturnLabel(e.return_status) })),
-    [entries],
+    () => entries.map((e) => {
+      const override = localOverrides.get(e.id);
+      const merged = override ? { ...e, ...override } : e;
+      return { ...merged, return_label: getReturnLabel(merged.return_status) };
+    }),
+    [entries, localOverrides],
   );
 
   const picValues      = useMemo(() => getUniqueValues(augmented, "pic_name"),     [augmented, getUniqueValues]);
@@ -618,25 +630,62 @@ export default function ShortListTable({
     return sortConfig.column === col ? { background: "#fafcff" } : {};
   }
 
-  async function confirmMarkReviewed(id: number): Promise<void> {
-    setReviewingIds((prev) => { const s = new Set(prev); s.add(id); return s; });
+  function openReviewPopup(entry: ShortListEntry) {
+    setReviewConfirmEntry(entry);
+    setReviewSuccess(false);
+    setReviewTimestamp(null);
+    setReviewError(null);
+  }
+
+  function closeReviewPopup() {
+    setReviewConfirmEntry(null);
+    setReviewSuccess(false);
+    setReviewTimestamp(null);
+    setReviewError(null);
+  }
+
+  async function confirmMarkReviewed(id: number) {
+    setIsReviewSaving(true);
+    setReviewError(null);
     try {
       const res = await fetch(`/api/expiry/${id}/review`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to mark reviewed");
-      setJustReviewedIds((prev) => { const s = new Set(prev); s.add(id); return s; });
-      setTimeout(() => {
-        setJustReviewedIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
-      }, 5000);
-      await onMarkReviewed?.(id);
+
+      const myt = new Date().toLocaleString("en-MY", {
+        timeZone: "Asia/Kuala_Lumpur",
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      // Update this entry in local state immediately — no re-fetch needed
+      setLocalOverrides((prev) => {
+        const next = new Map(prev);
+        next.set(id, {
+          ...(prev.get(id) ?? {}),
+          last_reviewed_at: new Date().toISOString(),
+          review_status: "pending" as const,
+          last_reviewed_display: myt,
+        });
+        return next;
+      });
+
+      setReviewTimestamp(myt);
+      setReviewSuccess(true);
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Failed to mark reviewed");
     } finally {
-      setReviewingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+      setIsReviewSaving(false);
     }
   }
 
   function openSellFromPopup() {
     if (!reviewConfirmEntry) return;
     const entry = reviewConfirmEntry;
-    setReviewConfirmEntry(null);
+    closeReviewPopup();
     setSellConfirmEntry(entry);
     setUnitsSold(1);
   }
@@ -698,16 +747,20 @@ export default function ShortListTable({
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {/* ── Row-click popup (portal-based) ──────────────────────────────── */}
-      <Modal isOpen={reviewConfirmEntry !== null} onClose={() => setReviewConfirmEntry(null)}>
+      <Modal isOpen={reviewConfirmEntry !== null} onClose={closeReviewPopup}>
         {reviewConfirmEntry && (
           <ReviewPopupContent
             entry={reviewConfirmEntry}
             isManager={isManager}
             currentPicName={currentPicName}
             onSwitchToSales={onSwitchToSales}
-            onClose={() => setReviewConfirmEntry(null)}
+            onClose={closeReviewPopup}
             onReviewed={() => confirmMarkReviewed(reviewConfirmEntry.id)}
             onSell={openSellFromPopup}
+            isSaving={isReviewSaving}
+            reviewSuccess={reviewSuccess}
+            reviewTimestamp={reviewTimestamp}
+            reviewError={reviewError}
           />
         )}
       </Modal>
@@ -817,11 +870,9 @@ export default function ShortListTable({
               </thead>
               <tbody>
                 {processedEntries.map((entry) => {
-                  const justReviewed = justReviewedIds.has(entry.id);
-                  const isReviewing  = reviewingIds.has(entry.id);
-                  const isSelling    = sellingIds.has(entry.id);
-                  const isHovered    = hoveredRowId === entry.id;
-                  const menuOpen     = openMenuId === entry.id;
+                  const isSelling = sellingIds.has(entry.id);
+                  const isHovered = hoveredRowId === entry.id;
+                  const menuOpen  = openMenuId === entry.id;
 
                   const isSold = entry.item_status === "sold" || entry.quantity === 0;
                   const canReview = (isManager || entry.pic_name === currentPicName)
@@ -830,7 +881,7 @@ export default function ShortListTable({
                   const canSell = (isManager || entry.pic_name === currentPicName)
                     && !isSold;
 
-                  const reviewStatus    = getRowStatus(entry, justReviewed);
+                  const reviewStatus    = getRowStatus(entry);
                   const firstCellBorder = getFirstCellBorderStyle(reviewStatus);
                   const rowBg           = getRowBgStyle(reviewStatus);
 
@@ -852,7 +903,7 @@ export default function ShortListTable({
                         if (dx > 5 || dy > 5) return;
                         const sel = window.getSelection();
                         if (sel && sel.toString().length > 0) return;
-                        setReviewConfirmEntry(entry);
+                        openReviewPopup(entry);
                       }}
                       onMouseEnter={() => setHoveredRowId(entry.id)}
                       onMouseLeave={() => setHoveredRowId(null)}
@@ -862,7 +913,7 @@ export default function ShortListTable({
                         style={{ ...cellBg("logged_at"), ...firstCellBorder }}
                       >
                         {formatDate(entry.logged_at)}
-                        <ReviewStatusLine entry={entry} justReviewed={justReviewed} />
+                        <ReviewStatusLine entry={entry} />
                       </td>
                       <td className="px-5 py-3.5 font-medium whitespace-nowrap" style={cellBg("pic_name")}>
                         <span
@@ -936,14 +987,7 @@ export default function ShortListTable({
                           onMouseEnter={(e) => { if (!menuOpen) (e.currentTarget as HTMLElement).style.background = "#f1f5f9"; }}
                           onMouseLeave={(e) => { if (!menuOpen) (e.currentTarget as HTMLElement).style.background = ""; }}
                         >
-                          {isReviewing ? (
-                            <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                          ) : (
-                            <EllipsisVerticalIcon className="w-4 h-4" />
-                          )}
+                          <EllipsisVerticalIcon className="w-4 h-4" />
                         </button>
 
                         {menuOpen && (
@@ -953,7 +997,7 @@ export default function ShortListTable({
                           >
                             {canReview && (
                               <button
-                                onClick={() => { setOpenMenuId(null); setReviewConfirmEntry(entry); }}
+                                onClick={() => { setOpenMenuId(null); openReviewPopup(entry); }}
                                 className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-left transition-colors"
                                 style={{ color: "#16a34a" }}
                                 onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f0fdf4")}
@@ -1017,8 +1061,10 @@ export default function ShortListTable({
           <div className="flex flex-wrap gap-4 mt-1">
             {[
               { color: "#22c55e", label: "Reviewed this week" },
-              { color: "#eab308", label: "Not reviewed (missed Sunday)" },
-              { color: "#ef4444", label: "Critical (missed 2+ Sundays)" },
+              { color: "#eab308", label: "Review soon (Thu–Sat)" },
+              { color: "#ea580c", label: "Review today! (Sunday)" },
+              { color: "#ef4444", label: "Missed Sunday" },
+              { color: "#991b1b", label: "Missed 2+ Sundays" },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <div className="w-[3px] h-3.5 rounded-full flex-shrink-0" style={{ background: color }} />

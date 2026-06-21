@@ -10,8 +10,9 @@ export interface StaleItem {
   pic_name: string;
   last_reviewed_at: string | null;
   days_since_review: number;
-  review_status: string;
-  missed_sunday: string;
+  review_status: "early_alert" | "last_chance" | "needs_review" | "critical_stale";
+  urgency: "warn" | "urgent" | "missed" | "critical";
+  sunday_label: string;
 }
 
 export interface ReviewDeadline {

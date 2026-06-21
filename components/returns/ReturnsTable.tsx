@@ -2,7 +2,13 @@
 
 import { useState } from "react";
 import type { ReturnEntry } from "@/hooks/useReturns";
-import { DocumentTextIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  DocumentTextIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 
@@ -19,8 +25,7 @@ function Dot({ color }: { color: string }) {
 }
 
 function StatusBadge({ entry }: { entry: ReturnEntry }) {
-  const status = entry.return_status;
-  if (status === "returned") {
+  if (entry.return_status === "returned") {
     return (
       <span className="badge" style={{ background: "#dcfce7", color: "#16a34a" }}>
         <Dot color="#16a34a" />
@@ -28,18 +33,10 @@ function StatusBadge({ entry }: { entry: ReturnEntry }) {
       </span>
     );
   }
-  if (status === "returning") {
+  if (entry.return_status === "not_approved") {
     return (
-      <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>
-        <Dot color="#2563eb" />
-        Returning
-      </span>
-    );
-  }
-  if (status === "not_approved") {
-    return (
-      <span className="badge" style={{ background: "#fee2e2", color: "#dc2626" }}>
-        <Dot color="#dc2626" />
+      <span className="badge" style={{ background: "#fee2e2", color: "#991b1b" }}>
+        <Dot color="#991b1b" />
         Not Approved
       </span>
     );
@@ -133,7 +130,9 @@ interface Props {
   entries: ReturnEntry[];
   isLoading: boolean;
   isManager: boolean;
-  onMarkReturned: (id: number) => Promise<void>;
+  mode: "active" | "history";
+  onMarkReturned: (id: number, notes?: string) => Promise<void>;
+  onMarkNotApproved: (id: number, notes?: string) => Promise<void>;
   onUpdateReturnDate: (id: number, date: string) => Promise<void>;
   onRefresh?: () => Promise<void>;
 }
@@ -146,71 +145,43 @@ export default function ReturnsTable({
   entries,
   isLoading,
   isManager,
+  mode,
   onMarkReturned,
+  onMarkNotApproved,
   onUpdateReturnDate,
   onRefresh,
 }: Props) {
-  const [completingEntry, setCompletingEntry] = useState<ReturnEntry | null>(null);
+  const [confirmEntry, setConfirmEntry] = useState<ReturnEntry | null>(null);
   const [notApprovingEntry, setNotApprovingEntry] = useState<ReturnEntry | null>(null);
   const [actionNotes, setActionNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [loadingId, setLoadingId] = useState<number | null>(null);
   const { toasts, showSuccess, showError, dismiss } = useToast();
 
-  async function callStatusApi(
-    id: number,
-    return_status: string,
-    return_notes?: string,
-  ) {
-    const res = await fetch(`/api/returns/${id}/status`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ return_status, return_notes }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
-  }
-
-  async function handleSetReturning(id: number) {
-    setLoadingId(id);
-    try {
-      await callStatusApi(id, "returning");
-      showSuccess("Return status updated to Returning");
-      await onRefresh?.();
-    } catch {
-      showError("Failed to update status");
-    } finally {
-      setLoadingId(null);
-    }
-  }
-
-  async function handleCompleteReturn() {
-    if (!completingEntry) return;
+  async function handleConfirmReturn() {
+    if (!confirmEntry) return;
     setSubmitting(true);
     try {
-      await callStatusApi(completingEntry.id, "returned", actionNotes || undefined);
-      showSuccess("Return marked as completed");
-      setCompletingEntry(null);
+      await onMarkReturned(confirmEntry.id, actionNotes || undefined);
+      showSuccess("Item marked as returned");
+      setConfirmEntry(null);
       setActionNotes("");
-      await onRefresh?.();
-    } catch {
-      showError("Failed to complete return");
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Failed to mark as returned");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleNotApprove() {
+  async function handleConfirmNotApproved() {
     if (!notApprovingEntry) return;
     setSubmitting(true);
     try {
-      await callStatusApi(notApprovingEntry.id, "not_approved", actionNotes || undefined);
+      await onMarkNotApproved(notApprovingEntry.id, actionNotes || undefined);
       showSuccess("Return marked as not approved");
       setNotApprovingEntry(null);
       setActionNotes("");
-      await onRefresh?.();
-    } catch {
-      showError("Failed to update status");
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Failed to update status");
     } finally {
       setSubmitting(false);
     }
@@ -236,12 +207,74 @@ export default function ReturnsTable({
     return (
       <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm flex flex-col items-center justify-center py-16 text-center">
         <DocumentTextIcon className="w-12 h-12 text-[#cbd5e1] mb-3" />
-        <p className="text-sm text-[#94a3b8]">No items found</p>
-        <p className="text-xs text-[#94a3b8] mt-1">Items appear here when logged as Returnable.</p>
+        <p className="text-sm text-[#94a3b8]">
+          {mode === "history" ? "No completed returns yet" : "No items found"}
+        </p>
+        {mode === "active" && (
+          <p className="text-xs text-[#94a3b8] mt-1">Items appear here when logged as Returnable.</p>
+        )}
       </div>
     );
   }
 
+  // ── History mode (read-only) ──────────────────────────────────────────────
+  if (mode === "history") {
+    return (
+      <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+        <p className="px-5 py-2.5 text-xs text-[#64748b] bg-[#f8fafc]" style={{ borderBottom: "1px solid #e2e8f0" }}>
+          Showing {entries.length} {entries.length === 1 ? "item" : "items"}
+        </p>
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+              <th className={TH}>Return By</th>
+              <th className={TH}>Date Logged</th>
+              <th className={TH}>PIC</th>
+              <th className={`${TH} max-w-[200px]`}>Description</th>
+              <th className={TH}>Barcode</th>
+              <th className={TH}>Category</th>
+              <th className={TH}>Status</th>
+              <th className={TH}>Completed Date</th>
+              <th className={TH}>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((entry) => (
+              <tr
+                key={entry.id}
+                className="transition-colors duration-150"
+                style={{ borderBottom: "1px solid #f1f5f9" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
+              >
+                <td className={`${TD} whitespace-nowrap text-[#334155]`}>{formatDate(entry.return_by_date)}</td>
+                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{formatDate(entry.logged_at)}</td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>{entry.pic_name}</span>
+                </td>
+                <td className={`${TD} max-w-[200px]`}>
+                  <span className="block truncate text-[#334155] font-medium" title={entry.description}>
+                    {entry.description}
+                  </span>
+                </td>
+                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.barcode}</td>
+                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.category}</td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  <StatusBadge entry={entry} />
+                </td>
+                <td className={`${TD} whitespace-nowrap text-[#334155]`}>{formatDate(entry.completed_at)}</td>
+                <td className={`${TD} max-w-[180px] text-xs text-[#64748b]`}>
+                  <span className="block truncate" title={entry.return_notes ?? ""}>{entry.return_notes ?? "—"}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // ── Active mode ───────────────────────────────────────────────────────────
   return (
     <>
       <Toast toasts={toasts} onDismiss={dismiss} />
@@ -267,9 +300,7 @@ export default function ReturnsTable({
           </thead>
           <tbody>
             {entries.map((entry) => {
-              const status = entry.return_status;
-              const isTerminal = status === "returned" || status === "not_approved";
-              const isRowLoading = loadingId === entry.id;
+              const isPending = entry.return_status === "pending";
 
               return (
                 <tr
@@ -291,9 +322,7 @@ export default function ReturnsTable({
                   </td>
                   <td className={`${TD} text-[#334155] whitespace-nowrap`}>{formatDate(entry.logged_at)}</td>
                   <td className={`${TD} whitespace-nowrap`}>
-                    <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>
-                      {entry.pic_name}
-                    </span>
+                    <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>{entry.pic_name}</span>
                   </td>
                   <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.stock_id ?? "—"}</td>
                   <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.barcode}</td>
@@ -316,44 +345,40 @@ export default function ReturnsTable({
                     <StatusBadge entry={entry} />
                   </td>
                   <td className={`${TD} whitespace-nowrap`}>
-                    <div className="flex items-center justify-end gap-1">
-                      {!isTerminal && (
+                    <div className="flex items-center justify-end gap-1.5">
+                      {isPending ? (
                         <>
-                          {/* Returning button — always shown when not terminal */}
-                          {status !== "returning" && (
-                            <button
-                              onClick={() => handleSetReturning(entry.id)}
-                              disabled={isRowLoading}
-                              className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
-                              style={{ background: "#dbeafe", color: "#2563eb" }}
-                              title="Mark as Returning"
-                            >
-                              {isRowLoading ? "..." : "Returning"}
-                            </button>
-                          )}
-
-                          {/* Completed button — only shown when status is 'returning' */}
-                          {status === "returning" && (
-                            <button
-                              onClick={() => { setCompletingEntry(entry); setActionNotes(""); }}
-                              className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
-                              style={{ background: "#dcfce7", color: "#16a34a" }}
-                              title="Mark as Returned"
-                            >
-                              Completed
-                            </button>
-                          )}
-
-                          {/* Not Approved button */}
+                          <button
+                            onClick={() => { setConfirmEntry(entry); setActionNotes(""); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
+                            style={{ background: "#dcfce7", color: "#16a34a" }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#bbf7d0")}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#dcfce7")}
+                            title="Mark as Returned"
+                          >
+                            <CheckIcon className="w-3 h-3" />
+                            Mark Returned
+                          </button>
                           <button
                             onClick={() => { setNotApprovingEntry(entry); setActionNotes(""); }}
-                            className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
                             style={{ background: "#fee2e2", color: "#dc2626" }}
+                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#fecaca")}
+                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#fee2e2")}
                             title="Mark as Not Approved"
                           >
+                            <XMarkIcon className="w-3 h-3" />
                             Not Approved
                           </button>
                         </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium"
+                          style={{ color: entry.return_status === "returned" ? "#16a34a" : "#991b1b" }}>
+                          {entry.return_status === "returned"
+                            ? <CheckCircleIcon className="w-3.5 h-3.5" />
+                            : <XCircleIcon className="w-3.5 h-3.5" />}
+                          {entry.return_status === "returned" ? "Returned" : "Not Approved"}
+                        </span>
                       )}
                     </div>
                   </td>
@@ -364,59 +389,46 @@ export default function ReturnsTable({
         </table>
       </div>
 
-      {/* Complete Return modal */}
-      {completingEntry && (
+      {/* Mark Returned confirm modal */}
+      {confirmEntry && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
           <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-md p-6 space-y-5">
             <div className="flex items-start justify-between">
-              <h3 className="text-base font-semibold text-[#1e293b]">
-                Confirm Return Completed
-              </h3>
-              <button
-                onClick={() => setCompletingEntry(null)}
-                className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
-              >
+              <h3 className="text-base font-semibold text-[#1e293b]">Confirm Return Completed</h3>
+              <button onClick={() => setConfirmEntry(null)} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-1 text-sm text-[#64748b]">
-              <p>
-                <span className="font-medium text-[#334155]">Item:</span>{" "}
-                {completingEntry.description}
-              </p>
-              {completingEntry.return_by_date && (
-                <p>
-                  <span className="font-medium text-[#334155]">Return By:</span>{" "}
-                  {formatDate(completingEntry.return_by_date)}
-                </p>
+              <p className="font-medium text-[#334155]">{confirmEntry.description}</p>
+              <p>Barcode: <span className="font-mono text-[#334155]">{confirmEntry.barcode}</span></p>
+              {confirmEntry.return_by_date && (
+                <p>Return By: <span className="font-medium text-[#334155]">{formatDate(confirmEntry.return_by_date)}</span></p>
               )}
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide">
-                Notes (optional)
-              </label>
+              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide">Notes (optional)</label>
               <textarea
                 value={actionNotes}
                 onChange={(e) => setActionNotes(e.target.value)}
                 rows={3}
-                placeholder="Add any notes..."
+                placeholder="Add any return notes..."
                 className="w-full px-3 py-2 rounded-xl border border-[#e2e8f0] text-sm text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] resize-none"
               />
             </div>
             <div className="flex justify-end gap-3 pt-1">
-              <button
-                onClick={() => setCompletingEntry(null)}
-                disabled={submitting}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors disabled:opacity-50"
-              >
+              <button onClick={() => setConfirmEntry(null)} disabled={submitting}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors disabled:opacity-50">
                 Cancel
               </button>
-              <button
-                onClick={handleCompleteReturn}
-                disabled={submitting}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#16a34a] hover:bg-[#15803d] transition-colors disabled:opacity-50"
+              <button onClick={handleConfirmReturn} disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50"
+                style={{ background: "#16a34a" }}
+                onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLElement).style.background = "#15803d"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#16a34a"; }}
               >
-                {submitting ? "Saving..." : "Confirm Completed"}
+                <CheckIcon className="w-4 h-4" />
+                {submitting ? "Saving..." : "Confirm Returned"}
               </button>
             </div>
           </div>
@@ -428,47 +440,37 @@ export default function ReturnsTable({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-black/30">
           <div className="bg-white rounded-[20px] shadow-2xl w-full max-w-md p-6 space-y-5">
             <div className="flex items-start justify-between">
-              <h3 className="text-base font-semibold text-[#1e293b]">
-                Return Not Approved
-              </h3>
-              <button
-                onClick={() => setNotApprovingEntry(null)}
-                className="text-[#94a3b8] hover:text-[#0f172a] transition-colors"
-              >
+              <h3 className="text-base font-semibold text-[#1e293b]">Return Not Approved</h3>
+              <button onClick={() => setNotApprovingEntry(null)} className="text-[#94a3b8] hover:text-[#0f172a] transition-colors">
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
             <div className="space-y-1 text-sm text-[#64748b]">
-              <p>
-                <span className="font-medium text-[#334155]">Item:</span>{" "}
-                {notApprovingEntry.description}
-              </p>
+              <p className="font-medium text-[#334155]">{notApprovingEntry.description}</p>
+              <p>Barcode: <span className="font-mono text-[#334155]">{notApprovingEntry.barcode}</span></p>
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide">
-                Reason (optional)
-              </label>
+              <label className="block text-xs font-semibold text-[#64748b] uppercase tracking-wide">Reason (optional)</label>
               <textarea
                 value={actionNotes}
                 onChange={(e) => setActionNotes(e.target.value)}
                 rows={3}
-                placeholder="Enter reason..."
+                placeholder="Reason for rejection..."
                 className="w-full px-3 py-2 rounded-xl border border-[#e2e8f0] text-sm text-[#0f172a] bg-white focus:outline-none focus:ring-2 focus:ring-[#2563eb]/20 focus:border-[#2563eb] resize-none"
               />
             </div>
             <div className="flex justify-end gap-3 pt-1">
-              <button
-                onClick={() => setNotApprovingEntry(null)}
-                disabled={submitting}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors disabled:opacity-50"
-              >
+              <button onClick={() => setNotApprovingEntry(null)} disabled={submitting}
+                className="px-4 py-2 rounded-xl text-sm font-medium text-[#64748b] bg-[#f1f5f9] hover:bg-[#e2e8f0] transition-colors disabled:opacity-50">
                 Cancel
               </button>
-              <button
-                onClick={handleNotApprove}
-                disabled={submitting}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-[#dc2626] hover:bg-[#b91c1c] transition-colors disabled:opacity-50"
+              <button onClick={handleConfirmNotApproved} disabled={submitting}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50"
+                style={{ background: "#dc2626" }}
+                onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLElement).style.background = "#b91c1c"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#dc2626"; }}
               >
+                <XMarkIcon className="w-4 h-4" />
                 {submitting ? "Saving..." : "Confirm Not Approved"}
               </button>
             </div>

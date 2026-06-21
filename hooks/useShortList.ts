@@ -26,7 +26,7 @@ export interface ShortListEntry {
   item_status: "active" | "sold" | "completed";
   days_left: number;
   urgency: "expired" | "critical" | "warning" | "safe";
-  review_status: "pending" | "needs_review" | "critical_stale";
+  review_status: "pending" | "early_alert" | "last_chance" | "needs_review" | "critical_stale" | "resolved";
   offer_status:
     | "not-offered"
     | "offered"

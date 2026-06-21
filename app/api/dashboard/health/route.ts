@@ -100,27 +100,39 @@ export async function GET(req: NextRequest) {
   // ── Sunday-rule review compliance ─────────────────────────────────────────
   const lastSundayStr = getLastSundayDisplay();
   const prevSundayStr = getPreviousSundayDisplay();
+  const nextSundayStr = getNextSundayDisplay();
 
-  type ReviewStatus = "pending" | "needs_review" | "critical_stale";
+  type ReviewStatus = "pending" | "early_alert" | "last_chance" | "needs_review" | "critical_stale" | "resolved";
+
+  const SORT_ORDER: Record<ReviewStatus, number> = {
+    critical_stale: 0, needs_review: 1, last_chance: 2, early_alert: 3, pending: 4, resolved: 5,
+  };
+
+  const URGENCY_MAP: Record<ReviewStatus, string> = {
+    critical_stale: "critical", needs_review: "missed", last_chance: "urgent", early_alert: "warn",
+    pending: "ok", resolved: "ok",
+  };
 
   interface Annotated extends ExpiryRow {
     computed_status: ReviewStatus;
     days_since_review: number;
-    missed_sunday: string;
+    sunday_label: string;
   }
 
   const annotated: Annotated[] = rows.map((row) => {
-    const status = getSundayReviewStatus(row.last_reviewed_at, row.logged_at) as ReviewStatus;
+    const status = getSundayReviewStatus(row.last_reviewed_at, row.logged_at, "active") as ReviewStatus;
     const ref = row.last_reviewed_at ?? row.logged_at;
     const days_since_review = calcDaysSince(ref);
-    const missed_sunday =
-      status === "critical_stale" ? prevSundayStr : lastSundayStr;
-    return { ...row, computed_status: status, days_since_review, missed_sunday };
+    const sunday_label =
+      status === "critical_stale" ? prevSundayStr :
+      status === "needs_review"   ? lastSundayStr :
+      nextSundayStr; // early_alert, last_chance → show upcoming deadline
+    return { ...row, computed_status: status, days_since_review, sunday_label };
   });
 
   const staleItems = annotated
-    .filter((r) => r.computed_status === "needs_review" || r.computed_status === "critical_stale")
-    .sort((a, b) => b.days_since_review - a.days_since_review)
+    .filter((r) => ["early_alert", "last_chance", "needs_review", "critical_stale"].includes(r.computed_status))
+    .sort((a, b) => SORT_ORDER[a.computed_status] - SORT_ORDER[b.computed_status] || b.days_since_review - a.days_since_review)
     .slice(0, 10)
     .map((r) => ({
       id: r.id,
@@ -131,7 +143,8 @@ export async function GET(req: NextRequest) {
       last_reviewed_at: r.last_reviewed_at,
       days_since_review: r.days_since_review,
       review_status: r.computed_status,
-      missed_sunday: r.missed_sunday,
+      urgency: URGENCY_MAP[r.computed_status],
+      sunday_label: r.sunday_label,
     }));
 
   // ── Per-PIC completion rates ───────────────────────────────────────────────
@@ -146,9 +159,9 @@ export async function GET(req: NextRequest) {
     }
     const pic = picMap.get(r.pic_name)!;
     pic.total++;
-    if (r.computed_status === "pending")        pic.reviewed_on_time++;
-    else if (r.computed_status === "needs_review") pic.needs_review++;
+    if (r.computed_status === "pending") pic.reviewed_on_time++;
     else if (r.computed_status === "critical_stale") pic.critical_stale++;
+    else pic.needs_review++; // early_alert, last_chance, needs_review all count as not-yet-reviewed
   }
 
   const completionRates = Array.from(picMap.entries())

@@ -16,6 +16,8 @@ export interface ReturnEntry {
   uom: string | null;
   return_status: string;
   return_by_date: string | null;
+  return_notes: string | null;
+  completed_at: string | null;
   overdue: boolean;
 }
 
@@ -31,25 +33,23 @@ export interface ReturnCounts {
   pending: number;
   overdue: number;
   returned: number;
+  not_approved: number;
   total: number;
 }
 
-function currentMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 const EMPTY_FILTERS: ReturnFilters = {
-  month: currentMonth(),
+  month: "",
   status: "",
   category: "",
   pic: "",
   search: "",
 };
+
 const EMPTY_COUNTS: ReturnCounts = {
   pending: 0,
   overdue: 0,
   returned: 0,
+  not_approved: 0,
   total: 0,
 };
 
@@ -65,7 +65,8 @@ interface UseReturnsReturn {
   ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
-  markReturned: (id: number) => Promise<void>;
+  markReturned: (id: number, notes?: string) => Promise<void>;
+  markNotApproved: (id: number, notes?: string) => Promise<void>;
   updateReturnDate: (id: number, date: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -118,21 +119,34 @@ export function useReturns(): UseReturnsReturn {
   }
 
   const activeFilterCount = useMemo(
-    () =>
-      Object.entries(filters).filter(([k, v]) => k !== "month" && Boolean(v))
-        .length,
+    () => Object.values(filters).filter(Boolean).length,
     [filters],
   );
 
-  async function markReturned(id: number): Promise<void> {
-    const res = await fetch(`/api/returns/${id}`, {
+  async function markReturned(id: number, notes?: string): Promise<void> {
+    const res = await fetch(`/api/returns/${id}/status`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ return_status: "returned" }),
+      body: JSON.stringify({ return_status: "returned", return_notes: notes }),
     });
     const json = await res.json();
     if (!res.ok || !json.success)
       throw new Error(json.error ?? "Failed to mark as returned");
+    await fetchData(filters);
+  }
+
+  async function markNotApproved(id: number, notes?: string): Promise<void> {
+    const res = await fetch(`/api/returns/${id}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        return_status: "not_approved",
+        return_notes: notes,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success)
+      throw new Error(json.error ?? "Failed to mark as not approved");
     await fetchData(filters);
   }
 
@@ -158,6 +172,7 @@ export function useReturns(): UseReturnsReturn {
     clearFilters,
     activeFilterCount,
     markReturned,
+    markNotApproved,
     updateReturnDate,
     refresh: () => fetchData(filters),
   };

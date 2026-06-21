@@ -37,7 +37,7 @@ interface RawRow extends ExpiryRow {
 export interface ShortListEntry extends ExpiryRow {
   days_left: number;
   urgency: Urgency;
-  review_status: "pending" | "needs_review" | "critical_stale";
+  review_status: "pending" | "early_alert" | "last_chance" | "needs_review" | "critical_stale" | "resolved";
   last_reviewed_display: string | null;
   offer_status:
     | "not-offered"
@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
   let entries: ShortListEntry[] = rows.map((row) => ({
     ...row,
     ...calcUrgency(row.expiry_date),
-    review_status: getSundayReviewStatus(row.last_reviewed_at, row.logged_at) as ShortListEntry["review_status"],
+    review_status: getSundayReviewStatus(row.last_reviewed_at, row.logged_at, row.item_status) as ShortListEntry["review_status"],
     last_reviewed_display: formatReviewedAt(row.last_reviewed_at),
     offer_status:
       (row.offer_status as ShortListEntry["offer_status"]) ?? "not-offered",
