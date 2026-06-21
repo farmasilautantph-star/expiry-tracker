@@ -32,6 +32,7 @@ interface RawRow extends ExpiryRow {
   offer_status: string | null;
   offer_id: number | null;
   total_offered: number;
+  offered_qty: number;
 }
 
 export interface ShortListEntry extends ExpiryRow {
@@ -47,6 +48,8 @@ export interface ShortListEntry extends ExpiryRow {
     | "completed";
   offer_id: number | null;
   total_offered: number;
+  offered_qty: number;
+  has_active_offer: boolean;
 }
 
 function formatReviewedAt(iso: string | null): string | null {
@@ -142,7 +145,8 @@ export async function GET(req: NextRequest) {
     SELECT el.*,
       (SELECT offer_status FROM offers WHERE expiry_log_id = el.id ORDER BY created_at DESC LIMIT 1) AS offer_status,
       (SELECT id FROM offers WHERE expiry_log_id = el.id ORDER BY created_at DESC LIMIT 1) AS offer_id,
-      COALESCE((SELECT SUM(quantity) FROM offers WHERE expiry_log_id = el.id), 0) AS total_offered
+      COALESCE((SELECT SUM(quantity) FROM offers WHERE expiry_log_id = el.id), 0) AS total_offered,
+      COALESCE((SELECT SUM(quantity) FROM offers WHERE expiry_log_id = el.id AND offer_status = 'offered'), 0) AS offered_qty
     FROM expiry_logs el
     ${where}
     ORDER BY el.expiry_date ASC
@@ -159,6 +163,8 @@ export async function GET(req: NextRequest) {
       (row.offer_status as ShortListEntry["offer_status"]) ?? "not-offered",
     offer_id: row.offer_id ?? null,
     total_offered: row.total_offered ?? 0,
+    offered_qty: row.offered_qty ?? 0,
+    has_active_offer: (row.offered_qty ?? 0) > 0,
   }));
 
   if (

@@ -4,11 +4,23 @@ import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useReturns } from "@/hooks/useReturns";
 import ReturnsModule from "@/components/returns/ReturnsModule";
+import type { MonthValue } from "@/components/ui/MonthPicker";
+
+function toYearMonth(val: MonthValue | null): string {
+  if (!val) return "";
+  return `${val.year}-${String(val.month).padStart(2, "0")}`;
+}
+
+function currentMonthValue(): MonthValue {
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+}
 
 export default function ReturnsPage() {
   const { user, isManager } = useAuth();
   const [tab, setTab] = useState<"active" | "history">("active");
-  const [historyMonth, setHistoryMonth] = useState("");
+  const [activeMonth, setActiveMonth] = useState<MonthValue | null>(null);
+  const [historyMonth, setHistoryMonth] = useState<MonthValue | null>(currentMonthValue());
 
   const {
     entries,
@@ -25,19 +37,25 @@ export default function ReturnsPage() {
     refresh,
   } = useReturns();
 
-  const activeEntries = useMemo(
-    () => entries.filter((e) => e.return_status === "pending"),
-    [entries],
-  );
+  const activeEntries = useMemo(() => {
+    const base = entries.filter((e) => e.return_status === "pending");
+    const ym = toYearMonth(activeMonth);
+    if (!ym) return base;
+    return base.filter((e) => {
+      const date = (e.return_by_date ?? e.logged_at).substring(0, 7);
+      return date === ym;
+    });
+  }, [entries, activeMonth]);
 
   const historyEntries = useMemo(() => {
     const base = entries.filter(
       (e) => e.return_status === "returned" || e.return_status === "not_approved",
     );
-    if (!historyMonth) return base;
+    const ym = toYearMonth(historyMonth);
+    if (!ym) return base;
     return base.filter((e) => {
       const date = (e.completed_at ?? e.logged_at).substring(0, 7);
-      return date === historyMonth;
+      return date === ym;
     });
   }, [entries, historyMonth]);
 
@@ -109,6 +127,8 @@ export default function ReturnsPage() {
         setFilter={setFilter}
         clearFilters={clearFilters}
         activeFilterCount={activeFilterCount}
+        activeMonth={activeMonth}
+        onActiveMonthChange={setActiveMonth}
         historyMonth={historyMonth}
         onHistoryMonthChange={setHistoryMonth}
         onMarkReturned={markReturned}

@@ -18,6 +18,19 @@ export interface OfferRow {
   created_by: number;
   created_at: string;
   updated_at: string;
+  expiry_date: string | null;
+  days_left: number | null;
+}
+
+async function authUser(req: NextRequest) {
+  const token = getTokenFromRequest(req);
+  if (!token) return { user: null, error: "Unauthorized", status: 401 };
+  try {
+    const user = await verifyToken(token);
+    return { user, error: null, status: 200 };
+  } catch {
+    return { user: null, error: "Unauthorized", status: 401 };
+  }
 }
 
 async function authManager(req: NextRequest) {
@@ -34,7 +47,7 @@ async function authManager(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { user, error, status } = await authManager(req);
+  const { user, error, status } = await authUser(req);
   if (!user) return NextResponse.json({ success: false, error }, { status });
 
   const { searchParams } = new URL(req.url);
@@ -48,6 +61,13 @@ export async function GET(req: NextRequest) {
   const db = getDb();
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
+
+  if (user.role !== "manager") {
+    conditions.push(
+      "expiry_log_id IN (SELECT id FROM expiry_logs WHERE pic_id = ?)",
+    );
+    bindings.push(user.userId);
+  }
 
   if (expiryLogId) {
     conditions.push("expiry_log_id = ?");
@@ -88,7 +108,10 @@ export async function GET(req: NextRequest) {
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const rows = db
-    .prepare(`SELECT * FROM offers ${where} ORDER BY created_at DESC`)
+    .prepare(
+      `SELECT *, CAST((julianday(expiry_date) - julianday('now')) AS INTEGER) AS days_left
+       FROM offers ${where} ORDER BY created_at DESC`
+    )
     .all(...bindings) as unknown as OfferRow[];
 
   // Counts by status
@@ -145,11 +168,13 @@ export async function POST(req: NextRequest) {
 
   const db = getDb();
 
+  let linkedExpiryDate: string | null = null;
+
   // Validate against expiry_logs.quantity when linked to a log entry
   if (expiry_log_id) {
     const logRow = db
-      .prepare("SELECT quantity FROM expiry_logs WHERE id = ?")
-      .get(expiry_log_id) as { quantity: number } | undefined;
+      .prepare("SELECT quantity, expiry_date FROM expiry_logs WHERE id = ?")
+      .get(expiry_log_id) as { quantity: number; expiry_date: string } | undefined;
     if (logRow) {
       const sumRow = db
         .prepare(
@@ -166,46 +191,56 @@ export async function POST(req: NextRequest) {
           { status: 400 },
         );
       }
+      linkedExpiryDate = logRow.expiry_date ?? null;
     }
   }
-  const result = db
-    .prepare(
-      `INSERT INTO offers
-      (expiry_log_id, stock_id, barcode, description, category, uom, quantity,
-       outlet_name, offer_status, has_alert, notes, created_by, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      expiry_log_id ?? null,
-      stock_id?.trim() || null,
-      barcode.trim(),
-      description.trim(),
-      category?.trim() || null,
-      uom?.trim() || null,
-      qty,
-      outlet_name.trim(),
-      oStatus,
-      has_alert ? 1 : 0,
-      notes?.trim() || null,
+  try {
+    const result = db
+      .prepare(
+        `INSERT INTO offers
+        (expiry_log_id, stock_id, barcode, description, category, uom, quantity,
+         outlet_name, offer_status, has_alert, notes, expiry_date, created_by, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        expiry_log_id ?? null,
+        stock_id?.trim() || null,
+        barcode.trim(),
+        description.trim(),
+        category?.trim() || null,
+        uom?.trim() || "",
+        qty,
+        outlet_name.trim(),
+        oStatus,
+        has_alert ? 1 : 0,
+        notes?.trim() || null,
+        linkedExpiryDate,
+        user.userId,
+        now,
+        now,
+      );
+
+    const newId = Number(result.lastInsertRowid);
+
+    db.prepare(
+      "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    ).run(
+      "CREATE",
+      "offers",
+      newId,
       user.userId,
-      now,
+      user.picName,
+      `Offered ${description.trim()} to ${outlet_name.trim()}`,
       now,
     );
 
-  const newId = Number(result.lastInsertRowid);
-
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "CREATE",
-    "offers",
-    newId,
-    user.userId,
-    user.picName,
-    `Offered ${description.trim()} to ${outlet_name.trim()}`,
-    now,
-  );
-
-  const entry = db.prepare("SELECT * FROM offers WHERE id = ?").get(newId);
-  return NextResponse.json({ success: true, data: entry }, { status: 201 });
+    const entry = db.prepare("SELECT * FROM offers WHERE id = ?").get(newId);
+    return NextResponse.json({ success: true, data: entry }, { status: 201 });
+  } catch (err) {
+    console.error("Offer insert error:", err);
+    return NextResponse.json(
+      { success: false, error: "Failed to create offer" },
+      { status: 500 },
+    );
+  }
 }

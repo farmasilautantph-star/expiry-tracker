@@ -18,6 +18,10 @@ export interface OfferEntry {
   created_by: number;
   created_at: string;
   updated_at: string;
+  received_at: string | null;
+  rejection_notes: string | null;
+  expiry_date: string | null;
+  days_left: number | null;
 }
 
 export interface OfferFilters {
@@ -81,6 +85,11 @@ interface UseOffersReturn {
   updateOffer: (id: number, data: Partial<OfferFormData>) => Promise<void>;
   deleteOffer: (id: number) => Promise<void>;
   toggleAlert: (id: number) => Promise<void>;
+  updateOfferStatus: (
+    id: number,
+    status: "accepted" | "rejected",
+    opts?: { received_at?: string; rejection_notes?: string }
+  ) => Promise<{ qty_deducted: number; item_completed: boolean }>;
   refresh: () => Promise<void>;
 }
 
@@ -171,6 +180,25 @@ export function useOffers(): UseOffersReturn {
     await fetchData(filters);
   }
 
+  async function updateOfferStatus(
+    id: number,
+    status: "accepted" | "rejected",
+    opts?: { received_at?: string; rejection_notes?: string }
+  ): Promise<{ qty_deducted: number; item_completed: boolean }> {
+    const res = await fetch(`/api/offers/${id}/status`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offer_status: status, ...opts }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to update offer status");
+    await fetchData(filters);
+    return {
+      qty_deducted: json.qty_deducted ?? 0,
+      item_completed: json.item_completed ?? false,
+    };
+  }
+
   async function toggleAlert(id: number): Promise<void> {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
@@ -190,6 +218,7 @@ export function useOffers(): UseOffersReturn {
     updateOffer,
     deleteOffer,
     toggleAlert,
+    updateOfferStatus,
     refresh: () => fetchData(filters),
   };
 }

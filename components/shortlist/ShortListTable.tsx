@@ -15,11 +15,14 @@ import {
   ExclamationTriangleIcon,
   XCircleIcon,
   ClockIcon,
+  BuildingStorefrontIcon,
 } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
 import Modal from "@/components/ui/Modal";
 import { useToast } from "@/hooks/useToast";
 import { getDaysUntilSunday } from "@/lib/sunday-deadline-client";
+import OfferForm from "@/components/offers/OfferForm";
+import type { OfferFormData } from "@/hooks/useOffers";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 type ReviewStatus = "pending" | "early_alert" | "last_chance" | "needs_review" | "critical_stale" | "resolved";
@@ -224,6 +227,7 @@ function ReviewPopupContent({
   onClose,
   onReviewed,
   onSell,
+  onOffer,
   isSaving,
   reviewSuccess,
   reviewTimestamp,
@@ -236,6 +240,7 @@ function ReviewPopupContent({
   onClose: () => void;
   onReviewed: () => void;
   onSell: () => void;
+  onOffer?: () => void;
   isSaving: boolean;
   reviewSuccess: boolean;
   reviewTimestamp: string | null;
@@ -323,10 +328,24 @@ function ReviewPopupContent({
             <InfoRow label="Qty" value={`${entry.quantity}${entry.uom ? ` ${entry.uom}` : ""}`} />
             <InfoRow label="Category" value={entry.category} />
             <InfoRow label="Expiry" value={formatDate(entry.expiry_date)} />
-            <InfoRow label="Days Left" last>
+            <InfoRow label="Days Left" last={entry.offered_qty === 0}>
               <DaysLeftBadge entry={entry} />
             </InfoRow>
+            {entry.offered_qty > 0 && (
+              <InfoRow label="Active Offers" last>
+                <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: "#2563eb" }}>
+                  <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#2563eb" }} />
+                  {entry.offered_qty} unit{entry.offered_qty !== 1 ? "s" : ""} offered
+                </span>
+              </InfoRow>
+            )}
           </div>
+          {entry.offered_qty > 0 && entry.offered_qty >= entry.quantity && (
+            <div className="rounded-xl px-3 py-3 flex items-center gap-2 mb-4" style={{ background: "#dcfce7" }}>
+              <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0" />
+              <p className="text-xs font-semibold text-[#16a34a]">All units offered out</p>
+            </div>
+          )}
           {isPartial && unitsPreviouslySold != null && (
             <div className="rounded-xl px-3 py-3 mb-4" style={{ background: "#fef9c3" }}>
               <p className="text-xs font-semibold" style={{ color: "#92400e" }}>⚠️ Partial Sale</p>
@@ -378,6 +397,20 @@ function ReviewPopupContent({
                 >
                   Cancel
                 </button>
+                {isManager && onOffer && canSell && (
+                  <button
+                    onClick={onOffer}
+                    disabled={isSaving || entry.offered_qty >= entry.quantity}
+                    title={entry.offered_qty >= entry.quantity ? "All units already offered" : undefined}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ background: "#eff6ff", color: "#2563eb" }}
+                    onMouseEnter={(e) => { if (entry.offered_qty < entry.quantity && !isSaving) (e.currentTarget as HTMLElement).style.background = "#dbeafe"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#eff6ff"; }}
+                  >
+                    <BuildingStorefrontIcon className="w-4 h-4" />
+                    Offer
+                  </button>
+                )}
                 {canSell && (
                   <button
                     onClick={onSell}
@@ -391,7 +424,7 @@ function ReviewPopupContent({
                     Mark Sold
                   </button>
                 )}
-                {canReview && (
+                {!isManager && canReview && (
                   <button
                     onClick={onReviewed}
                     disabled={isSaving}
@@ -561,6 +594,7 @@ export default function ShortListTable({
   const [reviewTimestamp, setReviewTimestamp] = useState<string | null>(null);
   const [reviewError, setReviewError]         = useState<string | null>(null);
 
+  const [offerEntry, setOfferEntry]           = useState<ShortListEntry | null>(null);
   const [sellingIds, setSellingIds]           = useState<Set<number>>(new Set());
   const [sellConfirmEntry, setSellConfirmEntry]     = useState<ShortListEntry | null>(null);
   const [reviewConfirmEntry, setReviewConfirmEntry] = useState<ShortListEntry | null>(null);
@@ -717,6 +751,19 @@ export default function ShortListTable({
     }
   }
 
+  async function handleOfferSubmit(data: OfferFormData): Promise<void> {
+    const res = await fetch("/api/offers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to create offer");
+    showSuccess("Offer submitted successfully");
+    setOfferEntry(null);
+    await onMarkReviewed?.(data.expiry_log_id!);
+  }
+
   if (isLoading) {
     return (
       <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
@@ -746,6 +793,26 @@ export default function ShortListTable({
     <>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
+      {/* ── Offer form modal ───────────────────────────────────────────── */}
+      {offerEntry && (
+        <OfferForm
+          isOpen={offerEntry !== null}
+          onClose={() => setOfferEntry(null)}
+          source={{
+            expiry_log_id: offerEntry.id,
+            stock_id: offerEntry.stock_id,
+            barcode: offerEntry.barcode,
+            description: offerEntry.description,
+            category: offerEntry.category,
+            uom: offerEntry.uom,
+            expiry_date: offerEntry.expiry_date,
+            quantity: offerEntry.quantity,
+            total_offered: offerEntry.total_offered,
+          }}
+          onSubmit={handleOfferSubmit}
+        />
+      )}
+
       {/* ── Row-click popup (portal-based) ──────────────────────────────── */}
       <Modal isOpen={reviewConfirmEntry !== null} onClose={closeReviewPopup}>
         {reviewConfirmEntry && (
@@ -757,6 +824,11 @@ export default function ShortListTable({
             onClose={closeReviewPopup}
             onReviewed={() => confirmMarkReviewed(reviewConfirmEntry.id)}
             onSell={openSellFromPopup}
+            onOffer={() => {
+              const entry = reviewConfirmEntry;
+              closeReviewPopup();
+              setOfferEntry(entry);
+            }}
             isSaving={isReviewSaving}
             reviewSuccess={reviewSuccess}
             reviewTimestamp={reviewTimestamp}
@@ -953,6 +1025,12 @@ export default function ShortListTable({
                         <span className="text-[#334155]">{entry.quantity}</span>
                         {entry.notes?.includes("unit(s) sold") && (
                           <span className="block text-[10px] text-[#94a3b8] leading-tight">partial</span>
+                        )}
+                        {entry.offered_qty > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-medium leading-tight mt-0.5" style={{ color: "#2563eb" }}>
+                            <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#2563eb" }} />
+                            {entry.offered_qty} offered
+                          </span>
                         )}
                       </td>
                       <td className="px-5 py-3.5 font-medium text-[#334155] whitespace-nowrap" style={cellBg("expiry_date")}>

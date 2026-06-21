@@ -9,7 +9,7 @@ import {
   HomeIcon,
   ListBulletIcon,
   ArrowUturnLeftIcon,
-  TagIcon,
+  BuildingStorefrontIcon,
   ClockIcon,
   ClipboardDocumentListIcon,
   ArrowRightOnRectangleIcon,
@@ -55,17 +55,16 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/dashboard/returns",
         icon: <ArrowUturnLeftIcon className="w-5 h-5" />,
       },
+      {
+        label: "Offer Ke Outlet",
+        href: "/dashboard/offers",
+        icon: <BuildingStorefrontIcon className="w-5 h-5" />,
+      },
     ],
   },
   {
     label: "MANAGEMENT",
     items: [
-      {
-        label: "Offer Ke Outlet",
-        href: "/dashboard/offers",
-        managerOnly: true,
-        icon: <TagIcon className="w-5 h-5" />,
-      },
       {
         label: "History Log",
         href: "/dashboard/history-log",

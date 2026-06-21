@@ -35,6 +35,8 @@ export interface ShortListEntry {
     | "completed";
   offer_id: number | null;
   total_offered: number;
+  offered_qty: number;
+  has_active_offer: boolean;
 }
 
 export interface ShortListFilters {

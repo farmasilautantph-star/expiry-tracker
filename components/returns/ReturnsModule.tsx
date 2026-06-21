@@ -9,6 +9,7 @@ import type {
   ReturnFilters,
   ReturnCounts,
 } from "@/hooks/useReturns";
+import type { MonthValue } from "@/components/ui/MonthPicker";
 
 interface Props {
   entries: ReturnEntry[];
@@ -24,8 +25,10 @@ interface Props {
   ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
-  historyMonth?: string;
-  onHistoryMonthChange?: (month: string) => void;
+  activeMonth?: MonthValue | null;
+  onActiveMonthChange?: (val: MonthValue | null) => void;
+  historyMonth?: MonthValue | null;
+  onHistoryMonthChange?: (val: MonthValue | null) => void;
   onMarkReturned: (id: number, notes?: string) => Promise<void>;
   onMarkNotApproved: (id: number, notes?: string) => Promise<void>;
   onUpdateReturnDate: (id: number, date: string) => Promise<void>;
@@ -43,6 +46,8 @@ export default function ReturnsModule({
   setFilter,
   clearFilters,
   activeFilterCount,
+  activeMonth,
+  onActiveMonthChange,
   historyMonth,
   onHistoryMonthChange,
   onMarkReturned,
@@ -72,6 +77,8 @@ export default function ReturnsModule({
         isManager={isManager}
         picOptions={picOptions}
         mode={mode}
+        activeMonth={activeMonth}
+        onActiveMonthChange={onActiveMonthChange}
         historyMonth={historyMonth}
         onHistoryMonthChange={onHistoryMonthChange}
       />

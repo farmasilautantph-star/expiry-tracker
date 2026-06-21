@@ -2,6 +2,7 @@
 
 import type { ReturnFilters } from "@/hooks/useReturns";
 import { MagnifyingGlassIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
+import MonthPicker, { type MonthValue } from "@/components/ui/MonthPicker";
 
 const CATEGORIES = [
   "MOM & BABY",
@@ -21,32 +22,14 @@ interface Props {
   isManager: boolean;
   picOptions: string[];
   mode: "active" | "history";
-  historyMonth?: string;
-  onHistoryMonthChange?: (month: string) => void;
+  activeMonth?: MonthValue | null;
+  onActiveMonthChange?: (val: MonthValue | null) => void;
+  historyMonth?: MonthValue | null;
+  onHistoryMonthChange?: (val: MonthValue | null) => void;
 }
 
 const SELECT_CLS =
   "relative appearance-none border border-[#e2e8f0] bg-white text-[#334155] text-sm transition-colors focus:outline-none pr-8 pl-4 py-2";
-
-function monthLabel(ym: string): string {
-  if (!ym) return "";
-  const [y, m] = ym.split("-");
-  const date = new Date(Number(y), Number(m) - 1, 1);
-  return date.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
-}
-
-function buildMonthOptions(): string[] {
-  const months: string[] = [];
-  const now = new Date();
-  for (let i = -6; i <= 3; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    months.push(ym);
-  }
-  return months;
-}
-
-const MONTH_OPTIONS = buildMonthOptions();
 
 export default function ReturnsFilters({
   filters,
@@ -56,6 +39,8 @@ export default function ReturnsFilters({
   isManager,
   picOptions,
   mode,
+  activeMonth,
+  onActiveMonthChange,
   historyMonth,
   onHistoryMonthChange,
 }: Props) {
@@ -70,24 +55,22 @@ export default function ReturnsFilters({
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      {/* History: month filter on completed_at */}
+      {/* Active: month filter (return_by_date) */}
+      {mode === "active" && onActiveMonthChange && (
+        <MonthPicker
+          value={activeMonth ?? null}
+          onChange={onActiveMonthChange}
+          placeholder="All Months"
+        />
+      )}
+
+      {/* History: month filter (completed_at) */}
       {mode === "history" && onHistoryMonthChange && (
-        <div className="relative">
-          <select
-            value={historyMonth ?? ""}
-            onChange={(e) => onHistoryMonthChange(e.target.value)}
-            className={SELECT_CLS}
-            style={{ borderRadius: "10px" }}
-            onFocus={focusStyle}
-            onBlur={blurStyle}
-          >
-            <option value="">All Months</option>
-            {MONTH_OPTIONS.map((ym) => (
-              <option key={ym} value={ym}>{monthLabel(ym)}</option>
-            ))}
-          </select>
-          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
-        </div>
+        <MonthPicker
+          value={historyMonth ?? null}
+          onChange={onHistoryMonthChange}
+          placeholder="All Time"
+        />
       )}
 
       {/* Active: status filter */}
@@ -188,9 +171,9 @@ export default function ReturnsFilters({
       </div>
 
       {/* Clear */}
-      {(activeFilterCount > 0 || (historyMonth && mode === "history")) && (
+      {(activeFilterCount > 0 || (activeMonth != null && mode === "active") || (historyMonth != null && mode === "history")) && (
         <button
-          onClick={() => { clearFilters(); onHistoryMonthChange?.(""); }}
+          onClick={() => { clearFilters(); onActiveMonthChange?.(null); onHistoryMonthChange?.(null); }}
           className="flex items-center gap-1.5 text-sm transition-colors"
           style={{ color: "#64748b" }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#ef4444")}
