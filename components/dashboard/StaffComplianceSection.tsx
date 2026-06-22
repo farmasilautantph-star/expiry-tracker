@@ -129,7 +129,7 @@ export default function StaffComplianceSection({
       </div>
 
       {/* Staff rows */}
-      <div className="mt-3">
+      <div className="mt-3 max-h-[320px] overflow-y-auto">
         {completionRates.map((staff) => (
           <CompactRow key={staff.pic_name} staff={staff} />
         ))}
@@ -156,7 +156,7 @@ export default function StaffComplianceSection({
   if (inline) return <>{inner}</>;
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm p-5" style={{ border: "1px solid #e2e8f0" }}>
+    <div className="rounded-2xl bg-white shadow-sm p-5 h-full" style={{ border: "1px solid #e2e8f0" }}>
       {inner}
     </div>
   );

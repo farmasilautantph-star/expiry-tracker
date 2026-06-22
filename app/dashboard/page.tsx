@@ -274,32 +274,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Staff Overview — manager only (compliance + monthly trend merged) */}
+      {/* Staff Overview — manager only */}
       {isManager && (
         <div>
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8] mb-3 mt-6">
             Staff Overview
           </p>
-          <div className="rounded-2xl bg-white shadow-sm" style={{ border: "1px solid #e2e8f0" }}>
-            <div className="grid grid-cols-1 xl:grid-cols-[2fr_3fr] divide-y xl:divide-y-0 xl:divide-x divide-slate-100">
-              <div className="p-5">
-                <StaffComplianceSection
-                  completionRates={healthData?.completionRates ?? []}
-                  weekRange={healthData?.reviewDeadline ?? { lastSunday: "—", nextSunday: "—" }}
-                  isLoading={healthLoading}
-                  inline
-                />
-              </div>
-              <div className="p-5">
-                <p className="text-sm font-bold text-[#0f172a] mb-1">Monthly Activity Trend</p>
-                <p className="text-xs text-slate-400 mb-4">Last 12 months</p>
-                <MonthlyTrend
-                  data={analyticsData?.monthlyTrend ?? []}
-                  isLoading={analyticsLoading}
-                  inline
-                />
-              </div>
-            </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
+            <StaffComplianceSection
+              completionRates={healthData?.completionRates ?? []}
+              weekRange={healthData?.reviewDeadline ?? { lastSunday: "—", nextSunday: "—" }}
+              isLoading={healthLoading}
+            />
+            <MonthlyTrend
+              data={analyticsData?.monthlyTrend ?? []}
+              isLoading={analyticsLoading}
+            />
           </div>
         </div>
       )}
