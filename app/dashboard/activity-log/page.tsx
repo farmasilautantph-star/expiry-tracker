@@ -24,77 +24,53 @@ export default function ActivityLogPage() {
 
   useEffect(() => { document.title = "Item Timeline | Expiry Tracker"; }, []);
 
-  const showBigHeader = !searchResult && !isLoading && !error;
   const showSelector =
     !!searchResult?.found && searchResult.multiple && selectedEntryId === null;
   const showTimeline = !!searchResult?.found && currentEntry !== null;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
-      {showBigHeader ? (
-        /* ── Empty state: centered card with large search ── */
+    <div className="max-w-2xl mx-auto space-y-4">
+      {/* Search card — always visible */}
+      <div
+        className="bg-white rounded-2xl p-8 shadow-sm text-center"
+        style={{ border: "1px solid #e2e8f0" }}
+      >
         <div
-          className="bg-white rounded-2xl p-8 shadow-sm text-center"
-          style={{ border: "1px solid #e2e8f0" }}
+          className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+          style={{ background: "#eff6ff" }}
         >
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: "#eff6ff" }}
-          >
-            <MagnifyingGlassIcon className="w-8 h-8 text-[#2563eb]" />
-          </div>
-          <h2 className="text-xl font-bold text-[#0f172a] mb-1">
-            Item Timeline
-          </h2>
-          <p className="text-sm text-[#94a3b8] mb-6">
-            Track full item journey by barcode
-          </p>
-          <ActivitySearchBar
-            barcode={barcode}
-            setBarcode={setBarcode}
-            onSearch={searchBarcode}
-            isLoading={isLoading}
-            searchResult={searchResult}
-            error={error}
-            onClear={clearSearch}
-            recentSearches={recentSearches}
-            compact={false}
-          />
+          <MagnifyingGlassIcon className="w-8 h-8 text-[#2563eb]" />
         </div>
-      ) : (
-        /* ── Results state: compact search + content below ── */
-        <>
-          <div
-            className="bg-white rounded-2xl px-4 py-3 shadow-sm"
-            style={{ border: "1px solid #e2e8f0" }}
-          >
-            <ActivitySearchBar
-              barcode={barcode}
-              setBarcode={setBarcode}
-              onSearch={searchBarcode}
-              isLoading={isLoading}
-              searchResult={searchResult}
-              error={error}
-              onClear={clearSearch}
-              recentSearches={recentSearches}
-              compact={true}
-            />
-          </div>
+        <h2 className="text-xl font-bold text-[#0f172a] mb-1">Item Timeline</h2>
+        <p className="text-sm text-[#94a3b8] mb-6">
+          Track a full item journey by barcode
+        </p>
+        <ActivitySearchBar
+          barcode={barcode}
+          setBarcode={setBarcode}
+          onSearch={searchBarcode}
+          isLoading={isLoading}
+          searchResult={searchResult}
+          error={error}
+          onClear={clearSearch}
+          recentSearches={recentSearches}
+        />
+      </div>
 
-          {showSelector && searchResult && (
-            <ActivityEntrySelector
-              entries={searchResult.entries}
-              selectedEntryId={selectedEntryId}
-              onSelect={selectEntry}
-              barcode={barcode}
-              onNewSearch={clearSearch}
-            />
-          )}
+      {/* Entry selector (multiple results) */}
+      {showSelector && searchResult && (
+        <ActivityEntrySelector
+          entries={searchResult.entries}
+          selectedEntryId={selectedEntryId}
+          onSelect={selectEntry}
+          barcode={barcode}
+          onNewSearch={clearSearch}
+        />
+      )}
 
-          {showTimeline && currentEntry && (
-            <ActivityTimeline entry={currentEntry} onNewSearch={clearSearch} />
-          )}
-        </>
+      {/* Timeline */}
+      {showTimeline && currentEntry && (
+        <ActivityTimeline entry={currentEntry} onNewSearch={clearSearch} />
       )}
     </div>
   );

@@ -349,7 +349,30 @@ function buildTimeline(
     }
   }
 
-  events.sort((a, b) => a.date.localeCompare(b.date));
+  const EVENT_PRIORITY: Record<string, number> = {
+    logged:               1,
+    marked_returnable:    2,
+    return_pending:       3,
+    qty_updated:          3,
+    stock_added:          3,
+    reviewed:             3,
+    returning:            4,
+    partial_sold:         4,
+    offer_created:        4,
+    fully_sold:           5,
+    offer_accepted:       5,
+    offer_rejected:       5,
+    return_completed:     6,
+    return_not_approved:  6,
+  };
+
+  events.sort((a, b) => {
+    const tA = new Date(a.date).getTime();
+    const tB = new Date(b.date).getTime();
+    if (tA !== tB) return tA - tB;
+    return (EVENT_PRIORITY[a.event_type] ?? 3) - (EVENT_PRIORITY[b.event_type] ?? 3);
+  });
+
   return events;
 }
 

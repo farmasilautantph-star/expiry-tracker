@@ -1,57 +1,50 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ReturnEntry } from "@/hooks/useReturns";
 import {
   DocumentTextIcon,
   XMarkIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 
-function formatDate(iso: string | null): string {
+function formatShortDate(iso: string | null): string {
   if (!iso) return "—";
   const [y, m, d] = iso.split("T")[0].split("-");
-  return `${d}/${m}/${y}`;
-}
-
-function Dot({ color }: { color: string }) {
-  return (
-    <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color }} />
-  );
+  return `${d}/${m}/${y.slice(2)}`;
 }
 
 function StatusBadge({ entry }: { entry: ReturnEntry }) {
   if (entry.return_status === "returned") {
     return (
-      <span className="badge" style={{ background: "#dcfce7", color: "#16a34a" }}>
-        <Dot color="#16a34a" />
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ background: "#dcfce7", color: "#16a34a" }}>
         Returned
       </span>
     );
   }
   if (entry.return_status === "not_approved") {
     return (
-      <span className="badge" style={{ background: "#fee2e2", color: "#991b1b" }}>
-        <Dot color="#991b1b" />
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ background: "#ffedd5", color: "#ea580c" }}>
         Not Approved
       </span>
     );
   }
   if (entry.overdue) {
     return (
-      <span className="badge" style={{ background: "#fee2e2", color: "#dc2626" }}>
-        <Dot color="#dc2626" />
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+        style={{ background: "#fee2e2", color: "#dc2626" }}>
         Overdue
       </span>
     );
   }
   return (
-    <span className="badge" style={{ background: "#fef3c7", color: "#d97706" }}>
-      <Dot color="#d97706" />
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+      style={{ background: "#fef3c7", color: "#d97706" }}>
       Pending
     </span>
   );
@@ -71,8 +64,7 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
     return (
       <div className="flex items-center gap-1 group">
         <span className={entry.overdue ? "text-[#ef4444] font-medium" : "text-[#334155]"}>
-          {formatDate(entry.return_by_date)}
-          {entry.overdue && <span className="ml-1 text-xs text-[#ef4444]">(overdue)</span>}
+          {formatShortDate(entry.return_by_date)}
         </span>
         <button
           onClick={() => setEditing(true)}
@@ -138,8 +130,8 @@ interface Props {
 }
 
 const TH =
-  "sticky top-0 z-10 bg-[#f8fafc] px-5 py-3 text-left text-[11px] uppercase font-semibold text-[#64748b] tracking-[0.08em] whitespace-nowrap";
-const TD = "px-5 py-3.5 font-medium";
+  "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-[11px] uppercase font-semibold text-[#64748b] tracking-[0.08em] whitespace-nowrap";
+const TD = "px-4 py-3";
 
 export default function ReturnsTable({
   entries,
@@ -149,8 +141,8 @@ export default function ReturnsTable({
   onMarkReturned,
   onMarkNotApproved,
   onUpdateReturnDate,
-  onRefresh,
 }: Props) {
+  const router = useRouter();
   const [confirmEntry, setConfirmEntry] = useState<ReturnEntry | null>(null);
   const [notApprovingEntry, setNotApprovingEntry] = useState<ReturnEntry | null>(null);
   const [actionNotes, setActionNotes] = useState("");
@@ -191,11 +183,12 @@ export default function ReturnsTable({
     return (
       <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="px-5 py-4 border-b border-[#f1f5f9] animate-pulse">
+          <div key={i} className="px-4 py-4 border-b border-[#f1f5f9] animate-pulse">
             <div className="flex gap-4">
+              <div className="h-4 w-40 bg-[#f1f5f9] rounded" />
               <div className="h-4 w-24 bg-[#f1f5f9] rounded" />
               <div className="h-4 w-16 bg-[#f1f5f9] rounded" />
-              <div className="h-4 flex-1 bg-[#f1f5f9] rounded" />
+              <div className="h-4 w-20 bg-[#f1f5f9] rounded" />
             </div>
           </div>
         ))}
@@ -207,8 +200,8 @@ export default function ReturnsTable({
     return (
       <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm flex flex-col items-center justify-center py-16 text-center">
         <DocumentTextIcon className="w-12 h-12 text-[#cbd5e1] mb-3" />
-        <p className="text-sm text-[#94a3b8]">
-          {mode === "history" ? "No completed returns yet" : "No items found"}
+        <p className="text-sm font-medium text-[#94a3b8]">
+          {mode === "history" ? "No completed returns yet" : "No active return items"}
         </p>
         {mode === "active" && (
           <p className="text-xs text-[#94a3b8] mt-1">Items appear here when logged as Returnable.</p>
@@ -217,91 +210,34 @@ export default function ReturnsTable({
     );
   }
 
-  // ── History mode (read-only) ──────────────────────────────────────────────
-  if (mode === "history") {
-    return (
-      <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-        <p className="px-5 py-2.5 text-xs text-[#64748b] bg-[#f8fafc]" style={{ borderBottom: "1px solid #e2e8f0" }}>
-          Showing {entries.length} {entries.length === 1 ? "item" : "items"}
-        </p>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-              <th className={TH}>Return By</th>
-              <th className={TH}>Date Logged</th>
-              <th className={TH}>PIC</th>
-              <th className={`${TH} max-w-[200px]`}>Description</th>
-              <th className={TH}>Barcode</th>
-              <th className={TH}>Category</th>
-              <th className={TH}>Status</th>
-              <th className={TH}>Completed Date</th>
-              <th className={TH}>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr
-                key={entry.id}
-                className="transition-colors duration-150"
-                style={{ borderBottom: "1px solid #f1f5f9" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
-              >
-                <td className={`${TD} whitespace-nowrap text-[#334155]`}>{formatDate(entry.return_by_date)}</td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{formatDate(entry.logged_at)}</td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>{entry.pic_name}</span>
-                </td>
-                <td className={`${TD} max-w-[200px]`}>
-                  <span className="block truncate text-[#334155] font-medium" title={entry.description}>
-                    {entry.description}
-                  </span>
-                </td>
-                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.barcode}</td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.category}</td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <StatusBadge entry={entry} />
-                </td>
-                <td className={`${TD} whitespace-nowrap text-[#334155]`}>{formatDate(entry.completed_at)}</td>
-                <td className={`${TD} max-w-[180px] text-xs text-[#64748b]`}>
-                  <span className="block truncate" title={entry.return_notes ?? ""}>{entry.return_notes ?? "—"}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  // ── Active mode ───────────────────────────────────────────────────────────
   return (
     <>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
-        <p className="px-5 py-2.5 text-xs text-[#64748b] bg-[#f8fafc]" style={{ borderBottom: "1px solid #e2e8f0" }}>
-          Showing {entries.length} {entries.length === 1 ? "item" : "items"}
-        </p>
+      <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+        {/* Row count */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-[#f8fafc]"
+          style={{ borderBottom: "1px solid #e2e8f0" }}>
+          <span className="text-xs text-[#94a3b8]">
+            {entries.length} {entries.length === 1 ? "item" : "items"}
+          </span>
+        </div>
+
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-              <th className={TH}>Return By</th>
-              <th className={TH}>Date Logged</th>
-              <th className={TH}>PIC</th>
-              <th className={TH}>Stock ID</th>
+            <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+              <th className={`${TH} min-w-[180px]`}>Item</th>
               <th className={TH}>Barcode</th>
-              <th className={`${TH} max-w-[200px]`}>Description</th>
               <th className={TH}>Category</th>
-              <th className={TH}>UOM</th>
+              {mode === "active" && isManager && <th className={TH}>Return By</th>}
+              <th className={TH}>Logged</th>
               <th className={TH}>Status</th>
-              <th className={`${TH} text-right`}>Actions</th>
+              <th className={`${TH} text-right`}>Action</th>
             </tr>
           </thead>
           <tbody>
             {entries.map((entry) => {
               const isPending = entry.return_status === "pending";
-
               return (
                 <tr
                   key={entry.id}
@@ -310,77 +246,85 @@ export default function ReturnsTable({
                   onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#f8fafc")}
                   onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "")}
                 >
-                  <td className={`${TD} whitespace-nowrap`}>
-                    {isManager ? (
-                      <EditDateCell entry={entry} onSave={onUpdateReturnDate} />
-                    ) : (
-                      <span className={entry.overdue ? "text-[#ef4444] font-medium" : "text-[#334155]"}>
-                        {formatDate(entry.return_by_date)}
-                        {entry.overdue && <span className="ml-1 text-xs">(overdue)</span>}
-                      </span>
-                    )}
-                  </td>
-                  <td className={`${TD} text-[#334155] whitespace-nowrap`}>{formatDate(entry.logged_at)}</td>
-                  <td className={`${TD} whitespace-nowrap`}>
-                    <span className="badge" style={{ background: "#dbeafe", color: "#2563eb" }}>{entry.pic_name}</span>
-                  </td>
-                  <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.stock_id ?? "—"}</td>
-                  <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>{entry.barcode}</td>
-                  <td className={`${TD} max-w-[200px]`}>
-                    <span
-                      className="block truncate text-[#334155] font-medium"
-                      title={entry.description + (entry.notes ? ` — ${entry.notes}` : "")}
-                    >
+                  {/* ITEM */}
+                  <td className={`${TD} min-w-[180px]`}>
+                    <p className="text-sm font-semibold text-[#0f172a] leading-snug"
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                      title={entry.description}>
                       {entry.description}
-                    </span>
+                    </p>
                     {entry.notes && (
-                      <span className="block truncate text-xs text-[#94a3b8] mt-0.5" title={entry.notes}>
+                      <p className="text-xs text-[#94a3b8] mt-0.5 truncate" title={entry.notes}>
                         {entry.notes}
-                      </span>
+                      </p>
                     )}
                   </td>
-                  <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.category}</td>
-                  <td className={`${TD} text-[#334155] text-xs whitespace-nowrap`}>{entry.uom ?? "—"}</td>
+
+                  {/* BARCODE */}
+                  <td className={`${TD} font-mono text-xs text-[#334155] whitespace-nowrap`}>
+                    {entry.barcode}
+                  </td>
+
+                  {/* CATEGORY */}
+                  <td className={`${TD} text-xs text-[#475569] whitespace-nowrap`}>
+                    {entry.category}
+                  </td>
+
+                  {/* RETURN BY — active manager only */}
+                  {mode === "active" && isManager && (
+                    <td className={`${TD} whitespace-nowrap`}>
+                      <EditDateCell entry={entry} onSave={onUpdateReturnDate} />
+                    </td>
+                  )}
+
+                  {/* LOGGED */}
+                  <td className={`${TD} text-xs text-[#475569] whitespace-nowrap`}>
+                    {formatShortDate(entry.logged_at)}
+                  </td>
+
+                  {/* STATUS */}
                   <td className={`${TD} whitespace-nowrap`}>
                     <StatusBadge entry={entry} />
                   </td>
-                  <td className={`${TD} whitespace-nowrap`}>
-                    <div className="flex items-center justify-end gap-1.5">
-                      {isPending ? (
-                        <>
-                          <button
-                            onClick={() => { setConfirmEntry(entry); setActionNotes(""); }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
-                            style={{ background: "#dcfce7", color: "#16a34a" }}
-                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#bbf7d0")}
-                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#dcfce7")}
-                            title="Mark as Returned"
-                          >
-                            <CheckIcon className="w-3 h-3" />
-                            Mark Returned
-                          </button>
-                          <button
-                            onClick={() => { setNotApprovingEntry(entry); setActionNotes(""); }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
-                            style={{ background: "#fee2e2", color: "#dc2626" }}
-                            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#fecaca")}
-                            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#fee2e2")}
-                            title="Mark as Not Approved"
-                          >
-                            <XMarkIcon className="w-3 h-3" />
-                            Not Approved
-                          </button>
-                        </>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium"
-                          style={{ color: entry.return_status === "returned" ? "#16a34a" : "#991b1b" }}>
-                          {entry.return_status === "returned"
-                            ? <CheckCircleIcon className="w-3.5 h-3.5" />
-                            : <XCircleIcon className="w-3.5 h-3.5" />}
-                          {entry.return_status === "returned" ? "Returned" : "Not Approved"}
-                        </span>
-                      )}
-                    </div>
+
+                  {/* ACTION */}
+                  <td className={`${TD} whitespace-nowrap text-right`}>
+                    {mode === "history" ? (
+                      <button
+                        onClick={() => router.push(`/dashboard/shortlist?review=${entry.id}`)}
+                        className="text-xs font-semibold transition-colors"
+                        style={{ color: "#2563eb" }}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#1d4ed8")}
+                        onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#2563eb")}
+                      >
+                        View →
+                      </button>
+                    ) : isPending ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => { setConfirmEntry(entry); setActionNotes(""); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
+                          style={{ background: "#dcfce7", color: "#16a34a" }}
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#bbf7d0")}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#dcfce7")}
+                        >
+                          <CheckIcon className="w-3 h-3" />
+                          Returned
+                        </button>
+                        <button
+                          onClick={() => { setNotApprovingEntry(entry); setActionNotes(""); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors"
+                          style={{ background: "#ffedd5", color: "#ea580c" }}
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#fed7aa")}
+                          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#ffedd5")}
+                        >
+                          <XMarkIcon className="w-3 h-3" />
+                          Not Approved
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-[#94a3b8]">—</span>
+                    )}
                   </td>
                 </tr>
               );
@@ -403,7 +347,7 @@ export default function ReturnsTable({
               <p className="font-medium text-[#334155]">{confirmEntry.description}</p>
               <p>Barcode: <span className="font-mono text-[#334155]">{confirmEntry.barcode}</span></p>
               {confirmEntry.return_by_date && (
-                <p>Return By: <span className="font-medium text-[#334155]">{formatDate(confirmEntry.return_by_date)}</span></p>
+                <p>Return By: <span className="font-medium text-[#334155]">{formatShortDate(confirmEntry.return_by_date)}</span></p>
               )}
             </div>
             <div className="space-y-1">
@@ -466,9 +410,9 @@ export default function ReturnsTable({
               </button>
               <button onClick={handleConfirmNotApproved} disabled={submitting}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-white transition-colors disabled:opacity-50"
-                style={{ background: "#dc2626" }}
-                onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLElement).style.background = "#b91c1c"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#dc2626"; }}
+                style={{ background: "#ea580c" }}
+                onMouseEnter={(e) => { if (!submitting) (e.currentTarget as HTMLElement).style.background = "#c2410c"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#ea580c"; }}
               >
                 <XMarkIcon className="w-4 h-4" />
                 {submitting ? "Saving..." : "Confirm Not Approved"}

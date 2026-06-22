@@ -39,7 +39,7 @@ export default function ShortListFilters({
   return (
     <div className="flex items-center gap-3 flex-wrap">
       {/* Search */}
-      <div className="relative flex-1 min-w-[200px] max-w-xs">
+      <div className="relative flex-1 min-w-[240px]">
         <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
         <input
           type="text"

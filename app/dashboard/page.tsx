@@ -7,8 +7,12 @@ import { useDashboardHealth } from "@/hooks/useDashboardHealth";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
 import SystemHealthCard from "@/components/dashboard/SystemHealthCard";
 import StaleItemsCard from "@/components/dashboard/StaleItemsCard";
-import CompletionRateCard from "@/components/dashboard/CompletionRateCard";
+import StaffComplianceSection from "@/components/dashboard/StaffComplianceSection";
+import CategoryHeatmap from "@/components/dashboard/CategoryHeatmap";
+import ResolutionRate from "@/components/dashboard/ResolutionRate";
+import MonthlyTrend from "@/components/dashboard/MonthlyTrend";
 import WeeklyExpiryChart from "@/components/dashboard/WeeklyExpiryChart";
+import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 import {
   ClipboardDocumentListIcon,
@@ -37,57 +41,70 @@ interface Trend {
   warning: number;
 }
 
+// Pill badge for EXPIRED trend — negative trend = improvement = green
+function TrendBadge({ value }: { value: number }) {
+  const improved = value <= 0;
+  const pct = Math.abs(value);
+  if (pct === 0) return null;
+  const color  = improved ? "#16a34a" : "#dc2626";
+  const bg     = improved ? "#dcfce7" : "#fee2e2";
+  const prefix = improved ? "+" : "-";
+  return (
+    <span
+      className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+      style={{ background: bg, color }}
+    >
+      {prefix}{pct}%
+    </span>
+  );
+}
+
 interface StatCardProps {
   label: string;
   value: number | null;
   description: string;
   color: string;
   trend?: number;
-  trendInverse?: boolean;
+  rangeLabel?: string;
 }
 
-function TrendBadge({ value, inverse = false }: { value: number; inverse?: boolean }) {
-  const isUp = value > 0;
-  const isGood = inverse ? isUp : !isUp;
-  const color = value === 0 ? "#94a3b8" : isGood ? "#16a34a" : "#dc2626";
-  const arrow = value > 0 ? "↑" : value < 0 ? "↓" : "—";
-  return (
-    <span className="text-xs font-bold flex items-center gap-0.5" style={{ color }}>
-      {arrow} {Math.abs(value)}%
-    </span>
-  );
-}
-
-function StatCard({ label, value, description, color, trend, trendInverse }: StatCardProps) {
+function StatCard({ label, value, description, color, trend, rangeLabel }: StatCardProps) {
   return (
     <div
-      className="rounded-2xl bg-white p-5 shadow-sm relative"
-      style={{
-        border: "1px solid #e2e8f0",
-        borderBottom: `4px solid ${color}`,
-      }}
+      className="rounded-2xl bg-white px-5 pt-4 pb-5 shadow-sm"
+      style={{ border: "1px solid #e2e8f0" }}
     >
-      {trend !== undefined && (
-        <div className="absolute top-4 right-4">
-          <TrendBadge value={trend} inverse={trendInverse} />
+      {/* Top row: dot + label / badge */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ background: color }}
+          />
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.1em]"
+            style={{ color }}
+          >
+            {label}
+          </span>
         </div>
-      )}
-      <p
-        className="text-[10px] font-semibold uppercase tracking-[0.1em]"
-        style={{ color }}
-      >
-        {label}
-      </p>
-      <p
-        className="font-black leading-none mt-2"
-        style={{ fontSize: "48px", color }}
-      >
+        {trend !== undefined ? (
+          <TrendBadge value={trend} />
+        ) : rangeLabel ? (
+          <span className="text-[11px] font-medium text-[#94a3b8]">{rangeLabel}</span>
+        ) : null}
+      </div>
+
+      {/* Big number */}
+      <p className="font-black leading-none" style={{ fontSize: "46px", color }}>
         {value === null ? (
-          <span className="inline-block w-12 h-10 bg-[#f1f5f9] animate-pulse rounded" />
+          <span className="inline-block w-12 h-9 bg-[#f1f5f9] animate-pulse rounded" />
         ) : (
           value
         )}
       </p>
+
+      {/* Description */}
       <p className="text-xs font-medium text-[#94a3b8] mt-2">{description}</p>
     </div>
   );
@@ -98,6 +115,7 @@ export default function DashboardPage() {
   const { addEntry, refresh } = useExpiry();
   const { toasts, showSuccess, dismiss } = useToast();
   const { healthData, isLoading: healthLoading } = useDashboardHealth();
+  const { analyticsData, analyticsLoading } = useDashboardAnalytics(isManager);
 
   const [stats, setStats] = useState<Stats | null>(null);
   const [statsError, setStatsError] = useState(false);
@@ -145,43 +163,50 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Quick Log card */}
-      <div
-        className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        style={{
-          background: "linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%)",
-          boxShadow: "0 4px 16px rgba(37,99,235,0.25)",
-        }}
-      >
-        <div className="flex items-center gap-4">
-          <ClipboardDocumentListIcon className="w-6 h-6 text-white flex-shrink-0" />
-          <div>
-            <p className="text-base font-bold text-white">Log New Expiry Entry</p>
-            <p className="text-sm text-[#bfdbfe] mt-0.5">
-              Record a short-expiry item for your outlet inventory
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => setFormOpen(true)}
-          className="flex-shrink-0 flex items-center justify-center gap-2 font-semibold text-[#2563eb] transition-colors"
+    <div className="space-y-4">
+      {/* Quick Log banner — staff only */}
+      {!isManager && (
+        <div
+          className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           style={{
-            background: "white",
-            borderRadius: "10px",
-            padding: "10px 20px",
+            background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
+            boxShadow: "0 4px 20px rgba(37,99,235,0.30)",
           }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLElement).style.background = "white")
-          }
         >
-          <PlusIcon className="w-4 h-4" />
-          Add Entry
-        </button>
-      </div>
+          <div className="flex items-center gap-4">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "rgba(255,255,255,0.18)" }}
+            >
+              <ClipboardDocumentListIcon className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-base font-bold text-white">Log New Expiry Entry</p>
+              <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.75)" }}>
+                Record a short-expiry item for your outlet inventory
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setFormOpen(true)}
+            className="flex-shrink-0 flex items-center justify-center gap-2 font-semibold text-[#2563eb] transition-colors"
+            style={{
+              background: "white",
+              borderRadius: "12px",
+              padding: "10px 22px",
+            }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLElement).style.background = "white")
+            }
+          >
+            <PlusIcon className="w-4 h-4" />
+            Add Entry
+          </button>
+        </div>
+      )}
 
       {/* Stat cards */}
       {statsError ? (
@@ -189,7 +214,7 @@ export default function DashboardPage() {
           Failed to load expiry stats. Please refresh.
         </div>
       ) : (
-        <>
+        <div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
               label="EXPIRED"
@@ -203,56 +228,100 @@ export default function DashboardPage() {
               value={stats?.critical ?? null}
               description="Expiring within 3 months"
               color="#ea580c"
-              trend={weeklyTrend?.critical}
+              rangeLabel="3 mo"
             />
             <StatCard
               label="WARNING"
               value={stats?.warning ?? null}
               description="3 to 8 months left"
               color="#d97706"
-              trend={weeklyTrend?.warning}
+              rangeLabel="3–8 mo"
             />
             <StatCard
               label="SAFE"
               value={stats?.safe ?? null}
               description="More than 8 months left"
               color="#16a34a"
-              trendInverse
+              rangeLabel="8 mo+"
             />
           </div>
-          <p className="text-xs text-[#94a3b8] text-right mt-1">
-            {isManager ? "Showing all staff items" : "Showing your items only"}
-          </p>
-        </>
+          {!isManager && (
+            <p className="text-xs text-[#94a3b8] text-right mt-2">
+              Showing your items only
+            </p>
+          )}
+        </div>
       )}
 
-      {/* INVENTORY HEALTH section */}
-      <p className="text-xs font-semibold uppercase tracking-wider text-[#94a3b8] mb-3">
-        Inventory Health
-      </p>
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <SystemHealthCard
-          data={healthData?.systemHealth ?? null}
-          isLoading={healthLoading}
-          isManager={isManager}
-        />
-        <StaleItemsCard
-          items={healthData?.staleItems ?? []}
-          isLoading={healthLoading}
-          reviewDeadline={healthData?.reviewDeadline}
-        />
+      {/* INVENTORY HEALTH */}
+      <div className="space-y-2">
+        <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8]">
+          Inventory Health
+        </p>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
+          <SystemHealthCard
+            data={healthData?.systemHealth ?? null}
+            isLoading={healthLoading}
+            isManager={isManager}
+          />
+          <StaleItemsCard
+            items={healthData?.staleItems ?? []}
+            isLoading={healthLoading}
+            isManager={isManager}
+            rates={healthData?.completionRates ?? []}
+            reviewDeadline={healthData?.reviewDeadline}
+          />
+        </div>
       </div>
 
-      {/* STAFF COMPLIANCE section */}
-      <p className="text-xs font-semibold uppercase tracking-wider text-[#94a3b8] mb-3">
-        Staff Compliance
-      </p>
-      <CompletionRateCard
-        rates={healthData?.completionRates ?? []}
-        isManager={isManager}
-        isLoading={healthLoading}
-        reviewDeadline={healthData?.reviewDeadline}
-      />
+      {/* Staff Overview — manager only (compliance + monthly trend merged) */}
+      {isManager && (
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8] mb-3 mt-6">
+            Staff Overview
+          </p>
+          <div className="rounded-2xl bg-white shadow-sm" style={{ border: "1px solid #e2e8f0" }}>
+            <div className="grid grid-cols-1 xl:grid-cols-[2fr_3fr] divide-y xl:divide-y-0 xl:divide-x divide-slate-100">
+              <div className="p-5">
+                <StaffComplianceSection
+                  completionRates={healthData?.completionRates ?? []}
+                  weekRange={healthData?.reviewDeadline ?? { lastSunday: "—", nextSunday: "—" }}
+                  isLoading={healthLoading}
+                  inline
+                />
+              </div>
+              <div className="p-5">
+                <p className="text-sm font-bold text-[#0f172a] mb-1">Monthly Activity Trend</p>
+                <p className="text-xs text-slate-400 mb-4">Last 12 months</p>
+                <MonthlyTrend
+                  data={analyticsData?.monthlyTrend ?? []}
+                  isLoading={analyticsLoading}
+                  inline
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics section — manager only */}
+      {isManager && (
+        <>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8] mb-3 mt-6">
+            Analytics
+          </p>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <CategoryHeatmap
+              data={analyticsData?.categoryHeatmap ?? []}
+              isLoading={analyticsLoading}
+            />
+            <ResolutionRate
+              data={analyticsData?.resolutionRate ?? null}
+              isLoading={analyticsLoading}
+            />
+          </div>
+        </>
+      )}
 
       {/* Weekly chart */}
       <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} />

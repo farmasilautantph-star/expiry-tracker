@@ -5,14 +5,12 @@ import ShortListTable from "./ShortListTable";
 import ShortListFilters from "./ShortListFilters";
 import ShortListSummary from "./ShortListSummary";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
-import OfferForm from "@/components/offers/OfferForm";
 import type {
   ShortListEntry,
   ShortListFilters as Filters,
   ShortListCounts,
 } from "@/hooks/useShortList";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
-import type { OfferFormData } from "@/hooks/useOffers";
 
 interface Props {
   entries: ShortListEntry[];
@@ -26,7 +24,6 @@ interface Props {
   activeFilterCount: number;
   onEdit: (id: number, data: ExpiryFormData) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
-  onAddOffer: (data: OfferFormData) => Promise<void>;
   onRefresh: () => Promise<void>;
   onSwitchToSales?: () => void;
 }
@@ -43,14 +40,10 @@ export default function ShortListModule({
   activeFilterCount,
   onEdit,
   onDelete,
-  onAddOffer,
   onRefresh,
   onSwitchToSales,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
-  const [offeringEntry, setOfferingEntry] = useState<ShortListEntry | null>(
-    null,
-  );
 
   const picOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -76,20 +69,6 @@ export default function ShortListModule({
     setEditingEntry(null);
   }
 
-  const offerSource = offeringEntry
-    ? {
-        expiry_log_id: offeringEntry.id,
-        stock_id: offeringEntry.stock_id,
-        barcode: offeringEntry.barcode,
-        description: offeringEntry.description,
-        category: offeringEntry.category,
-        uom: offeringEntry.uom,
-        expiry_date: offeringEntry.expiry_date,
-        quantity: offeringEntry.quantity,
-        total_offered: offeringEntry.total_offered,
-      }
-    : undefined;
-
   return (
     <div className="space-y-4">
       <ShortListFilters
@@ -110,31 +89,18 @@ export default function ShortListModule({
         currentPicName={picName}
         onEditRequest={setEditingEntry}
         onDeleteRequest={handleDeleteRequest}
-        onOfferRequest={setOfferingEntry}
         onMarkReviewed={onRefresh}
         onSwitchToSales={onSwitchToSales}
       />
 
       {isManager && (
-        <>
-          <ExpiryForm
-            isOpen={editingEntry !== null}
-            onClose={() => setEditingEntry(null)}
-            editingEntry={editingEntry}
-            picName={picName}
-            onSubmit={handleFormSubmit}
-          />
-
-          <OfferForm
-            isOpen={offeringEntry !== null}
-            onClose={() => setOfferingEntry(null)}
-            source={offerSource}
-            onSubmit={async (data) => {
-              await onAddOffer(data);
-              setOfferingEntry(null);
-            }}
-          />
-        </>
+        <ExpiryForm
+          isOpen={editingEntry !== null}
+          onClose={() => setEditingEntry(null)}
+          editingEntry={editingEntry}
+          picName={picName}
+          onSubmit={handleFormSubmit}
+        />
       )}
     </div>
   );

@@ -5,13 +5,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
 import SalesRecord from "@/components/shortlist/SalesRecord";
+import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
-import type { OfferFormData } from "@/hooks/useOffers";
 
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
   const [activeTab, setActiveTab] = useState<"active" | "sales">("active");
   const [salesCount, setSalesCount] = useState<number | null>(null);
+  const [deepLinkModalOpen, setDeepLinkModalOpen] = useState(false);
+  const [deepLinkReviewId, setDeepLinkReviewId]   = useState<number | null>(null);
   const {
     entries,
     counts,
@@ -25,6 +27,20 @@ export default function ShortListPage() {
   } = useShortList();
 
   useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
+
+  // Deep-link: /dashboard/shortlist?review=<id> opens the modal directly
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const reviewId = params.get("review");
+    if (reviewId) {
+      const id = parseInt(reviewId, 10);
+      if (!isNaN(id)) {
+        setDeepLinkReviewId(id);
+        setDeepLinkModalOpen(true);
+        window.history.replaceState({}, "", "/dashboard/shortlist");
+      }
+    }
+  }, []);
 
   if (!user) return null;
 
@@ -48,20 +64,17 @@ export default function ShortListPage() {
     await refresh();
   }
 
-  async function handleAddOffer(data: OfferFormData): Promise<void> {
-    const res = await fetch("/api/offers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success)
-      throw new Error(json.error ?? "Failed to create offer");
-    await refresh();
-  }
-
   return (
     <div className="space-y-5">
+      {/* Deep-link modal */}
+      <ItemReviewModal
+        isOpen={deepLinkModalOpen}
+        onClose={() => setDeepLinkModalOpen(false)}
+        entryId={deepLinkReviewId}
+        onUpdated={refresh}
+        onSwitchToSales={() => { setDeepLinkModalOpen(false); setActiveTab("sales"); }}
+      />
+
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
@@ -152,7 +165,6 @@ export default function ShortListPage() {
           activeFilterCount={activeFilterCount}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onAddOffer={handleAddOffer}
           onRefresh={refresh}
           onSwitchToSales={() => setActiveTab("sales")}
         />

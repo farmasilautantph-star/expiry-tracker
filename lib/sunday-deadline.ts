@@ -7,10 +7,15 @@ const getMalaysiaTime = (): Date => {
 const getLastSundayDeadline = (): Date => {
   const now = getMalaysiaTime();
   const dayOfWeek = now.getDay(); // 0=Sun … 6=Sat
-  const daysSinceSunday = dayOfWeek === 0 ? 0 : dayOfWeek;
   const lastSunday = new Date(now);
-  lastSunday.setDate(now.getDate() - daysSinceSunday);
-  lastSunday.setHours(23, 59, 59, 0);
+  if (dayOfWeek === 0) {
+    // Today IS Sunday — deadline is tonight at 23:59:59
+    lastSunday.setHours(23, 59, 59, 0);
+  } else {
+    // Go back to last Sunday
+    lastSunday.setDate(now.getDate() - dayOfWeek);
+    lastSunday.setHours(23, 59, 59, 0);
+  }
   return lastSunday;
 };
 
@@ -19,15 +24,6 @@ const getPreviousSundayDeadline = (): Date => {
   const prevSunday = new Date(lastSunday);
   prevSunday.setDate(lastSunday.getDate() - 7);
   return prevSunday;
-};
-
-// Returns the most recently PASSED Sunday 23:59:59 MYT.
-// On a Sunday before midnight, the passed deadline is from last week.
-// On any other day (or Sunday after midnight), it's this past Sunday.
-const getMostRecentPassedDeadline = (): Date => {
-  const now = getMalaysiaTime();
-  const lastSunday = getLastSundayDeadline();
-  return now >= lastSunday ? lastSunday : getPreviousSundayDeadline();
 };
 
 export type ReviewStatus =
@@ -53,28 +49,47 @@ const getSundayReviewStatus = (
 ): ReviewStatus => {
   if (itemStatus !== "active") return "resolved";
 
-  const passedDeadline = getMostRecentPassedDeadline();
-  const prevPassedDeadline = new Date(passedDeadline);
-  prevPassedDeadline.setDate(passedDeadline.getDate() - 7);
-
   const nowMYT = getMalaysiaTime();
   const dayOfWeek = nowMYT.getDay();
 
+  const lastSunday = getLastSundayDeadline();
+  const prevSunday = getPreviousSundayDeadline();
+
   const rawDate = lastReviewedAt ?? loggedAt;
-  const reviewMYT = new Date(
+  const reviewDateMYT = new Date(
     new Date(rawDate).toLocaleString("en-US", { timeZone: TZ }),
   );
 
-  // Reviewed after the most recently passed deadline → up to date
-  if (reviewMYT >= passedDeadline) return "pending";
+  console.log("[SundayReviewStatus]", {
+    lastReviewedAt,
+    rawDate,
+    reviewDateMYT: reviewDateMYT.toISOString(),
+    lastSunday: lastSunday.toISOString(),
+    prevSunday: prevSunday.toISOString(),
+    reviewAfterLastSunday: reviewDateMYT > lastSunday,
+    sameDay: reviewDateMYT.toDateString() === lastSunday.toDateString(),
+    dayOfWeek,
+  });
 
-  // Not yet reviewed this week — check what day it is
-  if (dayOfWeek >= 4 && dayOfWeek <= 6) return "early_alert"; // Thu-Sat: deadline approaching
-  if (dayOfWeek === 0) return "last_chance";                   // Sunday: last chance today
+  // Reviewed after last Sunday deadline → up to date for this week
+  if (reviewDateMYT > lastSunday) return "pending";
 
-  // Mon-Wed: Sunday deadline already missed — check how far overdue
-  if (reviewMYT >= prevPassedDeadline) return "needs_review";
-  return "critical_stale";
+  // Reviewed ON last Sunday (any time before 23:59:59) → also up to date
+  if (reviewDateMYT.toDateString() === lastSunday.toDateString()) return "pending";
+
+  // Not reviewed this week — branch by current day
+  if (dayOfWeek >= 4 && dayOfWeek <= 6) {
+    // Thu–Sat: upcoming deadline, check if reviewed after previous Sunday
+    return reviewDateMYT > prevSunday ? "early_alert" : "critical_stale";
+  }
+
+  if (dayOfWeek === 0) {
+    // Sunday: last chance today
+    return reviewDateMYT > prevSunday ? "last_chance" : "critical_stale";
+  }
+
+  // Mon–Wed: missed last Sunday deadline
+  return reviewDateMYT > prevSunday ? "needs_review" : "critical_stale";
 };
 
 // How many days until the next Sunday (MYT). Returns 0 on Sunday.

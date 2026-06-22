@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ExpiryEntry, ExpiryFormData, ProductResult } from "@/hooks/useExpiry";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, MagnifyingGlassIcon, CheckIcon } from "@heroicons/react/24/outline";
 import AddStockModal, { ExistingEntry } from "./AddStockModal";
 
 interface Props {
@@ -28,7 +28,6 @@ const EMPTY: ExpiryFormData = {
   notes: "",
 };
 
-type SearchField = "stock_id" | "barcode" | "description";
 type DuplicateStatus = "idle" | "checking" | "clear" | "exists" | "warning";
 
 interface DuplicateInfo {
@@ -37,28 +36,6 @@ interface DuplicateInfo {
   expiry_date: string;
   logged_at: string;
   pic_name: string;
-}
-
-const INPUT_BASE =
-  "w-full border border-[#e2e8f0] bg-white text-[#0f172a] placeholder-[#94a3b8] text-sm font-medium transition-colors focus:outline-none";
-const INPUT_RO =
-  "w-full border border-[#f1f5f9] bg-[#f8fafc] text-[#64748b] text-sm cursor-not-allowed";
-const INPUT_STYLE = { borderRadius: "10px", padding: "10px 16px" };
-const INPUT_RO_STYLE = { borderRadius: "10px", padding: "10px 16px" };
-
-function Label({
-  children,
-  required,
-}: {
-  children: React.ReactNode;
-  required?: boolean;
-}) {
-  return (
-    <label className="block text-sm font-semibold text-[#374151] mb-1.5">
-      {children}
-      {required && <span className="text-[#ef4444] ml-0.5">*</span>}
-    </label>
-  );
 }
 
 function fmtDate(d: string): string {
@@ -79,8 +56,9 @@ export default function ExpiryForm({
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<ProductResult[]>([]);
-  const [activeField, setActiveField] = useState<SearchField | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -92,6 +70,8 @@ export default function ExpiryForm({
 
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [existingEntryForStock, setExistingEntryForStock] = useState<ExistingEntry | null>(null);
+
+  const productSelected = !!(form.barcode || form.description);
 
   useEffect(() => {
     if (!isOpen) {
@@ -113,17 +93,17 @@ export default function ExpiryForm({
         quantity: editingEntry.quantity ?? 1,
         expiry_date: editingEntry.expiry_date.split("T")[0],
         return_status:
-          (editingEntry.return_status as ExpiryFormData["return_status"]) ||
-          "pending",
+          (editingEntry.return_status as ExpiryFormData["return_status"]) || "pending",
         return_by_date: editingEntry.return_by_date?.split("T")[0] ?? "",
         notes: editingEntry.notes ?? "",
       });
     } else {
       setForm(EMPTY);
     }
-    setError("");
+    setSearchQuery("");
     setResults([]);
-    setActiveField(null);
+    setShowDropdown(false);
+    setError("");
     setDupStatus("idle");
     setDupInfo(null);
     setDupConfirmed(false);
@@ -131,12 +111,9 @@ export default function ExpiryForm({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
         setResults([]);
-        setActiveField(null);
       }
     }
     document.addEventListener("mousedown", handleClick);
@@ -171,7 +148,6 @@ export default function ExpiryForm({
           if (type === "exists" && data.data.existing) {
             setExistingEntryForStock(data.data.existing as ExistingEntry);
             setShowAddStockModal(true);
-            // Keep ExpiryForm open behind AddStockModal
           } else {
             setDupInfo(data.data.existing ?? null);
           }
@@ -193,20 +169,22 @@ export default function ExpiryForm({
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function triggerSearch(value: string, field: SearchField) {
+  function triggerSearch(value: string) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (value.length < 2) {
       setResults([]);
-      setActiveField(null);
+      setShowDropdown(false);
       return;
     }
-    setActiveField(field);
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
       try {
         const res = await fetch(`/api/products/search?q=${encodeURIComponent(value)}`);
         const data = await res.json();
-        if (data.success) setResults(data.data);
+        if (data.success) {
+          setResults(data.data);
+          setShowDropdown(true);
+        }
       } catch {
         /* silent */
       } finally {
@@ -215,9 +193,12 @@ export default function ExpiryForm({
     }, 300);
   }
 
-  function handleSearchInput(field: SearchField, value: string) {
-    set(field, value);
-    triggerSearch(value, field);
+  function handleSearchChange(val: string) {
+    setSearchQuery(val);
+    if (productSelected) {
+      setForm((prev) => ({ ...prev, stock_id: "", barcode: "", description: "", category: "", uom: "" }));
+    }
+    triggerSearch(val);
   }
 
   function selectProduct(p: ProductResult) {
@@ -229,14 +210,15 @@ export default function ExpiryForm({
       category: p.category_id ?? "",
       uom: p.uom ?? "",
     }));
+    setSearchQuery("");
     setResults([]);
-    setActiveField(null);
+    setShowDropdown(false);
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.barcode.trim()) { setError("Barcode is required."); return; }
+    if (!form.barcode.trim()) { setError("Barcode is required — select a product from the search results."); return; }
     if (!form.description.trim()) { setError("Description is required."); return; }
     if (!form.category.trim()) { setError("Category is required — select a product from the search results."); return; }
     if (!form.expiry_date) { setError("Expiry date is required."); return; }
@@ -256,7 +238,14 @@ export default function ExpiryForm({
     }
   }
 
-  function handleAddStockSuccess(result: { additionalQty: number; newQty: number; previous_qty?: number; additional_qty?: number; new_qty?: number; reason?: string }) {
+  function handleAddStockSuccess(result: {
+    additionalQty: number;
+    newQty: number;
+    previous_qty?: number;
+    additional_qty?: number;
+    new_qty?: number;
+    reason?: string;
+  }) {
     setShowAddStockModal(false);
     setExistingEntryForStock(null);
     onClose();
@@ -273,55 +262,7 @@ export default function ExpiryForm({
       (dupStatus === "warning" && !dupConfirmed));
 
   const expiryBorderColor =
-    dupStatus === "warning" && !dupConfirmed
-      ? "#eab308"
-      : "#e2e8f0";
-
-  function SearchDropdown() {
-    if (!activeField || results.length === 0) return null;
-    return (
-      <div
-        className="absolute z-50 left-0 right-0 top-full mt-1 bg-white overflow-hidden max-h-[200px] overflow-y-auto"
-        style={{
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.10)",
-        }}
-      >
-        {isSearching && (
-          <div className="px-4 py-2.5 text-xs text-[#94a3b8]">Searching…</div>
-        )}
-        {results.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onMouseDown={() => selectProduct(p)}
-            className="w-full text-left px-4 py-2.5 text-sm text-[#334155] transition-colors border-b border-[#f1f5f9] last:border-0"
-            onMouseEnter={(e) =>
-              ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
-            }
-            onMouseLeave={(e) =>
-              ((e.currentTarget as HTMLElement).style.background = "")
-            }
-          >
-            <div className="flex items-center gap-2">
-              {p.stock_id && (
-                <span className="text-xs font-mono text-[#2563eb] bg-[#dbeafe] px-1.5 py-0.5 rounded flex-shrink-0">
-                  {p.stock_id}
-                </span>
-              )}
-              <span className="text-sm text-[#334155] truncate">{p.description}</span>
-            </div>
-            <div className="flex items-center gap-3 mt-0.5">
-              {p.barcode && <span className="text-xs text-[#64748b] font-mono">{p.barcode}</span>}
-              {p.uom && <span className="text-xs text-[#94a3b8]">{p.uom}</span>}
-              {p.category_id && <span className="text-xs text-[#94a3b8]">{p.category_id}</span>}
-            </div>
-          </button>
-        ))}
-      </div>
-    );
-  }
+    dupStatus === "warning" && !dupConfirmed ? "#eab308" : "#e2e8f0";
 
   return (
     <>
@@ -330,174 +271,208 @@ export default function ExpiryForm({
           className="relative w-full max-w-[480px] mx-4 bg-white flex flex-col max-h-[90vh]"
           style={{ borderRadius: "20px", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}
         >
-          {/* Header */}
+          {/* ── Header ── */}
           <div
-            className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0"
+            className="flex items-start justify-between px-6 pt-6 pb-4 flex-shrink-0"
             style={{ borderBottom: "1px solid #f1f5f9" }}
           >
-            <h2 className="text-lg font-bold text-[#0f172a]">
-              {editingEntry ? "Edit Expiry Entry" : "Log New Expiry"}
-            </h2>
+            <div>
+              <h2 className="text-lg font-bold text-[#0f172a]">
+                {editingEntry ? "Edit Expiry Entry" : "Log New Expiry Entry"}
+              </h2>
+              <p className="text-sm text-slate-400 mt-0.5">Record a short-expiry item</p>
+            </div>
             <button
+              type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors text-[#64748b]"
-              onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = "#f1f5f9")
-              }
-              onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLElement).style.background = "")
-              }
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors text-[#64748b] hover:bg-slate-100 flex-shrink-0 mt-0.5"
             >
               <XMarkIcon className="w-[18px] h-[18px]" />
             </button>
           </div>
 
-          {/* Scrollable body */}
-          <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-5 space-y-4 flex-1">
-            {/* Search hint */}
+          {/* ── Scrollable body ── */}
+          <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-5 flex-1">
+
+            {/* SECTION 2 — Product Search (new entry only) */}
             {!editingEntry && (
-              <p className="text-xs text-[#2563eb] bg-[#eff6ff] border border-blue-200 rounded-lg px-3 py-2">
-                Type in Stock ID, Barcode, or Description to search products and auto-fill fields.
-              </p>
+              <div ref={dropdownRef}>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Product Search
+                </p>
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    placeholder="Search by barcode or product description..."
+                    autoFocus
+                    className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 placeholder:text-slate-400"
+                  />
+                  {showDropdown && (results.length > 0 || isSearching) && (
+                    <div
+                      className="absolute z-50 left-0 right-0 top-full mt-1 bg-white overflow-hidden max-h-[200px] overflow-y-auto rounded-xl shadow-lg"
+                      style={{ border: "1px solid #e2e8f0" }}
+                    >
+                      {isSearching && (
+                        <div className="px-4 py-2.5 text-xs text-[#94a3b8]">Searching…</div>
+                      )}
+                      {results.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onMouseDown={() => selectProduct(p)}
+                          className="w-full text-left px-4 py-2.5 transition-colors border-b border-[#f1f5f9] last:border-0"
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = "#eff6ff";
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = "";
+                          }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-[#0f172a] truncate">
+                              {p.description}
+                            </span>
+                            <span className="text-xs text-[#94a3b8] font-mono flex-shrink-0">
+                              {p.barcode}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            {p.category_id && (
+                              <span className="text-xs text-[#64748b]">{p.category_id}</span>
+                            )}
+                            {p.uom && (
+                              <span className="text-xs text-[#64748b]">· {p.uom}</span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Type barcode or name to auto-fill product details
+                </p>
+              </div>
             )}
 
-            {/* PIC */}
-            <div>
-              <Label>PIC (auto-filled)</Label>
-              <input type="text" readOnly value={picName} className={INPUT_RO} style={INPUT_RO_STYLE} />
+            {/* SECTION 3 — Product Details */}
+            <div className={!editingEntry ? "mt-4" : ""}>
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Product Details
+              </p>
+              {productSelected ? (
+                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                        Barcode
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {form.barcode || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                        Category
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {form.category || "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                      Description
+                    </p>
+                    <p className="text-sm font-semibold text-slate-800 leading-snug">
+                      {form.description || "—"}
+                    </p>
+                  </div>
+                  {form.uom && (
+                    <div>
+                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                        Unit of Measure
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800">{form.uom}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-200 text-center">
+                  <p className="text-sm text-slate-400">
+                    Search for a product above to auto-fill details
+                  </p>
+                </div>
+              )}
             </div>
 
-            {/* Stock ID */}
-            <div ref={activeField === "stock_id" ? dropdownRef : undefined} className="relative">
-              <Label>Stock ID</Label>
-              <input
-                type="text"
-                value={form.stock_id}
-                onChange={(e) => handleSearchInput("stock_id", e.target.value)}
-                placeholder="e.g. S001234"
-                className={INPUT_BASE}
-                style={INPUT_STYLE}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#2563eb";
-                  e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              />
-              {activeField === "stock_id" && <SearchDropdown />}
-            </div>
+            {/* SECTION 4 — Expiry Details */}
+            <div className="mt-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Expiry Details{" "}
+                <span className="text-red-500 ml-0.5">*</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Expiry Date */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-slate-600">
+                      Expiry Date *
+                    </label>
+                    {dupStatus === "checking" && (
+                      <span className="flex items-center gap-1 text-[10px] text-[#64748b]">
+                        <svg className="animate-spin w-2.5 h-2.5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Checking…
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="date"
+                    value={form.expiry_date}
+                    onChange={(e) => set("expiry_date", e.target.value)}
+                    className="w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-50 transition-colors"
+                    style={{ borderColor: expiryBorderColor }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "#2563eb";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = expiryBorderColor;
+                    }}
+                  />
+                </div>
 
-            {/* Barcode */}
-            <div ref={activeField === "barcode" ? dropdownRef : undefined} className="relative">
-              <Label required>Barcode</Label>
-              <input
-                type="text"
-                value={form.barcode}
-                onChange={(e) => handleSearchInput("barcode", e.target.value)}
-                placeholder="e.g. 9556234001"
-                className={INPUT_BASE}
-                style={INPUT_STYLE}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#2563eb";
-                  e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              />
-              {activeField === "barcode" && <SearchDropdown />}
-            </div>
-
-            {/* Description */}
-            <div ref={activeField === "description" ? dropdownRef : undefined} className="relative">
-              <Label required>Description</Label>
-              <input
-                type="text"
-                value={form.description}
-                onChange={(e) => handleSearchInput("description", e.target.value)}
-                placeholder="e.g. Dumex Mamil Gold Step 3 1.2kg"
-                className={INPUT_BASE}
-                style={INPUT_STYLE}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#2563eb";
-                  e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              />
-              {activeField === "description" && <SearchDropdown />}
-            </div>
-
-            {/* Category + UOM */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label required>Category</Label>
-                <input type="text" value={form.category} readOnly placeholder="Auto-filled from search" className={INPUT_RO} style={INPUT_RO_STYLE} />
+                {/* Quantity */}
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                    Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.quantity ?? 1}
+                    onChange={(e) =>
+                      set("quantity", Math.max(1, Math.round(Number(e.target.value))))
+                    }
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = "#2563eb";
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = "#e2e8f0";
+                    }}
+                  />
+                </div>
               </div>
-              <div>
-                <Label>UOM</Label>
-                <input type="text" value={form.uom} readOnly placeholder="Auto-filled from search" className={INPUT_RO} style={INPUT_RO_STYLE} />
-              </div>
-            </div>
 
-            {/* Quantity */}
-            <div>
-              <Label required>Quantity</Label>
-              <input
-                type="number"
-                min={1}
-                value={form.quantity ?? 1}
-                onChange={(e) => set("quantity", Math.max(1, Math.round(Number(e.target.value))))}
-                className={INPUT_BASE}
-                style={INPUT_STYLE}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#2563eb";
-                  e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              />
-            </div>
-
-            {/* Expiry Date */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <Label required>Expiry Date</Label>
-                {dupStatus === "checking" && (
-                  <span className="flex items-center gap-1.5 text-[11px] text-[#64748b]">
-                    <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Checking for duplicates…
-                  </span>
-                )}
-              </div>
-              <input
-                type="date"
-                value={form.expiry_date}
-                onChange={(e) => set("expiry_date", e.target.value)}
-                className={INPUT_BASE}
-                style={{ ...INPUT_STYLE, borderColor: expiryBorderColor }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#2563eb";
-                  e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = expiryBorderColor;
-                  e.currentTarget.style.boxShadow = "";
-                }}
-              />
-
+              {/* Duplicate warning */}
               {dupStatus === "warning" && dupInfo && !dupConfirmed && (
-                <div className="mt-2 rounded-xl border border-yellow-200 bg-yellow-50 p-3.5 space-y-2">
+                <div className="mt-3 rounded-xl border border-yellow-200 bg-yellow-50 p-3.5 space-y-2">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-[#ca8a04] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -511,10 +486,18 @@ export default function ExpiryForm({
                   </ul>
                   <p className="text-xs text-[#92400e]">Continue only if this is a different batch.</p>
                   <div className="flex items-center gap-2 pt-1">
-                    <button type="button" onClick={onClose} className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-yellow-300 text-[#92400e] hover:bg-yellow-100 transition-colors">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium border border-yellow-300 text-[#92400e] hover:bg-yellow-100 transition-colors"
+                    >
                       Cancel
                     </button>
-                    <button type="button" onClick={() => setDupConfirmed(true)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#ca8a04] hover:bg-[#b45309] text-white transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => setDupConfirmed(true)}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#ca8a04] hover:bg-[#b45309] text-white transition-colors"
+                    >
                       Yes, Different Batch
                     </button>
                   </div>
@@ -531,76 +514,81 @@ export default function ExpiryForm({
               )}
             </div>
 
-            {/* Return Status */}
-            <div>
-              <Label>Return Status</Label>
-              <div className="flex gap-2">
-                {(["pending", "non-returnable"] as const).map((val) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => set("return_status", val)}
-                    className="flex-1 py-2 rounded-lg text-sm font-medium border transition-colors"
-                    style={
-                      form.return_status === val
-                        ? val === "pending"
-                          ? { background: "#dcfce7", borderColor: "#86efac", color: "#16a34a" }
-                          : { background: "#fee2e2", borderColor: "#fca5a5", color: "#ef4444" }
-                        : { background: "white", borderColor: "#e2e8f0", color: "#64748b" }
-                    }
-                  >
-                    {val === "pending" ? "Returnable" : "Non-Returnable"}
-                  </button>
-                ))}
+            {/* SECTION 5 — Return Status */}
+            <div className="mt-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Return Status
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => set("return_status", "non-returnable")}
+                  className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                    form.return_status === "non-returnable"
+                      ? "bg-slate-800 text-white border-slate-800"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                  }`}
+                >
+                  Non-Returnable
+                </button>
+                <button
+                  type="button"
+                  onClick={() => set("return_status", "pending")}
+                  className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                    form.return_status === "pending"
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+                  }`}
+                >
+                  Returnable
+                </button>
               </div>
+
+              {form.return_status === "pending" && (
+                <div className="mt-3">
+                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                    Return By Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={form.return_by_date}
+                    onChange={(e) => set("return_by_date", e.target.value)}
+                    className="w-full px-3 py-2.5 border border-blue-200 rounded-xl text-sm bg-blue-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Return By Date */}
-            {form.return_status === "pending" && (
-              <div>
-                <Label required>Return By Date</Label>
-                <input
-                  type="date"
-                  value={form.return_by_date}
-                  onChange={(e) => set("return_by_date", e.target.value)}
-                  className={INPUT_BASE}
-                  style={INPUT_STYLE}
-                  onFocus={(e) => {
-                    e.currentTarget.style.borderColor = "#2563eb";
-                    e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                  }}
-                  onBlur={(e) => {
-                    e.currentTarget.style.borderColor = "#e2e8f0";
-                    e.currentTarget.style.boxShadow = "";
-                  }}
-                />
-              </div>
-            )}
-
-            {/* Notes */}
-            <div>
-              <Label>Notes</Label>
-              <input
-                type="text"
+            {/* SECTION 6 — Notes + PIC */}
+            <div className="mt-4">
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                Notes{" "}
+                <span className="text-slate-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                rows={2}
                 value={form.notes}
                 onChange={(e) => set("notes", e.target.value)}
-                placeholder="Optional note…"
-                className={INPUT_BASE}
-                style={INPUT_STYLE}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "#2563eb";
-                  e.currentTarget.style.boxShadow = "0 0 0 2px rgba(37,99,235,0.05)";
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "#e2e8f0";
-                  e.currentTarget.style.boxShadow = "";
-                }}
+                placeholder="Add any additional notes..."
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
               />
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-[10px] font-bold">
+                  {picName?.[0]?.toUpperCase() ?? "?"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Logging as{" "}
+                <span className="font-semibold text-slate-700">{picName}</span>
+              </p>
             </div>
 
             {/* Validation error */}
             {error && (
-              <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-[#ef4444] text-sm">
+              <div className="mt-3 flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-50 border border-red-200 text-[#ef4444] text-sm">
                 <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -608,26 +596,20 @@ export default function ExpiryForm({
               </div>
             )}
 
-            {/* Footer */}
-            <div
-              className="flex items-center justify-end gap-3 pt-4 pb-1"
-              style={{ borderTop: "1px solid #f1f5f9" }}
-            >
+            {/* SECTION 7 — Footer (sticky) */}
+            <div className="flex gap-3 pt-4 mt-4 border-t border-slate-100 sticky bottom-0 bg-white pb-1">
               <button
                 type="button"
                 onClick={onClose}
-                className="bg-white border border-[#e2e8f0] text-[#374151] font-semibold rounded-xl px-5 py-2.5 text-sm hover:bg-[#f8fafc] transition-colors"
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={submitting || isDupBlocked}
-                className="text-white font-semibold rounded-xl px-5 py-2.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                style={{
-                  background: "#2563eb",
-                  boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
-                }}
+                className="flex-1 py-2.5 px-6 rounded-xl text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 justify-center shadow-sm transition-colors"
+                style={{ background: "#2563eb" }}
                 onMouseEnter={(e) => {
                   if (!submitting && !isDupBlocked)
                     (e.currentTarget as HTMLElement).style.background = "#1d4ed8";
@@ -636,14 +618,27 @@ export default function ExpiryForm({
                   (e.currentTarget as HTMLElement).style.background = "#2563eb";
                 }}
               >
-                {submitting ? "Saving…" : editingEntry ? "Save Changes" : "Log Entry"}
+                {submitting ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <CheckIcon className="w-4 h-4" />
+                    {editingEntry ? "Save Changes" : "Log Entry"}
+                  </>
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* AddStockModal — rendered as portal, appears above ExpiryForm */}
+      {/* AddStockModal — rendered above ExpiryForm */}
       {existingEntryForStock && (
         <AddStockModal
           isOpen={showAddStockModal}

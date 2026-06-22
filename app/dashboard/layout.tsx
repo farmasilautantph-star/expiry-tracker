@@ -7,16 +7,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
   HomeIcon,
-  ListBulletIcon,
+  ClipboardDocumentListIcon,
   ArrowUturnLeftIcon,
   BuildingStorefrontIcon,
   ClockIcon,
-  ClipboardDocumentListIcon,
+  Squares2X2Icon,
   ArrowRightOnRectangleIcon,
   BellIcon,
   Bars3Icon,
   MagnifyingGlassIcon,
-  QrCodeIcon,
+  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 
 interface NavSection {
@@ -38,7 +38,7 @@ const NAV_SECTIONS: NavSection[] = [
       {
         label: "Dashboard",
         href: "/dashboard",
-        icon: <HomeIcon className="w-5 h-5" />,
+        icon: <HomeIcon className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />,
       },
     ],
   },
@@ -48,17 +48,17 @@ const NAV_SECTIONS: NavSection[] = [
       {
         label: "Expiry Monitor",
         href: "/dashboard/shortlist",
-        icon: <ListBulletIcon className="w-5 h-5" />,
+        icon: <ClipboardDocumentListIcon style={{ width: 18, height: 18 }} />,
       },
       {
         label: "Return Management",
         href: "/dashboard/returns",
-        icon: <ArrowUturnLeftIcon className="w-5 h-5" />,
+        icon: <ArrowUturnLeftIcon style={{ width: 18, height: 18 }} />,
       },
       {
         label: "Outlet Offers",
         href: "/dashboard/offers",
-        icon: <BuildingStorefrontIcon className="w-5 h-5" />,
+        icon: <BuildingStorefrontIcon style={{ width: 18, height: 18 }} />,
       },
     ],
   },
@@ -69,7 +69,13 @@ const NAV_SECTIONS: NavSection[] = [
         label: "History Log",
         href: "/dashboard/history-log",
         managerOnly: true,
-        icon: <ClockIcon className="w-5 h-5" />,
+        icon: <ClockIcon style={{ width: 18, height: 18 }} />,
+      },
+      {
+        label: "Staff Report",
+        href: "/dashboard/staff-report",
+        managerOnly: true,
+        icon: <UserGroupIcon style={{ width: 18, height: 18 }} />,
       },
     ],
   },
@@ -79,7 +85,7 @@ const NAV_SECTIONS: NavSection[] = [
       {
         label: "Item Timeline",
         href: "/dashboard/activity-log",
-        icon: <QrCodeIcon className="w-5 h-5" />,
+        icon: <Squares2X2Icon style={{ width: 18, height: 18 }} />,
       },
     ],
   },
@@ -91,6 +97,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/returns": "Return Management",
   "/dashboard/offers": "Outlet Offers",
   "/dashboard/history-log": "History Log",
+  "/dashboard/staff-report": "Staff Report",
   "/dashboard/expiry": "Log New Expiry",
   "/dashboard/activity-log": "Item Timeline",
 };
@@ -104,8 +111,6 @@ function formatDate(date: Date): string {
   });
 }
 
-// Module-level sidebar — stable component identity so it doesn't unmount/remount
-// when DashboardLayout state (e.g. mobileSidebarOpen) changes.
 function SidebarContent({
   pathname,
   isManager,
@@ -130,31 +135,31 @@ function SidebarContent({
       {/* Logo */}
       <div
         className="flex items-center gap-3 px-5 flex-shrink-0"
-        style={{ height: "72px", borderBottom: "1px solid #e2e8f0" }}
+        style={{ height: "72px", borderBottom: "1px solid #f1f5f9" }}
       >
         <div
           className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: "#eff6ff" }}
+          style={{ background: "#2563eb" }}
         >
-          <ClipboardDocumentListIcon className="w-5 h-5 text-[#2563eb]" />
+          <ClipboardDocumentListIcon className="w-5 h-5 text-white" />
         </div>
         <div>
           <p className="text-[#0f172a] font-bold text-sm leading-none">Expiry Tracker</p>
-          <p className="text-[#64748b] text-xs font-medium mt-0.5">Outlet Inventory</p>
+          <p className="text-[#94a3b8] text-xs font-medium mt-0.5">Outlet Inventory</p>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3">
+      <nav className="flex-1 overflow-y-auto py-2">
         {NAV_SECTIONS.map((section) => {
           const visibleItems = section.items.filter(
             (item) => !item.managerOnly || isManager,
           );
           if (visibleItems.length === 0) return null;
           return (
-            <div key={section.label}>
+            <div key={section.label} className="mb-1">
               <p
-                className="px-5 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                className="px-5 pt-4 pb-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
                 style={{ color: "#94a3b8" }}
               >
                 {section.label}
@@ -167,14 +172,11 @@ function SidebarContent({
                     href={item.href}
                     onClick={onLinkClick}
                     className={cn(
-                      "flex items-center gap-3 pl-5 pr-4 py-2.5 text-sm transition-all border-l-[3px]",
-                      isActive ? "font-semibold" : "font-medium hover:bg-[#f8fafc]",
-                    )}
-                    style={
+                      "flex items-center gap-3 mx-3 px-3 py-2.5 rounded-xl text-sm transition-all",
                       isActive
-                        ? { borderLeftColor: "#2563eb", background: "#eff6ff", color: "#2563eb" }
-                        : { borderLeftColor: "transparent", color: "#64748b" }
-                    }
+                        ? "font-semibold bg-[#eff6ff] text-[#2563eb]"
+                        : "font-medium text-[#64748b] hover:bg-[#f8fafc] hover:text-[#334155]",
+                    )}
                   >
                     <span
                       className="flex-shrink-0"
@@ -192,8 +194,8 @@ function SidebarContent({
       </nav>
 
       {/* User section */}
-      <div className="px-4 py-4 flex-shrink-0" style={{ borderTop: "1px solid #e2e8f0" }}>
-        <div className="flex items-center gap-3">
+      <div className="px-3 py-4 flex-shrink-0" style={{ borderTop: "1px solid #f1f5f9" }}>
+        <div className="flex items-center gap-3 px-2">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm text-white"
             style={{ background: "#2563eb" }}
@@ -201,15 +203,17 @@ function SidebarContent({
             {userInitial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[#0f172a] text-sm font-semibold truncate">{picName || username}</p>
-            <p className="text-[#64748b] text-xs font-medium capitalize">{role}</p>
+            <p className="text-[#0f172a] text-sm font-semibold truncate leading-none">
+              {picName || username}
+            </p>
+            <p className="text-[#94a3b8] text-xs font-medium capitalize mt-0.5">{role}</p>
           </div>
           <button
             onClick={onLogout}
             title="Sign out"
-            className="p-1.5 rounded-lg transition-colors text-[#94a3b8] hover:text-[#ef4444]"
+            className="p-1.5 rounded-lg transition-colors text-[#94a3b8] hover:text-[#ef4444] hover:bg-[#fff5f5]"
           >
-            <ArrowRightOnRectangleIcon className="w-[18px] h-[18px]" />
+            <ArrowRightOnRectangleIcon style={{ width: 18, height: 18 }} />
           </button>
         </div>
       </div>
@@ -233,15 +237,13 @@ export default function DashboardLayout({
     }
   }, [isLoading, user, router]);
 
-  // Close mobile sidebar on route change instead of on every Link click. This
-  // avoids triggering a layout re-render in the middle of navigation.
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#eef2f7" }}>
         <div className="flex items-center gap-3 text-[#64748b]">
           <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -258,6 +260,7 @@ export default function DashboardLayout({
   const currentUser = user;
   const pageTitle = PAGE_TITLES[pathname] ?? "Dashboard";
   const userInitial = (currentUser.picName?.charAt(0) ?? currentUser.username.charAt(0)).toUpperCase();
+  const avatarBg = "#2563eb";
 
   const sidebarProps = {
     pathname,
@@ -271,14 +274,13 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#f8fafc" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "#eef2f7" }}>
       {/* Desktop Sidebar */}
       <aside
-        className="hidden lg:flex flex-col w-64 flex-shrink-0"
+        className="hidden lg:flex flex-col w-56 flex-shrink-0"
         style={{
           background: "#ffffff",
-          boxShadow: "2px 0 12px rgba(0,0,0,0.06)",
-          borderRight: "1px solid #e2e8f0",
+          boxShadow: "2px 0 16px rgba(0,0,0,0.06)",
         }}
       >
         <SidebarContent {...sidebarProps} />
@@ -288,15 +290,12 @@ export default function DashboardLayout({
       {mobileSidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-50 flex">
           <div
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/40"
             onClick={() => setMobileSidebarOpen(false)}
           />
           <aside
-            className="relative w-64 flex flex-col flex-shrink-0 z-10"
-            style={{
-              background: "#ffffff",
-              boxShadow: "2px 0 12px rgba(0,0,0,0.12)",
-            }}
+            className="relative w-56 flex flex-col flex-shrink-0 z-10 bg-white"
+            style={{ boxShadow: "2px 0 16px rgba(0,0,0,0.12)" }}
           >
             <SidebarContent {...sidebarProps} />
           </aside>
@@ -307,15 +306,15 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
         <header
-          className="flex items-center px-6 flex-shrink-0 bg-white relative"
+          className="flex items-center px-6 flex-shrink-0 bg-white"
           style={{
             height: "72px",
-            borderBottom: "1px solid #e2e8f0",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            borderBottom: "1px solid #f1f5f9",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
           }}
         >
           {/* Left: hamburger + title */}
-          <div className="flex items-center gap-3 w-48 flex-shrink-0">
+          <div className="flex items-center gap-3 flex-shrink-0" style={{ minWidth: 180 }}>
             <button
               className="lg:hidden p-2 rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors"
               onClick={() => setMobileSidebarOpen(true)}
@@ -323,45 +322,51 @@ export default function DashboardLayout({
               <Bars3Icon className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-[#0f172a]">{pageTitle}</h1>
-              <p className="text-xs text-[#94a3b8] mt-0.5">{formatDate(new Date())}</p>
+              <h1 className="text-[15px] font-bold text-[#0f172a] leading-none">{pageTitle}</h1>
+              <p className="text-[11px] text-[#94a3b8] mt-0.5">{formatDate(new Date())}</p>
             </div>
           </div>
 
           {/* Center: search */}
           <div className="flex-1 flex justify-center">
             <div className="relative hidden sm:block">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+              <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
               <input
                 type="text"
                 placeholder="Search items, barcodes..."
-                className="pl-9 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb] w-72"
+                className="pl-10 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 w-80"
                 style={{
                   background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
+                  border: "1.5px solid #e2e8f0",
                   color: "#0f172a",
                 }}
               />
             </div>
           </div>
 
-          {/* Right: bell + avatar */}
-          <div className="flex items-center gap-2 w-48 justify-end flex-shrink-0">
-            <button
-              className="flex items-center justify-center rounded-full transition-colors text-[#64748b] hover:bg-[#f1f5f9]"
-              style={{ width: "36px", height: "36px" }}
-            >
-              <BellIcon className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2.5 pl-2 border-l border-[#e2e8f0]">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-semibold text-[#0f172a] leading-none">
-                  {currentUser.picName || currentUser.username}
-                </p>
-              </div>
+          {/* Right: bell + user */}
+          <div className="flex items-center gap-3 flex-shrink-0" style={{ minWidth: 180, justifyContent: "flex-end" }}>
+            {/* Bell with notification dot */}
+            <div className="relative">
+              <button
+                className="flex items-center justify-center w-9 h-9 rounded-full transition-colors text-[#64748b] hover:bg-[#f1f5f9]"
+              >
+                <BellIcon className="w-5 h-5" />
+              </button>
+              <span
+                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                style={{ background: "#ef4444", border: "1.5px solid white" }}
+              />
+            </div>
+
+            {/* User */}
+            <div className="flex items-center gap-2.5">
+              <span className="hidden sm:block text-sm font-semibold text-[#0f172a]">
+                {(currentUser.picName || currentUser.username).toUpperCase()}
+              </span>
               <div
                 className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0"
-                style={{ background: "#2563eb" }}
+                style={{ background: avatarBg }}
               >
                 {userInitial}
               </div>
@@ -370,7 +375,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6" style={{ background: "#f8fafc" }}>
+        <main className="flex-1 overflow-y-auto p-6" style={{ background: "#eef2f7" }}>
           {children}
         </main>
       </div>
