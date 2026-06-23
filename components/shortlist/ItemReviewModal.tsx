@@ -454,6 +454,7 @@ function OffersSection({
         <SectionHeader>Outlet Offers</SectionHeader>
         {isManager && item.qty > 0 && item.item_status === "active" && (
           <button
+            type="button"
             onClick={() => setShowOfferForm(true)}
             className="h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1 -mt-3"
             style={{ background: "#eff6ff", color: "#2563eb" }}
@@ -742,6 +743,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
               ) : null}
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-slate-100"
             >

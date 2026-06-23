@@ -205,6 +205,7 @@ export default function ShortListTable({
 }: Props) {
   const [reviewModalOpen, setReviewModalOpen]   = useState(false);
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
+  const [reviewedIds, setReviewedIds]           = useState<Set<number>>(new Set());
   const [hoveredRowId, setHoveredRowId]         = useState<number | null>(null);
   const [openMenuId, setOpenMenuId]             = useState<number | null>(null);
   const [mouseDownPos, setMouseDownPos]         = useState({ x: 0, y: 0 });
@@ -297,7 +298,12 @@ export default function ShortListTable({
         isOpen={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
         entryId={reviewingEntryId}
-        onUpdated={() => onMarkReviewed?.(reviewingEntryId!)}
+        onUpdated={() => {
+          if (reviewingEntryId !== null) {
+            setReviewedIds((prev) => { const s = new Set(prev); s.add(reviewingEntryId); return s; });
+          }
+          onMarkReviewed?.(reviewingEntryId!);
+        }}
         onSwitchToSales={onSwitchToSales}
       />
 
@@ -424,7 +430,7 @@ export default function ShortListTable({
                         <span className="text-sm font-semibold text-[#0f172a]">
                           {formatDate(entry.logged_at)}
                         </span>
-                        <ReviewSubLabel entry={entry} />
+                        <ReviewSubLabel entry={reviewedIds.has(entry.id) ? { ...entry, review_status: "pending" } : entry} />
                       </td>
 
                       {/* PIC */}
