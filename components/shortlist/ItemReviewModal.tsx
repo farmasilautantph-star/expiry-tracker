@@ -105,6 +105,7 @@ function Btn({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       className="h-8 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -824,6 +825,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                 </div>
               </div>
               <button
+                type="button"
                 onClick={onClose}
                 className="w-full h-10 rounded-xl text-sm font-medium transition-colors"
                 style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
@@ -834,6 +836,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
           ) : (
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={onClose}
                 className="flex-1 h-10 rounded-xl text-sm font-medium transition-colors"
                 style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
@@ -842,6 +845,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
               </button>
               {item && item.item_status !== "active" && onSwitchToSales && (
                 <button
+                  type="button"
                   onClick={() => { onClose(); onSwitchToSales(); }}
                   className="flex-1 h-10 rounded-xl text-sm font-semibold transition-colors"
                   style={{ background: "#eff6ff", color: "#2563eb" }}
@@ -851,6 +855,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
               )}
               {canReview && (
                 <button
+                  type="button"
                   onClick={handleMarkReviewed}
                   disabled={isReviewing}
                   className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70"
