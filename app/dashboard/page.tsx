@@ -264,13 +264,21 @@ export default function DashboardPage() {
             isLoading={healthLoading}
             isManager={isManager}
           />
-          <StaleItemsCard
-            items={healthData?.staleItems ?? []}
-            isLoading={healthLoading}
-            isManager={isManager}
-            rates={healthData?.completionRates ?? []}
-            reviewDeadline={healthData?.reviewDeadline}
-          />
+          {isManager ? (
+            <StaleItemsCard
+              isManager={true}
+              urgentItems={healthData?.urgentItems ?? []}
+              isLoading={healthLoading}
+            />
+          ) : (
+            <StaleItemsCard
+              isManager={false}
+              staleItems={healthData?.staleItems ?? []}
+              isLoading={healthLoading}
+              rates={healthData?.completionRates ?? []}
+              reviewDeadline={healthData?.reviewDeadline}
+            />
+          )}
         </div>
       </div>
 

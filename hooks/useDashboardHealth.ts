@@ -43,10 +43,24 @@ export interface SystemHealth {
   totalPenalty: number;
 }
 
+export interface UrgentItem {
+  id: number;
+  description: string;
+  barcode: string;
+  category: string;
+  pic_name: string;
+  expiry_date: string;
+  days_left: number;
+  urgency: "expired" | "critical";
+  return_status: string | null;
+  days_left_display: string;
+}
+
 export interface HealthData {
   systemHealth: SystemHealth;
   reviewDeadline: ReviewDeadline;
   staleItems: StaleItem[];
+  urgentItems?: UrgentItem[];
   completionRates: CompletionRate[];
 }
 

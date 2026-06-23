@@ -22,6 +22,19 @@ interface ExpiryRow {
   expiry_date: string;
 }
 
+interface UrgentItem {
+  id: number;
+  description: string;
+  barcode: string;
+  category: string;
+  pic_name: string;
+  expiry_date: string;
+  days_left: number;
+  urgency: "expired" | "critical";
+  return_status: string | null;
+  days_left_display: string;
+}
+
 function daysUntilExpiry(expiryDate: string): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -147,6 +160,31 @@ export async function GET(req: NextRequest) {
       sunday_label: r.sunday_label,
     }));
 
+  // ── Manager: urgent items (expired + critical, sorted most urgent first) ────
+  let urgentItems: UrgentItem[] | undefined;
+  if (user.role === "manager") {
+    urgentItems = rows
+      .map((row) => {
+        const daysLeft = daysUntilExpiry(row.expiry_date);
+        if (daysLeft >= 90) return null;
+        return {
+          id: row.id,
+          description: row.description,
+          barcode: row.barcode,
+          category: row.category,
+          pic_name: row.pic_name,
+          expiry_date: row.expiry_date,
+          days_left: daysLeft,
+          urgency: (daysLeft < 0 ? "expired" : "critical") as "expired" | "critical",
+          return_status: row.return_status,
+          days_left_display: daysLeft < 0 ? "Expired" : `${daysLeft}d left`,
+        };
+      })
+      .filter((x): x is UrgentItem => x !== null)
+      .sort((a, b) => a.days_left - b.days_left)
+      .slice(0, 10);
+  }
+
   // ── Per-PIC completion rates ───────────────────────────────────────────────
   const picMap = new Map<
     string,
@@ -214,6 +252,7 @@ export async function GET(req: NextRequest) {
         timezone:    "Malaysia Time (GMT+8)",
       },
       staleItems,
+      urgentItems,
       completionRates,
       completedToday:    completedTodayRow?.cnt    ?? 0,
       soldThisMonth:     soldThisMonthRow?.cnt     ?? 0,

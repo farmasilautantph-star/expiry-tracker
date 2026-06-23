@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { StaleItem, ReviewDeadline, CompletionRate } from "@/hooks/useDashboardHealth";
+import type { StaleItem, ReviewDeadline, CompletionRate, UrgentItem } from "@/hooks/useDashboardHealth";
 import { CheckCircleIcon, CalendarDaysIcon } from "@heroicons/react/24/outline";
 import {
   getDaysUntilSunday,
@@ -9,13 +9,23 @@ import {
   getLastSundayDisplay,
 } from "@/lib/sunday-deadline-client";
 
-interface Props {
-  items: StaleItem[];
+// ── Staff-view helpers ────────────────────────────────────────────────────────
+
+interface StaffProps {
+  staleItems: StaleItem[];
   isLoading: boolean;
-  isManager: boolean;
   rates: CompletionRate[];
   reviewDeadline?: ReviewDeadline;
 }
+
+interface ManagerProps {
+  urgentItems: UrgentItem[];
+  isLoading: boolean;
+}
+
+type Props =
+  | ({ isManager: true } & ManagerProps & { rates?: CompletionRate[]; reviewDeadline?: ReviewDeadline })
+  | ({ isManager: false } & StaffProps);
 
 function getMYTDayOfWeek(): number {
   return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" })).getDay();
@@ -50,7 +60,7 @@ function StatusMessage({ item }: { item: StaleItem }) {
   }
 }
 
-function StatusDot({ urgency }: { urgency: StaleItem["urgency"] }) {
+function StaleStatusDot({ urgency }: { urgency: StaleItem["urgency"] }) {
   const colors: Record<string, string> = {
     warn: "#eab308",
     urgent: "#ea580c",
@@ -77,17 +87,13 @@ function rateEmoji(rate: number): string {
   return "❌";
 }
 
-// ── Compliance sub-section ───────────────────────────────────────────────────
-
 function StaffComplianceSection({
   rates,
-  isManager,
   isLoading,
   lastSunday,
   nextSunday,
 }: {
   rates: CompletionRate[];
-  isManager: boolean;
   isLoading: boolean;
   lastSunday: string;
   nextSunday: string;
@@ -101,87 +107,134 @@ function StaffComplianceSection({
     );
   }
 
-  if (!isManager) {
-    // Staff: show own rate only
-    const myRate = rates[0];
-    if (!myRate) {
-      return (
-        <p className="text-xs text-[#94a3b8]">No active items to track.</p>
-      );
-    }
-    const color = rateColor(myRate.completion_rate);
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl font-black leading-none" style={{ color }}>
-            {myRate.completion_rate}%
-          </span>
-          <div className="flex-1">
-            <div
-              className="h-2 rounded-full overflow-hidden"
-              style={{ background: "#f1f5f9" }}
-            >
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${myRate.completion_rate}%`, background: color }}
-              />
-            </div>
-            <p className="text-xs mt-1" style={{ color: "#94a3b8" }}>
-              {myRate.reviewed_on_time} of {myRate.total} items reviewed on time
-            </p>
-          </div>
-        </div>
-        <p className="text-[11px]" style={{ color: "#94a3b8" }}>
-          Week: {lastSunday} → {nextSunday}
-        </p>
-      </div>
-    );
-  }
-
-  // Manager: compact multi-staff list
-  if (rates.length === 0) {
+  const myRate = rates[0];
+  if (!myRate) {
     return <p className="text-xs text-[#94a3b8]">No active items to track.</p>;
   }
+  const color = rateColor(myRate.completion_rate);
   return (
-    <div className="space-y-1.5">
-      {rates.map((r) => {
-        const color = rateColor(r.completion_rate);
-        return (
-          <div key={r.pic_name} className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-[#334155] w-20 truncate flex-shrink-0">
-              {r.pic_name}
-            </span>
-            <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${r.completion_rate}%`, background: color }}
-              />
-            </div>
-            <span className="text-xs font-bold w-9 text-right flex-shrink-0" style={{ color }}>
-              {r.completion_rate}%
-            </span>
-            <span className="text-xs flex-shrink-0">{rateEmoji(r.completion_rate)}</span>
+    <div className="space-y-2">
+      <div className="flex items-center gap-3">
+        <span className="text-2xl font-black leading-none" style={{ color }}>
+          {myRate.completion_rate}%
+        </span>
+        <div className="flex-1">
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${myRate.completion_rate}%`, background: color }}
+            />
           </div>
-        );
-      })}
-      <p className="text-[11px] mt-1" style={{ color: "#94a3b8" }}>
+          <p className="text-xs mt-1" style={{ color: "#94a3b8" }}>
+            {myRate.reviewed_on_time} of {myRate.total} items reviewed on time
+          </p>
+        </div>
+      </div>
+      <p className="text-[11px]" style={{ color: "#94a3b8" }}>
         Week: {lastSunday} → {nextSunday}
       </p>
     </div>
   );
 }
 
-// ── Main card ────────────────────────────────────────────────────────────────
+// ── Manager view ──────────────────────────────────────────────────────────────
 
-export default function StaleItemsCard({
-  items,
-  isLoading,
-  isManager,
-  rates,
-  reviewDeadline,
-}: Props) {
-  const router = useRouter();
-  const count = items.length;
+function ManagerView({ urgentItems, isLoading, router }: ManagerProps & { router: ReturnType<typeof useRouter> }) {
+  const count = urgentItems.length;
+  const VISIBLE = 5;
+  const overflow = count - VISIBLE;
+
+  return (
+    <div
+      className="rounded-2xl bg-white shadow-sm p-6 flex flex-col"
+      style={{ border: "1px solid #e2e8f0" }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-sm font-bold text-slate-800">Items to Monitor</p>
+          <p className="text-xs text-slate-400 mt-0.5">Expired &amp; critical items across all staff</p>
+        </div>
+        {!isLoading && count > 0 && (
+          <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-bold flex-shrink-0 bg-red-500 text-white">
+            {count}
+          </span>
+        )}
+        {!isLoading && count === 0 && (
+          <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 rounded-full text-xs font-bold flex-shrink-0 bg-green-100 text-green-700">
+            All clear
+          </span>
+        )}
+      </div>
+
+      {/* List */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 bg-[#f1f5f9] animate-pulse rounded-xl" />
+          ))}
+        </div>
+      ) : count === 0 ? (
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <CheckCircleIcon className="w-10 h-10 text-green-500 mb-2" />
+          <p className="text-sm font-semibold text-green-700">No expired or critical items!</p>
+          <p className="text-xs text-slate-400 mt-1">Inventory is in good shape.</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-0 max-h-[280px] overflow-y-auto">
+            {urgentItems.map((item, idx) => {
+              const isExpired = item.urgency === "expired";
+              const badgeBg    = isExpired ? "bg-red-100"    : "bg-orange-100";
+              const badgeColor = isExpired ? "text-red-600"  : "text-orange-600";
+              const dotColor   = isExpired ? "bg-red-500"    : "bg-orange-500";
+
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-start justify-between gap-3 py-3 cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors"
+                  style={{ borderBottom: idx < urgentItems.length - 1 ? "1px solid #f1f5f9" : "none" }}
+                  onClick={() => router.push(`/dashboard/shortlist?review=${item.id}`)}
+                >
+                  <div className="flex items-start gap-2 min-w-0">
+                    <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${dotColor}${isExpired ? " animate-pulse" : ""}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[#0f172a] truncate" title={item.description}>
+                        {item.description}
+                      </p>
+                      <p className="text-xs text-[#64748b] mt-0.5">
+                        {item.category} · {item.pic_name}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {new Date(item.expiry_date).toLocaleDateString("en-MY", { day: "2-digit", month: "short", year: "numeric" })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${badgeBg} ${badgeColor}`}>
+                    {item.days_left_display}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {overflow > 0 && (
+            <button
+              className="mt-3 text-xs text-blue-600 font-medium text-left hover:text-blue-700 transition-colors"
+              onClick={() => router.push("/dashboard/shortlist")}
+            >
+              + {overflow} more critical item{overflow !== 1 ? "s" : ""}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Staff view ────────────────────────────────────────────────────────────────
+
+function StaffView({ staleItems, isLoading, rates, reviewDeadline, router }: StaffProps & { router: ReturnType<typeof useRouter> }) {
+  const count = staleItems.length;
   const dayOfWeek = getMYTDayOfWeek();
   const daysUntilSunday = getDaysUntilSunday();
   const nextSunday = reviewDeadline?.nextSunday ?? getNextSundayDisplay();
@@ -221,7 +274,7 @@ export default function StaleItemsCard({
       className="rounded-2xl bg-white shadow-sm p-6 flex flex-col"
       style={{ border: "1px solid #e2e8f0" }}
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-start justify-between mb-1">
         <div>
           <p className="text-xs font-bold text-[#0f172a] uppercase tracking-wider">
@@ -247,7 +300,7 @@ export default function StaleItemsCard({
         )}
       </div>
 
-      {/* ── Deadline badge ── */}
+      {/* Deadline badge */}
       {!isLoading && !isSunday && (
         <div className="mb-4 mt-2">
           <span
@@ -271,7 +324,7 @@ export default function StaleItemsCard({
         </div>
       )}
 
-      {/* ── Stale items list ── */}
+      {/* Stale items list */}
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
@@ -286,19 +339,16 @@ export default function StaleItemsCard({
         </div>
       ) : (
         <div className="space-y-0 max-h-56 overflow-y-auto">
-          {items.map((item, idx) => (
+          {staleItems.map((item, idx) => (
             <div
               key={item.id}
               className="flex items-start justify-between gap-3 py-3"
-              style={{ borderBottom: idx < items.length - 1 ? "1px solid #f1f5f9" : "none" }}
+              style={{ borderBottom: idx < staleItems.length - 1 ? "1px solid #f1f5f9" : "none" }}
             >
               <div className="flex items-start gap-2 min-w-0">
-                <StatusDot urgency={item.urgency} />
+                <StaleStatusDot urgency={item.urgency} />
                 <div className="min-w-0">
-                  <p
-                    className="text-sm font-semibold text-[#0f172a] truncate"
-                    title={item.description}
-                  >
+                  <p className="text-sm font-semibold text-[#0f172a] truncate" title={item.description}>
                     {item.description}
                   </p>
                   <p className="text-xs text-[#94a3b8] mt-0.5">
@@ -321,21 +371,44 @@ export default function StaleItemsCard({
         </div>
       )}
 
-      {/* ── Compliance section — staff only (manager sees full section below) ── */}
-      {!isManager && (
-        <div className="border-t mt-4 pt-4 flex-shrink-0" style={{ borderColor: "#f1f5f9" }}>
-          <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "#94a3b8" }}>
-            My Review Compliance
-          </p>
-          <StaffComplianceSection
-            rates={rates}
-            isManager={false}
-            isLoading={isLoading}
-            lastSunday={lastSunday}
-            nextSunday={nextSunday}
-          />
-        </div>
-      )}
+      {/* Compliance — staff only */}
+      <div className="border-t mt-4 pt-4 flex-shrink-0" style={{ borderColor: "#f1f5f9" }}>
+        <p className="text-[10px] font-bold uppercase tracking-wider mb-3" style={{ color: "#94a3b8" }}>
+          My Review Compliance
+        </p>
+        <StaffComplianceSection
+          rates={rates}
+          isLoading={isLoading}
+          lastSunday={lastSunday}
+          nextSunday={nextSunday}
+        />
+      </div>
     </div>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+export default function StaleItemsCard(props: Props) {
+  const router = useRouter();
+
+  if (props.isManager) {
+    return (
+      <ManagerView
+        urgentItems={props.urgentItems}
+        isLoading={props.isLoading}
+        router={router}
+      />
+    );
+  }
+
+  return (
+    <StaffView
+      staleItems={props.staleItems}
+      isLoading={props.isLoading}
+      rates={props.rates}
+      reviewDeadline={props.reviewDeadline}
+      router={router}
+    />
   );
 }
