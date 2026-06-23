@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 async function authManager(req: NextRequest) {
@@ -29,8 +29,9 @@ export async function PUT(
       { status: 400 },
     );
 
-  const db = getDb();
-  const existing = db.prepare("SELECT * FROM offers WHERE id = ?").get(id);
+  const existing = (
+    await pool.query("SELECT * FROM offers WHERE id = $1", [id])
+  ).rows[0];
   if (!existing)
     return NextResponse.json(
       { success: false, error: "Not found" },
@@ -42,26 +43,27 @@ export async function PUT(
 
   const validStatus = ["offered", "accepted", "rejected", "completed"];
   const fields: string[] = [];
-  const bindings: (string | number | null)[] = [];
+  const bindings: (string | number | boolean | null)[] = [];
+  let p = 1;
 
   if (offer_status !== undefined && validStatus.includes(offer_status)) {
-    fields.push("offer_status = ?");
+    fields.push(`offer_status = $${p++}`);
     bindings.push(offer_status);
   }
   if (quantity !== undefined) {
-    fields.push("quantity = ?");
+    fields.push(`quantity = $${p++}`);
     bindings.push(Math.max(1, Number(quantity)));
   }
   if (outlet_name !== undefined) {
-    fields.push("outlet_name = ?");
+    fields.push(`outlet_name = $${p++}`);
     bindings.push(outlet_name?.trim() || "");
   }
   if (has_alert !== undefined) {
-    fields.push("has_alert = ?");
-    bindings.push(has_alert ? 1 : 0);
+    fields.push(`has_alert = $${p++}`);
+    bindings.push(Boolean(has_alert));
   }
   if (notes !== undefined) {
-    fields.push("notes = ?");
+    fields.push(`notes = $${p++}`);
     bindings.push(notes?.trim() || null);
   }
 
@@ -73,27 +75,31 @@ export async function PUT(
   }
 
   const now = new Date().toISOString();
-  fields.push("updated_at = ?");
+  fields.push(`updated_at = $${p++}`);
   bindings.push(now);
   bindings.push(id);
 
-  db.prepare(`UPDATE offers SET ${fields.join(", ")} WHERE id = ?`).run(
-    ...bindings,
+  await pool.query(
+    `UPDATE offers SET ${fields.join(", ")} WHERE id = $${p}`,
+    bindings,
   );
 
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "UPDATE",
-    "offers",
-    id,
-    user.userId,
-    user.picName,
-    `Updated offer id=${id}`,
-    now,
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [
+      "UPDATE",
+      "offers",
+      id,
+      user.userId,
+      user.picName,
+      `Updated offer id=${id}`,
+      now,
+    ],
   );
 
-  const updated = db.prepare("SELECT * FROM offers WHERE id = ?").get(id);
+  const updated = (
+    await pool.query("SELECT * FROM offers WHERE id = $1", [id])
+  ).rows[0];
   return NextResponse.json({ success: true, data: updated });
 }
 
@@ -111,29 +117,29 @@ export async function DELETE(
       { status: 400 },
     );
 
-  const db = getDb();
-  const existing = db.prepare("SELECT * FROM offers WHERE id = ?").get(id) as
-    | { description?: string; outlet_name?: string }
-    | undefined;
+  const existing = (
+    await pool.query("SELECT * FROM offers WHERE id = $1", [id])
+  ).rows[0] as { description?: string; outlet_name?: string } | undefined;
   if (!existing)
     return NextResponse.json(
       { success: false, error: "Not found" },
       { status: 404 },
     );
 
-  db.prepare("DELETE FROM offers WHERE id = ?").run(id);
+  await pool.query("DELETE FROM offers WHERE id = $1", [id]);
 
   const now = new Date().toISOString();
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "DELETE",
-    "offers",
-    id,
-    user.userId,
-    user.picName,
-    `Deleted offer: ${existing.description ?? ""} → ${existing.outlet_name ?? ""}`,
-    now,
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [
+      "DELETE",
+      "offers",
+      id,
+      user.userId,
+      user.picName,
+      `Deleted offer: ${existing.description ?? ""} → ${existing.outlet_name ?? ""}`,
+      now,
+    ],
   );
 
   return NextResponse.json({ success: true });

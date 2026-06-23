@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
@@ -49,10 +49,9 @@ export async function PUT(
     );
   }
 
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow | undefined;
+  const existing = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+  ).rows[0] as unknown as ExpiryRow | undefined;
 
   if (!existing) {
     return NextResponse.json(
@@ -122,40 +121,42 @@ export async function PUT(
 
   const now = new Date().toISOString();
 
-  db.prepare(
+  await pool.query(
     `UPDATE expiry_logs
-     SET barcode=?, description=?, category=?, expiry_date=?, notes=?,
-         stock_id=?, uom=?, quantity=?, return_status=?, return_by_date=?
-     WHERE id=?`,
-  ).run(
-    updated.barcode,
-    updated.description,
-    updated.category,
-    updated.expiry_date,
-    updated.notes,
-    updated.stock_id,
-    updated.uom,
-    updated.quantity,
-    updated.return_status,
-    updated.return_by_date,
-    id,
+     SET barcode=$1, description=$2, category=$3, expiry_date=$4, notes=$5,
+         stock_id=$6, uom=$7, quantity=$8, return_status=$9, return_by_date=$10
+     WHERE id=$11`,
+    [
+      updated.barcode,
+      updated.description,
+      updated.category,
+      updated.expiry_date,
+      updated.notes,
+      updated.stock_id,
+      updated.uom,
+      updated.quantity,
+      updated.return_status,
+      updated.return_by_date,
+      id,
+    ],
   );
 
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "UPDATE",
-    "expiry",
-    id,
-    user.userId,
-    user.picName,
-    `Updated expiry log #${id}: ${updated.description} (${updated.expiry_date})`,
-    now,
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [
+      "UPDATE",
+      "expiry",
+      id,
+      user.userId,
+      user.picName,
+      `Updated expiry log #${id}: ${updated.description} (${updated.expiry_date})`,
+      now,
+    ],
   );
 
-  const entry = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow;
+  const entry = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+  ).rows[0] as unknown as ExpiryRow;
 
   return NextResponse.json({ success: true, data: entry });
 }
@@ -177,10 +178,9 @@ export async function DELETE(
     );
   }
 
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow | undefined;
+  const existing = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+  ).rows[0] as unknown as ExpiryRow | undefined;
 
   if (!existing) {
     return NextResponse.json(
@@ -191,18 +191,19 @@ export async function DELETE(
 
   const now = new Date().toISOString();
 
-  db.prepare("DELETE FROM expiry_logs WHERE id = ?").run(id);
+  await pool.query("DELETE FROM expiry_logs WHERE id = $1", [id]);
 
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "DELETE",
-    "expiry",
-    id,
-    user.userId,
-    user.picName,
-    `Deleted expiry log #${id}: ${existing.description} (${existing.expiry_date})`,
-    now,
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [
+      "DELETE",
+      "expiry",
+      id,
+      user.userId,
+      user.picName,
+      `Deleted expiry log #${id}: ${existing.description} (${existing.expiry_date})`,
+      now,
+    ],
   );
 
   return NextResponse.json({ success: true, data: { id } });

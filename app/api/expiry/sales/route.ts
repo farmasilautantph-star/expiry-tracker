@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface SalesRow {
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   const sortBy    = searchParams.get("sort_by")?.trim() ?? "last_sold_at";
   const sortOrder = searchParams.get("sort_order")?.trim() === "asc" ? "asc" : "desc";
 
-  const db = getDb();
+  let p = 1;
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
@@ -76,17 +76,17 @@ export async function GET(req: NextRequest) {
   );
 
   if (user.role !== "manager") {
-    conditions.push("pic_id = ?");
+    conditions.push(`pic_id = $${p++}`);
     bindings.push(user.userId);
   } else if (pic) {
-    conditions.push("pic_name = ?");
+    conditions.push(`pic_name = $${p++}`);
     bindings.push(pic);
   }
 
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER(?))",
+      `(LOWER(description) LIKE LOWER($${p++}) OR LOWER(barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER($${p++}))`,
     );
     bindings.push(like, like, like);
   }
@@ -97,9 +97,12 @@ export async function GET(req: NextRequest) {
       : "ORDER BY COALESCE(sold_at, logged_at) DESC";
 
   const where = `WHERE ${conditions.join(" AND ")}`;
-  const rows = db
-    .prepare(`SELECT * FROM expiry_logs ${where} ${sqlOrder}`)
-    .all(...bindings) as unknown as SalesRow[];
+  const rows = (
+    await pool.query(
+      `SELECT * FROM expiry_logs ${where} ${sqlOrder}`,
+      bindings,
+    )
+  ).rows as unknown as SalesRow[];
 
   // Compute derived fields
   let data = rows.map((row) => {

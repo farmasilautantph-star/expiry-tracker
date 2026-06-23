@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryLogRow {
@@ -398,27 +398,27 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const db = getDb();
-
-  const rows =
+  const rows = (
     user.role === "manager"
-      ? (db
-          .prepare(
-            "SELECT * FROM expiry_logs WHERE barcode = ? ORDER BY logged_at ASC",
-          )
-          .all(barcode) as unknown as ExpiryLogRow[])
-      : (db
-          .prepare(
-            "SELECT * FROM expiry_logs WHERE barcode = ? AND pic_id = ? ORDER BY logged_at ASC",
-          )
-          .all(barcode, user.userId) as unknown as ExpiryLogRow[]);
+      ? await pool.query(
+          "SELECT * FROM expiry_logs WHERE barcode = $1 ORDER BY logged_at ASC",
+          [barcode],
+        )
+      : await pool.query(
+          "SELECT * FROM expiry_logs WHERE barcode = $1 AND pic_id = $2 ORDER BY logged_at ASC",
+          [barcode, user.userId],
+        )
+  ).rows as unknown as ExpiryLogRow[];
 
   if (rows.length === 0) {
     // Check if barcode belongs to another PIC (staff only)
     if (user.role !== "manager") {
-      const anyRow = db
-        .prepare("SELECT id FROM expiry_logs WHERE barcode = ? LIMIT 1")
-        .get(barcode);
+      const anyRow = (
+        await pool.query(
+          "SELECT id FROM expiry_logs WHERE barcode = $1 LIMIT 1",
+          [barcode],
+        )
+      ).rows[0];
       if (anyRow) {
         return NextResponse.json({
           success: true,
@@ -440,40 +440,44 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const entries = rows.map((entry) => {
-    const history = db
-      .prepare(
-        "SELECT * FROM history_log WHERE record_id = ? AND module = 'expiry' ORDER BY timestamp ASC",
-      )
-      .all(entry.id) as unknown as HistoryRow[];
+  const entries = await Promise.all(
+    rows.map(async (entry) => {
+      const history = (
+        await pool.query(
+          "SELECT * FROM history_log WHERE record_id = $1 AND module = 'expiry' ORDER BY timestamp ASC",
+          [entry.id],
+        )
+      ).rows as unknown as HistoryRow[];
 
-    const offers = db
-      .prepare(
-        "SELECT * FROM offers WHERE barcode = ? ORDER BY created_at ASC",
-      )
-      .all(entry.barcode) as unknown as OfferRow[];
+      const offers = (
+        await pool.query(
+          "SELECT * FROM offers WHERE barcode = $1 ORDER BY created_at ASC",
+          [entry.barcode],
+        )
+      ).rows as unknown as OfferRow[];
 
-    const { daysLeft, urgency } = calcUrgency(entry.expiry_date);
-    const timeline = buildTimeline(entry, history, offers);
+      const { daysLeft, urgency } = calcUrgency(entry.expiry_date);
+      const timeline = buildTimeline(entry, history, offers);
 
-    return {
-      entry_id:     entry.id,
-      barcode:      entry.barcode,
-      description:  entry.description,
-      stock_id:     entry.stock_id,
-      category:     entry.category,
-      uom:          entry.uom,
-      pic_name:     entry.pic_name,
-      logged_at:    entry.logged_at,
-      current_qty:  entry.quantity,
-      original_qty: entry.original_qty,
-      expiry_date:  entry.expiry_date,
-      days_left:    daysLeft,
-      urgency,
-      item_status:  entry.item_status,
-      timeline,
-    };
-  });
+      return {
+        entry_id:     entry.id,
+        barcode:      entry.barcode,
+        description:  entry.description,
+        stock_id:     entry.stock_id,
+        category:     entry.category,
+        uom:          entry.uom,
+        pic_name:     entry.pic_name,
+        logged_at:    entry.logged_at,
+        current_qty:  entry.quantity,
+        original_qty: entry.original_qty,
+        expiry_date:  entry.expiry_date,
+        days_left:    daysLeft,
+        urgency,
+        item_status:  entry.item_status,
+        timeline,
+      };
+    }),
+  );
 
   return NextResponse.json({
     success: true,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
@@ -39,12 +39,12 @@ export async function PUT(
       { status: 400 },
     );
 
-  const db = getDb();
-  const existing = db
-    .prepare(
-      "SELECT id, pic_id, pic_name, description, barcode, return_status FROM expiry_logs WHERE id = ?",
+  const existing = (
+    await pool.query(
+      "SELECT id, pic_id, pic_name, description, barcode, return_status FROM expiry_logs WHERE id = $1",
+      [id],
     )
-    .get(id) as unknown as ExpiryRow | undefined;
+  ).rows[0] as unknown as ExpiryRow | undefined;
 
   if (!existing)
     return NextResponse.json(
@@ -73,58 +73,64 @@ export async function PUT(
   const now = new Date().toISOString();
 
   if (return_status === "returned") {
-    db.prepare(
+    await pool.query(
       `UPDATE expiry_logs
        SET return_status = 'returned',
-           return_notes = ?,
+           return_notes = $1,
            item_status = 'completed',
            completed_via = 'returned',
-           completed_at = ?,
+           completed_at = $2,
            review_status = 'resolved',
-           last_updated_at = ?
-       WHERE id = ?`,
-    ).run(return_notes ?? null, now, now, id);
+           last_updated_at = $3
+       WHERE id = $4`,
+      [return_notes ?? null, now, now, id],
+    );
 
-    db.prepare(
+    await pool.query(
       `INSERT INTO history_log
          (action, module, record_id, pic_id, pic_name, description, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      "UPDATE",
-      "expiry",
-      id,
-      user.userId,
-      user.picName,
-      `Return completed for ${existing.description} (Barcode: ${existing.barcode}) by ${existing.pic_name}`,
-      now,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        "UPDATE",
+        "expiry",
+        id,
+        user.userId,
+        user.picName,
+        `Return completed for ${existing.description} (Barcode: ${existing.barcode}) by ${existing.pic_name}`,
+        now,
+      ],
     );
   } else {
-    db.prepare(
+    await pool.query(
       `UPDATE expiry_logs
        SET return_status = 'not_approved',
-           return_notes = ?,
+           return_notes = $1,
            completed_via = 'return_not_approved',
-           completed_at = ?,
+           completed_at = $2,
            review_status = 'resolved',
-           last_updated_at = ?
-       WHERE id = ?`,
-    ).run(return_notes ?? null, now, now, id);
+           last_updated_at = $3
+       WHERE id = $4`,
+      [return_notes ?? null, now, now, id],
+    );
 
-    db.prepare(
+    await pool.query(
       `INSERT INTO history_log
          (action, module, record_id, pic_id, pic_name, description, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      "UPDATE",
-      "expiry",
-      id,
-      user.userId,
-      user.picName,
-      `Return not approved for ${existing.description} by ${existing.pic_name}${return_notes ? `. Notes: ${return_notes}` : ""}`,
-      now,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        "UPDATE",
+        "expiry",
+        id,
+        user.userId,
+        user.picName,
+        `Return not approved for ${existing.description} by ${existing.pic_name}${return_notes ? `. Notes: ${return_notes}` : ""}`,
+        now,
+      ],
     );
   }
 
-  const entry = db.prepare("SELECT * FROM expiry_logs WHERE id = ?").get(id);
+  const entry = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+  ).rows[0];
   return NextResponse.json({ success: true, data: entry });
 }

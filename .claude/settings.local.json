@@ -37,7 +37,18 @@
       "Bash(npm uninstall *)",
       "Bash(node -e \" const fs = require\\('fs'\\); const lines = fs.readFileSync\\('C:/Users/CLIENT/.claude/projects/C--Projects-EXPIRY-TRACKER/a3ed9bf5-ab89-4e42-b26f-a51f3c38d05e.jsonl', 'utf8'\\).split\\('\\\\n'\\); lines.slice\\(-300\\).forEach\\(line => { try { const obj = JSON.parse\\(line\\); if \\(obj.type === 'message' || obj.role\\) { const content = obj.content || obj.message?.content; if \\(Array.isArray\\(content\\)\\) { content.forEach\\(b => { if \\(b.type === 'text' && b.text && b.text.length > 100\\) { console.log\\('=== TEXT ==='\\); console.log\\(b.text.substring\\(0, 800\\)\\); } }\\); } else if \\(typeof content === 'string' && content.length > 100\\) { console.log\\('=== STR ==='\\); console.log\\(content.substring\\(0, 800\\)\\); } } } catch\\(e\\) {} }\\); \")",
       "Bash(grep -o '\"content\":\\\\[{\"type\":\"text\",\"text\":\"[^\"]*\"')",
-      "Bash(awk 'NR==3' \"C:/Users/CLIENT/.claude/projects/C--Projects-EXPIRY-TRACKER/a3ed9bf5-ab89-4e42-b26f-a51f3c38d05e.jsonl\")"
+      "Bash(awk 'NR==3' \"C:/Users/CLIENT/.claude/projects/C--Projects-EXPIRY-TRACKER/a3ed9bf5-ab89-4e42-b26f-a51f3c38d05e.jsonl\")",
+      "Bash(node -e \"const Database = require\\('./node_modules/node:sqlite' in require.resolve ? 'node:sqlite' : 'better-sqlite3'\\); \")",
+      "Bash(node -e \"const {DatabaseSync} = require\\('node:sqlite'\\); const db = new DatabaseSync\\('./db/expiry-tracker.db'\\); const info = db.prepare\\(\\\\\"SELECT sql FROM sqlite_master WHERE type='table' AND name='expiry_logs'\\\\\"\\).get\\(\\); console.log\\(info\\);\")",
+      "Bash(node --experimental-strip-types scripts/check-db.ts)",
+      "Bash(node -e ' *)",
+      "Bash(grep -v \"Use \\\\`node\")",
+      "Bash(node -e \"const {DatabaseSync} = require\\('node:sqlite'\\); const db = new DatabaseSync\\('db/expiry-tracker.db'\\); const cols = db.prepare\\('PRAGMA table_info\\(expiry_logs\\)'\\).all\\(\\); console.log\\(cols.map\\(c => c.name\\).join\\(', '\\)\\);\")",
+      "Bash(git stash *)",
+      "Bash(npx ts-node -e ' *)",
+      "Bash(node -e \"const XLSX = require\\('xlsx'\\); const wb = XLSX.readFile\\('migrate/csv/EXPIRY_TRACKER_1.xlsx'\\); console.log\\('Sheets:', wb.SheetNames\\); const ws = wb.Sheets['EXPIRY_TRACKER']; const rows = XLSX.utils.sheet_to_json\\(ws\\); console.log\\('Row count:', rows.length\\); console.log\\('First row keys:', Object.keys\\(rows[0] || {}\\)\\); console.log\\('First row:', JSON.stringify\\(rows[0], null, 2\\)\\); console.log\\('Second row:', JSON.stringify\\(rows[1], null, 2\\)\\);\")",
+      "Bash(node --experimental-sqlite -e ' *)",
+      "Bash(node -e \"try { require.resolve\\('dotenv'\\); console.log\\('dotenv: installed'\\); } catch\\(e\\) { console.log\\('dotenv: NOT installed'\\); }\")"
     ]
   }
 }

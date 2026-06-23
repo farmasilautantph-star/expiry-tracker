@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 export interface ReturnRow {
@@ -47,31 +47,31 @@ export async function GET(req: NextRequest) {
   const pic = searchParams.get("pic")?.trim() ?? "";
   const search = searchParams.get("search")?.trim() ?? "";
 
-  const db = getDb();
   const today = new Date().toISOString().split("T")[0];
 
+  let p = 1;
   const conditions: string[] = [
     "return_status IN ('pending', 'returned', 'not_approved')",
   ];
   const bindings: (string | number)[] = [];
 
   if (user.role !== "manager") {
-    conditions.push("pic_id = ?");
+    conditions.push(`pic_id = $${p++}`);
     bindings.push(user.userId);
   } else if (pic) {
-    conditions.push("pic_name = ?");
+    conditions.push(`pic_name = $${p++}`);
     bindings.push(pic);
   }
 
   if (category) {
-    conditions.push("category = ?");
+    conditions.push(`category = $${p++}`);
     bindings.push(category);
   }
 
   // Status filter — applied on top of base condition
   if (statusFilter === "pending") {
     conditions.push("return_status = 'pending'");
-    conditions.push("(return_by_date IS NULL OR return_by_date >= ?)");
+    conditions.push(`(return_by_date IS NULL OR return_by_date >= $${p++})`);
     bindings.push(today);
   } else if (statusFilter === "returned") {
     conditions.push("return_status = 'returned'");
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
     conditions.push("return_status = 'not_approved'");
   } else if (statusFilter === "overdue") {
     conditions.push("return_status = 'pending'");
-    conditions.push("return_by_date < ?");
+    conditions.push(`return_by_date < $${p++}`);
     bindings.push(today);
   } else if (statusFilter === "active") {
     conditions.push("return_status = 'pending'");
@@ -95,11 +95,13 @@ export async function GET(req: NextRequest) {
       statusFilter === "history";
 
     if (isHistoryFilter) {
-      conditions.push("strftime('%Y-%m', COALESCE(completed_at, logged_at)) = ?");
+      conditions.push(
+        `to_char((COALESCE(completed_at, logged_at))::timestamp, 'YYYY-MM') = $${p++}`,
+      );
     } else {
       // For active items: include those with no return_by_date (don't exclude them)
       conditions.push(
-        "(return_by_date IS NULL OR strftime('%Y-%m', return_by_date) = ?)",
+        `(return_by_date IS NULL OR to_char((return_by_date)::timestamp, 'YYYY-MM') = $${p++})`,
       );
     }
     bindings.push(month);
@@ -108,7 +110,7 @@ export async function GET(req: NextRequest) {
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER(?))",
+      `(LOWER(description) LIKE LOWER($${p++}) OR LOWER(barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER($${p++}))`,
     );
     bindings.push(like, like, like);
   }
@@ -117,7 +119,7 @@ export async function GET(req: NextRequest) {
   const sql = `SELECT * FROM expiry_logs ${where} ORDER BY return_by_date ASC NULLS LAST, logged_at DESC`;
 
   type ExpiryRow = Omit<ReturnRow, "overdue">;
-  const rows = db.prepare(sql).all(...bindings) as unknown as ExpiryRow[];
+  const rows = (await pool.query(sql, bindings)).rows as unknown as ExpiryRow[];
 
   const entries: ReturnRow[] = rows.map((r) => ({
     ...r,

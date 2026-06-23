@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 export interface HistoryRow {
@@ -55,50 +55,56 @@ export async function GET(req: NextRequest) {
   );
   const offset = (page - 1) * limit;
 
-  const db = getDb();
+  let p = 1;
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
   const validModules = ["expiry", "offers", "returns", "users"];
   if (modFilter && validModules.includes(modFilter)) {
-    conditions.push("module = ?");
+    conditions.push(`module = $${p++}`);
     bindings.push(modFilter);
   }
 
   const validActions = ["CREATE", "UPDATE", "DELETE"];
   if (action && validActions.includes(action.toUpperCase())) {
-    conditions.push("action = ?");
+    conditions.push(`action = $${p++}`);
     bindings.push(action.toUpperCase());
   }
 
   if (pic) {
-    conditions.push("pic_name = ?");
+    conditions.push(`pic_name = $${p++}`);
     bindings.push(pic);
   }
 
   if (month) {
-    conditions.push("strftime('%Y-%m', timestamp) = ?");
+    conditions.push(`to_char((timestamp)::timestamp, 'YYYY-MM') = $${p++}`);
     bindings.push(month);
   }
 
   if (search) {
-    conditions.push("LOWER(COALESCE(description,'')) LIKE LOWER(?)");
+    conditions.push(`LOWER(COALESCE(description,'')) LIKE LOWER($${p++})`);
     bindings.push(`%${search}%`);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const total = (
-    db
-      .prepare(`SELECT COUNT(*) AS n FROM history_log ${where}`)
-      .get(...bindings) as { n: number }
-  ).n;
+  const total = Number(
+    (
+      (
+        await pool.query(
+          `SELECT COUNT(*) AS n FROM history_log ${where}`,
+          bindings,
+        )
+      ).rows[0] as { n: string | number }
+    ).n,
+  );
 
-  const rows = db
-    .prepare(
-      `SELECT * FROM history_log ${where} ORDER BY timestamp DESC LIMIT ? OFFSET ?`,
+  const rows = (
+    await pool.query(
+      `SELECT * FROM history_log ${where} ORDER BY timestamp DESC LIMIT $${p} OFFSET $${p + 1}`,
+      [...bindings, limit, offset],
     )
-    .all(...bindings, limit, offset) as unknown as HistoryRow[];
+  ).rows as unknown as HistoryRow[];
 
   const entries: HistoryEntry[] = rows.map((r) => ({
     ...r,
@@ -106,29 +112,37 @@ export async function GET(req: NextRequest) {
   }));
 
   // Summary counts (for the filtered set — run a separate aggregation)
-  const countsRow = db
-    .prepare(
+  const countsRowRaw = (
+    await pool.query(
       `SELECT
        COUNT(*) AS total,
        SUM(CASE WHEN action = 'CREATE' THEN 1 ELSE 0 END) AS creates,
        SUM(CASE WHEN action = 'UPDATE' THEN 1 ELSE 0 END) AS updates,
        SUM(CASE WHEN action = 'DELETE' THEN 1 ELSE 0 END) AS deletes
      FROM history_log ${where}`,
+      bindings,
     )
-    .get(...bindings) as {
-    total: number;
-    creates: number;
-    updates: number;
-    deletes: number;
+  ).rows[0] as {
+    total: string | number;
+    creates: string | number;
+    updates: string | number;
+    deletes: string | number;
+  };
+
+  const countsRow = {
+    total: Number(countsRowRaw.total),
+    creates: Number(countsRowRaw.creates),
+    updates: Number(countsRowRaw.updates),
+    deletes: Number(countsRowRaw.deletes),
   };
 
   // Available PICs for filter dropdown
   const picNames = (
-    db
-      .prepare(
+    (
+      await pool.query(
         "SELECT DISTINCT pic_name FROM history_log WHERE pic_name IS NOT NULL ORDER BY pic_name",
       )
-      .all() as { pic_name: string }[]
+    ).rows as { pic_name: string }[]
   ).map((r) => r.pic_name);
 
   return NextResponse.json({

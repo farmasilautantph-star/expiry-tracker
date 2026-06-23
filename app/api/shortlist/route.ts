@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import { getSundayReviewStatus } from "@/lib/sunday-deadline";
 
@@ -108,8 +108,7 @@ export async function GET(req: NextRequest) {
   const statusFilter = searchParams.get("status")?.trim() ?? "";
   const search = searchParams.get("search")?.trim() ?? "";
 
-  const db = getDb();
-
+  let p = 1;
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
@@ -117,22 +116,22 @@ export async function GET(req: NextRequest) {
   conditions.push("el.item_status = 'active'");
 
   if (user.role !== "manager") {
-    conditions.push("el.pic_id = ?");
+    conditions.push(`el.pic_id = $${p++}`);
     bindings.push(user.userId);
   } else if (pic) {
-    conditions.push("el.pic_name = ?");
+    conditions.push(`el.pic_name = $${p++}`);
     bindings.push(pic);
   }
 
   if (category) {
-    conditions.push("el.category = ?");
+    conditions.push(`el.category = $${p++}`);
     bindings.push(category);
   }
 
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(el.description) LIKE LOWER(?) OR LOWER(el.barcode) LIKE LOWER(?) OR LOWER(COALESCE(el.stock_id,'')) LIKE LOWER(?))",
+      `(LOWER(el.description) LIKE LOWER($${p++}) OR LOWER(el.barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(el.stock_id,'')) LIKE LOWER($${p++}))`,
     );
     bindings.push(like, like, like);
   }
@@ -152,7 +151,7 @@ export async function GET(req: NextRequest) {
     ORDER BY el.expiry_date ASC
   `;
 
-  const rows = db.prepare(sql).all(...bindings) as unknown as RawRow[];
+  const rows = (await pool.query(sql, bindings)).rows as unknown as RawRow[];
 
   let entries: ShortListEntry[] = rows.map((row) => ({
     ...row,

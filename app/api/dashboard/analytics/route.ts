@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 // ── Row types ──────────────────────────────────────────────────────────────
@@ -94,14 +94,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const db = getDb();
   const todayMs = new Date().setHours(0, 0, 0, 0);
 
   // ── 1. categoryHeatmap ────────────────────────────────────────────────────
 
-  const allRows = db
-    .prepare(`SELECT category, expiry_date FROM expiry_logs`)
-    .all() as unknown as ExpiryLogRow[];
+  const allRows = (
+    await pool.query(`SELECT category, expiry_date FROM expiry_logs`)
+  ).rows as unknown as ExpiryLogRow[];
 
   // Group by category
   const categoryMap = new Map<
@@ -145,13 +144,13 @@ export async function GET(req: NextRequest) {
 
   // ── 2. resolutionRate ─────────────────────────────────────────────────────
 
-  const resolutionRows = db
-    .prepare(
+  const resolutionRows = (
+    await pool.query(
       `SELECT item_status, completed_via, COUNT(*) as cnt
        FROM expiry_logs
        GROUP BY item_status, completed_via`,
     )
-    .all() as unknown as ResolutionGroupRow[];
+  ).rows as unknown as ResolutionGroupRow[];
 
   let total = 0;
   let sold = 0;
@@ -184,40 +183,40 @@ export async function GET(req: NextRequest) {
 
   // ── 3. monthlyTrend ───────────────────────────────────────────────────────
 
-  const loggedRows = db
-    .prepare(
-      `SELECT strftime('%Y-%m', logged_at) as mo, COUNT(*) as cnt
+  const loggedRows = (
+    await pool.query(
+      `SELECT to_char((logged_at)::timestamp, 'YYYY-MM') as mo, COUNT(*) as cnt
        FROM expiry_logs
        GROUP BY mo`,
     )
-    .all() as unknown as MonthCountRow[];
+  ).rows as unknown as MonthCountRow[];
 
-  const soldRows = db
-    .prepare(
-      `SELECT strftime('%Y-%m', sold_at) as mo, COUNT(*) as cnt
+  const soldRows = (
+    await pool.query(
+      `SELECT to_char((sold_at)::timestamp, 'YYYY-MM') as mo, COUNT(*) as cnt
        FROM expiry_logs
        WHERE item_status = 'sold'
        GROUP BY mo`,
     )
-    .all() as unknown as MonthCountRow[];
+  ).rows as unknown as MonthCountRow[];
 
-  const returnedRows = db
-    .prepare(
-      `SELECT strftime('%Y-%m', completed_at) as mo, COUNT(*) as cnt
+  const returnedRows = (
+    await pool.query(
+      `SELECT to_char((completed_at)::timestamp, 'YYYY-MM') as mo, COUNT(*) as cnt
        FROM expiry_logs
        WHERE completed_via = 'returned'
        GROUP BY mo`,
     )
-    .all() as unknown as MonthCountRow[];
+  ).rows as unknown as MonthCountRow[];
 
-  const offeredRows = db
-    .prepare(
-      `SELECT strftime('%Y-%m', completed_at) as mo, COUNT(*) as cnt
+  const offeredRows = (
+    await pool.query(
+      `SELECT to_char((completed_at)::timestamp, 'YYYY-MM') as mo, COUNT(*) as cnt
        FROM expiry_logs
        WHERE completed_via = 'offer_received'
        GROUP BY mo`,
     )
-    .all() as unknown as MonthCountRow[];
+  ).rows as unknown as MonthCountRow[];
 
   const loggedMap = buildMonthMap(loggedRows);
   const soldMap = buildMonthMap(soldRows);

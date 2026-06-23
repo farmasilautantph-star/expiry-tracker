@@ -32,7 +32,7 @@ async function detectDevServer(): Promise<number | null> {
       const res = await fetch(`http://localhost:${port}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: "manager", password: "manager123" }),
+        body: JSON.stringify({ username: "aizat", password: "Mgr70B02931!" }),
         signal: AbortSignal.timeout(2000),
       });
       // A 200 or 401 means it's our Next.js server
@@ -54,7 +54,7 @@ async function smokeTestAPI(port: number): Promise<void> {
     const loginRes = await fetch(`http://localhost:${port}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: "manager", password: "manager123" }),
+      body: JSON.stringify({ username: "aizat", password: "Mgr70B02931!" }),
     });
     if (!loginRes.ok) throw new Error(`Login failed: ${loginRes.status}`);
 

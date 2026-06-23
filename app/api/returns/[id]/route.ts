@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import type { ReturnRow } from "@/app/api/returns/route";
 
@@ -35,10 +35,9 @@ export async function PUT(
     );
   }
 
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow | undefined;
+  const existing = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+  ).rows[0] as unknown as ExpiryRow | undefined;
 
   if (!existing) {
     return NextResponse.json(
@@ -77,24 +76,25 @@ export async function PUT(
       );
     }
     const now = new Date().toISOString();
-    db.prepare(
-      "UPDATE expiry_logs SET return_status = 'returned' WHERE id = ?",
-    ).run(id);
-    db.prepare(
-      "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    ).run(
-      "UPDATE",
-      "returns",
-      id,
-      user.userId,
-      user.picName,
-      `Marked returned: ${existing.description}`,
-      now,
+    await pool.query(
+      "UPDATE expiry_logs SET return_status = 'returned' WHERE id = $1",
+      [id],
     );
-    const updated = db
-      .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-      .get(id) as unknown as ExpiryRow;
-    const today = now.split("T")[0];
+    await pool.query(
+      "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [
+        "UPDATE",
+        "returns",
+        id,
+        user.userId,
+        user.picName,
+        `Marked returned: ${existing.description}`,
+        now,
+      ],
+    );
+    const updated = (
+      await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+    ).rows[0] as unknown as ExpiryRow;
     return NextResponse.json({
       success: true,
       data: { ...updated, overdue: false },
@@ -116,25 +116,27 @@ export async function PUT(
 
   const now = new Date().toISOString();
 
-  db.prepare(
-    "UPDATE expiry_logs SET return_status=?, return_by_date=?, notes=? WHERE id=?",
-  ).run(newStatus, newReturnByDate, newNotes, id);
-
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "UPDATE",
-    "returns",
-    id,
-    user.userId,
-    user.picName,
-    `Updated return for: ${existing.description} — status: ${newStatus}`,
-    now,
+  await pool.query(
+    "UPDATE expiry_logs SET return_status=$1, return_by_date=$2, notes=$3 WHERE id=$4",
+    [newStatus, newReturnByDate, newNotes, id],
   );
 
-  const updated = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow;
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [
+      "UPDATE",
+      "returns",
+      id,
+      user.userId,
+      user.picName,
+      `Updated return for: ${existing.description} — status: ${newStatus}`,
+      now,
+    ],
+  );
+
+  const updated = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
+  ).rows[0] as unknown as ExpiryRow;
   const today = now.split("T")[0];
   const overdue =
     updated.return_status === "pending" &&

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryLogRow {
@@ -61,10 +61,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = getDb();
-  const entry = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(Number(existing_id)) as unknown as ExpiryLogRow | undefined;
+  const entry = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [Number(existing_id)])
+  ).rows[0] as unknown as ExpiryLogRow | undefined;
 
   if (!entry) {
     return NextResponse.json(
@@ -84,16 +83,18 @@ export async function POST(req: NextRequest) {
     : noteAppend;
 
   if (entry.original_qty === null) {
-    db.prepare(
-      "UPDATE expiry_logs SET original_qty = ? WHERE id = ?",
-    ).run(previousQty, entry.id);
+    await pool.query(
+      "UPDATE expiry_logs SET original_qty = $1 WHERE id = $2",
+      [previousQty, entry.id],
+    );
   }
 
-  db.prepare(
+  await pool.query(
     `UPDATE expiry_logs
-     SET quantity = ?, last_updated_at = ?, review_status = 'pending', notes = ?
-     WHERE id = ?`,
-  ).run(newQty, now, updatedNotes, entry.id);
+     SET quantity = $1, last_updated_at = $2, review_status = 'pending', notes = $3
+     WHERE id = $4`,
+    [newQty, now, updatedNotes, entry.id],
+  );
 
   const historyDesc =
     `+${addQty} unit(s) added to ${entry.description} ` +
@@ -101,13 +102,14 @@ export async function POST(req: NextRequest) {
     `Reason: ${trimmedReason}. ` +
     `New total: ${newQty} units`;
 
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run("UPDATE", "expiry", entry.id, user.userId, user.picName, historyDesc, now);
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    ["UPDATE", "expiry", entry.id, user.userId, user.picName, historyDesc, now],
+  );
 
-  const updatedEntry = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(entry.id);
+  const updatedEntry = (
+    await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [entry.id])
+  ).rows[0];
 
   return NextResponse.json({
     success: true,

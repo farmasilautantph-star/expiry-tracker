@@ -13,7 +13,10 @@
     "expiry-check": "npx ts-node --project tsconfig.scripts.json scripts/expiry-check.ts",
     "preflight": "npx ts-node --project tsconfig.scripts.json scripts/preflight.ts",
     "import-products": "npx ts-node --project tsconfig.scripts.json scripts/import-products.ts",
-    "verify": "npx ts-node --project tsconfig.scripts.json scripts/verify.ts"
+    "verify": "npx ts-node --project tsconfig.scripts.json scripts/verify.ts",
+    "migrate:excel": "npx ts-node --project tsconfig.scripts.json scripts/migrate-excel.ts",
+    "setup:neon": "npx ts-node --project tsconfig.scripts.json scripts/setup-neon-schema.ts",
+    "migrate:neon": "npx ts-node --project tsconfig.scripts.json scripts/migrate-sqlite-to-neon.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -22,6 +25,7 @@
     "jose": "^6.2.3",
     "next": "14.2.35",
     "nodemailer": "^6.9.13",
+    "pg": "^8.22.0",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^3.8.1",
@@ -31,6 +35,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22",
     "@types/nodemailer": "^6.4.14",
+    "@types/pg": "^8.20.0",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",

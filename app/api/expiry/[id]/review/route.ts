@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
@@ -39,10 +39,10 @@ export async function POST(
     );
   }
 
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT id, pic_id, description, expiry_date FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow | undefined;
+  const existing = (await pool.query(
+    "SELECT id, pic_id, description, expiry_date FROM expiry_logs WHERE id = $1",
+    [id],
+  )).rows[0] as unknown as ExpiryRow | undefined;
 
   if (!existing) {
     return NextResponse.json(
@@ -60,32 +60,35 @@ export async function POST(
 
   const now = new Date().toISOString();
 
-  db.prepare(
+  await pool.query(
     `UPDATE expiry_logs
-     SET last_reviewed_at = ?,
-         last_reviewed_by = ?,
-         last_updated_at = ?,
+     SET last_reviewed_at = $1,
+         last_reviewed_by = $2,
+         last_updated_at = $3,
          review_status = 'pending'
-     WHERE id = ?`,
-  ).run(now, user.picName, now, id);
-
-  db.prepare(
-    `INSERT INTO history_log
-       (action, module, record_id, pic_id, pic_name, description, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    "UPDATE",
-    "expiry",
-    id,
-    user.userId,
-    user.picName,
-    `Marked as reviewed by ${user.picName}`,
-    now,
+     WHERE id = $4`,
+    [now, user.picName, now, id],
   );
 
-  const entry = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(id);
+  await pool.query(
+    `INSERT INTO history_log
+       (action, module, record_id, pic_id, pic_name, description, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [
+      "UPDATE",
+      "expiry",
+      id,
+      user.userId,
+      user.picName,
+      `Marked as reviewed by ${user.picName}`,
+      now,
+    ],
+  );
+
+  const entry = (await pool.query(
+    "SELECT * FROM expiry_logs WHERE id = $1",
+    [id],
+  )).rows[0];
 
   return NextResponse.json({ success: true, data: entry });
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface StaffRow {
@@ -86,14 +86,12 @@ export async function GET(req: NextRequest) {
     period = formatMonthLabel(month);
   }
 
-  const db = getDb();
-
   // Build WHERE clause for main query
   const conditions: string[] = [];
   const bindings: string[] = [];
 
   if (month !== "all") {
-    conditions.push("strftime('%Y-%m', logged_at) = ?");
+    conditions.push("to_char((logged_at)::timestamp, 'YYYY-MM') = $1");
     bindings.push(month);
   }
 
@@ -101,23 +99,24 @@ export async function GET(req: NextRequest) {
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // Fetch all matching rows for period-scoped metrics
-  const rows = db
-    .prepare(
+  const rows = (
+    await pool.query(
       `SELECT pic_name, item_status, completed_via, quantity, original_qty, last_reviewed_at, review_status
        FROM expiry_logs
        ${where}
        ORDER BY pic_name`,
+      bindings,
     )
-    .all(...bindings) as unknown as ExpiryLogRow[];
+  ).rows as unknown as ExpiryLogRow[];
 
   // Fetch active rows (always unfiltered by date)
-  const activeRows = db
-    .prepare(
+  const activeRows = (
+    await pool.query(
       `SELECT pic_name, item_status, review_status
        FROM expiry_logs
        WHERE item_status = 'active'`,
     )
-    .all() as unknown as ActiveRow[];
+  ).rows as unknown as ActiveRow[];
 
   // Group active rows by pic_name
   const activeMap = new Map<

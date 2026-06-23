@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface WeekRow {
@@ -22,32 +22,36 @@ export async function GET(req: NextRequest) {
   }
 
   const isManager = user.role === "manager";
-  const picFilter = isManager ? "" : "AND pic_id = ?";
+  const picFilter = isManager ? "" : "AND pic_id = $1";
   const picBinding: number[] = isManager ? [] : [user.userId];
 
-  const db = getDb();
-
-  const rows = db
-    .prepare(
+  const rows = (
+    await pool.query(
       `
     SELECT
-      (8 - CAST((julianday('now') - julianday(logged_at)) / 7 AS INTEGER)) AS week_num,
-      SUM(CASE WHEN date(expiry_date) < date('now') THEN 1 ELSE 0 END) AS expired,
-      SUM(CASE WHEN date(expiry_date) >= date('now')
-               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) < 90
+      (8 - ((CURRENT_DATE - (logged_at)::date) / 7))::int AS week_num,
+      SUM(CASE WHEN (expiry_date)::date < CURRENT_DATE THEN 1 ELSE 0 END) AS expired,
+      SUM(CASE WHEN (expiry_date)::date >= CURRENT_DATE
+               AND ((expiry_date)::date - CURRENT_DATE) < 90
                THEN 1 ELSE 0 END) AS critical,
-      SUM(CASE WHEN CAST(julianday(expiry_date) - julianday('now') AS INTEGER) >= 90
-               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) <= 240
+      SUM(CASE WHEN ((expiry_date)::date - CURRENT_DATE) >= 90
+               AND ((expiry_date)::date - CURRENT_DATE) <= 240
                THEN 1 ELSE 0 END) AS warning
     FROM expiry_logs
-    WHERE logged_at >= datetime('now', '-56 days')
+    WHERE (logged_at)::timestamp >= (NOW() - INTERVAL '56 days')
       ${picFilter}
     GROUP BY week_num
-    HAVING week_num BETWEEN 1 AND 8
+    HAVING (8 - ((CURRENT_DATE - (logged_at)::date) / 7))::int BETWEEN 1 AND 8
     ORDER BY week_num ASC
   `,
+      picBinding,
     )
-    .all(...picBinding) as unknown as WeekRow[];
+  ).rows.map((r) => ({
+    week_num: Number(r.week_num),
+    expired: Number(r.expired),
+    critical: Number(r.critical),
+    warning: Number(r.warning),
+  })) as WeekRow[];
 
   const weekMap = new Map(rows.map((r) => [r.week_num, r]));
   const weeks = Array.from({ length: 8 }, (_, i) => {

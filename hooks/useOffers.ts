@@ -13,7 +13,7 @@ export interface OfferEntry {
   quantity: number;
   outlet_name: string;
   offer_status: "offered" | "accepted" | "rejected" | "completed";
-  has_alert: number;
+  has_alert: boolean;
   notes: string | null;
   created_by: number;
   created_at: string;
@@ -202,7 +202,7 @@ export function useOffers(): UseOffersReturn {
   async function toggleAlert(id: number): Promise<void> {
     const entry = entries.find((e) => e.id === id);
     if (!entry) return;
-    await updateOffer(id, { has_alert: entry.has_alert !== 1 });
+    await updateOffer(id, { has_alert: !entry.has_alert });
   }
 
   return {

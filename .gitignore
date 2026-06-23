@@ -31,3 +31,6 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Migration source files (contains real product/outlet data)
+migrate/csv/

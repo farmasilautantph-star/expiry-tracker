@@ -74,7 +74,7 @@ export default function OfferForm({
       setOutletName(editingOffer.outlet_name);
       setQuantity(editingOffer.quantity);
       setOfferStatus(editingOffer.offer_status);
-      setHasAlert(editingOffer.has_alert === 1);
+      setHasAlert(!!editingOffer.has_alert);
       setNotes(editingOffer.notes ?? "");
       setExistingOffers([]);
     } else {

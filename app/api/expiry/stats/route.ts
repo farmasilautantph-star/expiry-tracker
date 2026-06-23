@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
@@ -25,18 +25,19 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const db = getDb();
-
   const whereClause =
     user.role !== "manager"
-      ? "WHERE item_status = 'active' AND pic_id = ?"
+      ? "WHERE item_status = 'active' AND pic_id = $1"
       : "WHERE item_status = 'active'";
   const params: (string | number)[] =
     user.role !== "manager" ? [user.userId] : [];
 
-  const rows = db
-    .prepare(`SELECT expiry_date FROM expiry_logs ${whereClause}`)
-    .all(...params) as unknown as ExpiryRow[];
+  const rows = (
+    await pool.query(
+      `SELECT expiry_date FROM expiry_logs ${whereClause}`,
+      params,
+    )
+  ).rows as unknown as ExpiryRow[];
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

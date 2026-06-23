@@ -232,6 +232,7 @@ export default function ReturnsTable({
               {mode === "active" && isManager && <th className={TH}>Return By</th>}
               <th className={TH}>Logged</th>
               <th className={TH}>Status</th>
+              <th className={TH}>Return Date</th>
               <th className={`${TH} text-right`}>Action</th>
             </tr>
           </thead>
@@ -285,6 +286,11 @@ export default function ReturnsTable({
                   {/* STATUS */}
                   <td className={`${TD} whitespace-nowrap`}>
                     <StatusBadge entry={entry} />
+                  </td>
+
+                  {/* RETURN DATE */}
+                  <td className={`${TD} text-xs text-[#475569] whitespace-nowrap`}>
+                    {formatShortDate(entry.completed_at)}
                   </td>
 
                   {/* ACTION */}

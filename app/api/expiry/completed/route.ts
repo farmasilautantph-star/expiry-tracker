@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface CompletedRow {
@@ -57,36 +57,36 @@ export async function GET(req: NextRequest) {
   const sortOrder  = searchParams.get("sort_order")?.trim() === "asc" ? "ASC" : "DESC";
   const search     = searchParams.get("search")?.trim() ?? "";
 
-  const db = getDb();
+  let p = 1;
   const conditions: string[] = [];
   const bindings: (string | number)[] = [];
 
   conditions.push("item_status IN ('sold', 'completed')");
 
   if (user.role !== "manager") {
-    conditions.push("pic_id = ?");
+    conditions.push(`pic_id = $${p++}`);
     bindings.push(user.userId);
   } else if (pic) {
-    conditions.push("pic_name = ?");
+    conditions.push(`pic_name = $${p++}`);
     bindings.push(pic);
   }
 
   if (completedVia) {
-    conditions.push("completed_via = ?");
+    conditions.push(`completed_via = $${p++}`);
     bindings.push(completedVia);
   }
 
   // Default: current month unless showAll=true or explicit month passed
   const effectiveMonth = showAll ? "" : (month || currentMonth());
   if (effectiveMonth) {
-    conditions.push("strftime('%Y-%m', completed_at) = ?");
+    conditions.push(`to_char((completed_at)::timestamp, 'YYYY-MM') = $${p++}`);
     bindings.push(effectiveMonth);
   }
 
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      "(LOWER(description) LIKE LOWER(?) OR LOWER(barcode) LIKE LOWER(?) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER(?))",
+      `(LOWER(description) LIKE LOWER($${p++}) OR LOWER(barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER($${p++}))`,
     );
     bindings.push(like, like, like);
   }
@@ -94,9 +94,12 @@ export async function GET(req: NextRequest) {
   const where = `WHERE ${conditions.join(" AND ")}`;
   const sqlSortCol = ALLOWED_SORT[sortBy] ?? "completed_at";
 
-  const rows = db
-    .prepare(`SELECT * FROM expiry_logs ${where} ORDER BY ${sqlSortCol} ${sortOrder}`)
-    .all(...bindings) as unknown as CompletedRow[];
+  const rows = (
+    await pool.query(
+      `SELECT * FROM expiry_logs ${where} ORDER BY ${sqlSortCol} ${sortOrder}`,
+      bindings,
+    )
+  ).rows as unknown as CompletedRow[];
 
   // Attach computed fields
   const data = rows.map((row) => {

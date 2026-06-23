@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import {
   getSundayReviewStatus,
@@ -71,25 +71,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = getDb();
-
   const conditions: string[] = ["item_status = 'active'"];
   const bindings: (string | number)[] = [];
 
   if (user.role !== "manager") {
-    conditions.push("pic_id = ?");
+    conditions.push("pic_id = $1");
     bindings.push(user.userId);
   }
 
   const where = `WHERE ${conditions.join(" AND ")}`;
 
-  const rows = db
-    .prepare(
+  const rows = (
+    await pool.query(
       `SELECT id, description, barcode, category, pic_name, pic_id,
               logged_at, quantity, return_status, last_reviewed_at, expiry_date
        FROM expiry_logs ${where} ORDER BY logged_at DESC`,
+      bindings,
     )
-    .all(...bindings) as unknown as ExpiryRow[];
+  ).rows as unknown as ExpiryRow[];
 
   // ── Urgency-based health score ─────────────────────────────────────────────
   let expiredCount  = 0;
@@ -217,19 +216,28 @@ export async function GET(req: NextRequest) {
   // ── Completion activity stats ──────────────────────────────────────────────
   const today       = new Date().toISOString().split("T")[0];
   const currentMonth = today.slice(0, 7);
-  interface CountRow { cnt: number }
+  interface CountRow { cnt: string | number }
 
-  const completedTodayRow = db
-    .prepare(`SELECT COUNT(*) AS cnt FROM expiry_logs WHERE item_status IN ('sold','completed') AND DATE(completed_at) = ?`)
-    .get(today) as unknown as CountRow;
+  const completedTodayRow = (
+    await pool.query(
+      `SELECT COUNT(*) AS cnt FROM expiry_logs WHERE item_status IN ('sold','completed') AND (completed_at)::date = $1::date`,
+      [today],
+    )
+  ).rows[0] as unknown as CountRow;
 
-  const soldThisMonthRow = db
-    .prepare(`SELECT COUNT(*) AS cnt FROM expiry_logs WHERE completed_via = 'sold' AND strftime('%Y-%m', completed_at) = ?`)
-    .get(currentMonth) as unknown as CountRow;
+  const soldThisMonthRow = (
+    await pool.query(
+      `SELECT COUNT(*) AS cnt FROM expiry_logs WHERE completed_via = 'sold' AND to_char((completed_at)::timestamp, 'YYYY-MM') = $1`,
+      [currentMonth],
+    )
+  ).rows[0] as unknown as CountRow;
 
-  const returnedThisMonthRow = db
-    .prepare(`SELECT COUNT(*) AS cnt FROM expiry_logs WHERE completed_via = 'returned' AND strftime('%Y-%m', completed_at) = ?`)
-    .get(currentMonth) as unknown as CountRow;
+  const returnedThisMonthRow = (
+    await pool.query(
+      `SELECT COUNT(*) AS cnt FROM expiry_logs WHERE completed_via = 'returned' AND to_char((completed_at)::timestamp, 'YYYY-MM') = $1`,
+      [currentMonth],
+    )
+  ).rows[0] as unknown as CountRow;
 
   return NextResponse.json({
     success: true,
@@ -254,9 +262,9 @@ export async function GET(req: NextRequest) {
       staleItems,
       urgentItems,
       completionRates,
-      completedToday:    completedTodayRow?.cnt    ?? 0,
-      soldThisMonth:     soldThisMonthRow?.cnt     ?? 0,
-      returnedThisMonth: returnedThisMonthRow?.cnt ?? 0,
+      completedToday:    Number(completedTodayRow?.cnt    ?? 0),
+      soldThisMonth:     Number(soldThisMonthRow?.cnt     ?? 0),
+      returnedThisMonth: Number(returnedThisMonthRow?.cnt ?? 0),
     },
   });
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { comparePassword } from "@/lib/password";
 import { signToken } from "@/lib/auth";
 
@@ -22,12 +22,10 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const db = getDb();
-  const user = db
-    .prepare(
-      "SELECT id, username, password_hash, role, pic_name FROM users WHERE username = ?",
-    )
-    .get(username) as UserRow | undefined;
+  const user = (await pool.query(
+    "SELECT id, username, password_hash, role, pic_name FROM users WHERE username = $1",
+    [username],
+  )).rows[0] as UserRow | undefined;
 
   if (!user || !comparePassword(password, user.password_hash)) {
     return NextResponse.json(

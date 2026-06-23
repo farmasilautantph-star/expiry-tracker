@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ProductRow {
@@ -36,16 +36,16 @@ export async function GET(req: NextRequest) {
   }
 
   const like = `%${q}%`;
-  const db = getDb();
 
-  const rows = db
-    .prepare(
+  const rows = (
+    await pool.query(
       `SELECT id, stock_id, barcode, description, uom, category_id
        FROM products
-       WHERE stock_id LIKE ? OR barcode LIKE ? OR description LIKE ?
+       WHERE stock_id LIKE $1 OR barcode LIKE $2 OR description LIKE $3
        LIMIT 10`,
+      [like, like, like],
     )
-    .all(like, like, like) as unknown as ProductRow[];
+  ).rows as unknown as ProductRow[];
 
   return NextResponse.json({ success: true, data: rows });
 }

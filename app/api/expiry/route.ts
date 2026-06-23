@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
@@ -38,18 +38,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const db = getDb();
-
   const rows =
     user.role === "manager"
-      ? (db
-          .prepare("SELECT * FROM expiry_logs ORDER BY expiry_date ASC")
-          .all() as unknown as ExpiryRow[])
-      : (db
-          .prepare(
-            "SELECT * FROM expiry_logs WHERE pic_id = ? ORDER BY expiry_date ASC",
-          )
-          .all(user.userId) as unknown as ExpiryRow[]);
+      ? ((await pool.query(
+          "SELECT * FROM expiry_logs ORDER BY expiry_date ASC",
+        )).rows as unknown as ExpiryRow[])
+      : ((await pool.query(
+          "SELECT * FROM expiry_logs WHERE pic_id = $1 ORDER BY expiry_date ASC",
+          [user.userId],
+        )).rows as unknown as ExpiryRow[]);
 
   return NextResponse.json({ success: true, data: rows });
 }
@@ -94,17 +91,15 @@ export async function POST(req: NextRequest) {
       ? return_status
       : null;
 
-  const db = getDb();
   const logged_at = new Date().toISOString();
 
-  const result = db
-    .prepare(
-      `INSERT INTO expiry_logs
+  const result = await pool.query(
+    `INSERT INTO expiry_logs
         (barcode, description, category, expiry_date, pic_id, pic_name, logged_at, notes,
          stock_id, uom, quantity, return_status, return_by_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING id`,
+    [
       barcode.trim(),
       description.trim(),
       category.trim(),
@@ -118,25 +113,28 @@ export async function POST(req: NextRequest) {
       qty,
       rs,
       rs === "pending" ? return_by_date || null : null,
-    );
-
-  const newId = Number(result.lastInsertRowid);
-
-  db.prepare(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES (?, ?, ?, ?, ?, ?, ?)",
-  ).run(
-    "CREATE",
-    "expiry",
-    newId,
-    user.userId,
-    user.picName,
-    `Logged expiry: ${description.trim()} (${expiry_date}) qty=${qty}`,
-    logged_at,
+    ],
   );
 
-  const entry = db
-    .prepare("SELECT * FROM expiry_logs WHERE id = ?")
-    .get(newId) as unknown as ExpiryRow;
+  const newId = result.rows[0].id as number;
+
+  await pool.query(
+    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+    [
+      "CREATE",
+      "expiry",
+      newId,
+      user.userId,
+      user.picName,
+      `Logged expiry: ${description.trim()} (${expiry_date}) qty=${qty}`,
+      logged_at,
+    ],
+  );
+
+  const entry = (await pool.query(
+    "SELECT * FROM expiry_logs WHERE id = $1",
+    [newId],
+  )).rows[0] as unknown as ExpiryRow;
 
   return NextResponse.json({ success: true, data: entry }, { status: 201 });
 }

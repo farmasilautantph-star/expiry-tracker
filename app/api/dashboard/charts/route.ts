@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface CategoryRow {
@@ -65,85 +65,86 @@ export async function GET(req: NextRequest) {
   }
 
   const isManager = user.role === "manager";
-  const picFilter = isManager ? "" : "AND pic_id = ?";
+  const picFilter = isManager ? "" : "AND pic_id = $1";
   const picBinding: number[] = isManager ? [] : [user.userId];
 
-  const db = getDb();
-
   // Category breakdown — expiry status per category
-  const categoryRows = db
-    .prepare(
+  const categoryRows = (
+    await pool.query(
       `
     SELECT
       category,
-      SUM(CASE WHEN date(expiry_date) < date('now') THEN 1 ELSE 0 END) AS expired,
-      SUM(CASE WHEN date(expiry_date) >= date('now')
-               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) <= 7
+      SUM(CASE WHEN (expiry_date)::date < CURRENT_DATE THEN 1 ELSE 0 END) AS expired,
+      SUM(CASE WHEN (expiry_date)::date >= CURRENT_DATE
+               AND ((expiry_date)::date - CURRENT_DATE) <= 7
                THEN 1 ELSE 0 END) AS critical,
-      SUM(CASE WHEN CAST(julianday(expiry_date) - julianday('now') AS INTEGER) > 7
-               AND CAST(julianday(expiry_date) - julianday('now') AS INTEGER) <= 30
+      SUM(CASE WHEN ((expiry_date)::date - CURRENT_DATE) > 7
+               AND ((expiry_date)::date - CURRENT_DATE) <= 30
                THEN 1 ELSE 0 END) AS warning,
-      SUM(CASE WHEN CAST(julianday(expiry_date) - julianday('now') AS INTEGER) > 30
+      SUM(CASE WHEN ((expiry_date)::date - CURRENT_DATE) > 30
                THEN 1 ELSE 0 END) AS safe
     FROM expiry_logs
     WHERE 1=1 ${picFilter}
     GROUP BY category
     ORDER BY category ASC
   `,
+      picBinding,
     )
-    .all(...picBinding) as unknown as CategoryRow[];
+  ).rows as unknown as CategoryRow[];
 
   // Expiry timeline — items expiring each month for next 6 months
-  const timelineRows = db
-    .prepare(
+  const timelineRows = (
+    await pool.query(
       `
     SELECT
-      strftime('%m', expiry_date) AS month_key,
-      strftime('%Y', expiry_date) AS year,
+      to_char((expiry_date)::timestamp, 'MM') AS month_key,
+      to_char((expiry_date)::timestamp, 'YYYY') AS year,
       COUNT(*) AS count
     FROM expiry_logs
-    WHERE date(expiry_date) >= date('now')
-      AND date(expiry_date) <= date('now', '+6 months')
+    WHERE (expiry_date)::date >= CURRENT_DATE
+      AND (expiry_date)::date <= (CURRENT_DATE + INTERVAL '6 months')
       ${picFilter}
-    GROUP BY strftime('%Y-%m', expiry_date)
-    ORDER BY expiry_date ASC
+    GROUP BY to_char((expiry_date)::timestamp, 'YYYY-MM'), to_char((expiry_date)::timestamp, 'MM'), to_char((expiry_date)::timestamp, 'YYYY')
+    ORDER BY to_char((expiry_date)::timestamp, 'YYYY-MM') ASC
   `,
+      picBinding,
     )
-    .all(...picBinding) as unknown as TimelineRow[];
+  ).rows as unknown as TimelineRow[];
 
   const expiryTimeline = timelineRows.map((r) => ({
     month: `${MONTH_NAMES[parseInt(r.month_key, 10) - 1]} ${r.year}`,
-    count: r.count,
+    count: Number(r.count),
   }));
 
   // Return status — from returns table
-  const returnStatusRow = db
-    .prepare(
+  const returnStatusRow = (
+    await pool.query(
       `
     SELECT
       SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS returned,
       SUM(CASE WHEN status = 'pending'
-               AND (return_by_date IS NULL OR date(return_by_date) >= date('now'))
+               AND (return_by_date IS NULL OR (return_by_date)::date >= CURRENT_DATE)
                THEN 1 ELSE 0 END) AS pending,
       SUM(CASE WHEN status = 'pending'
                AND return_by_date IS NOT NULL
-               AND date(return_by_date) < date('now')
+               AND (return_by_date)::date < CURRENT_DATE
                THEN 1 ELSE 0 END) AS overdue
     FROM returns
     WHERE 1=1 ${picFilter}
   `,
+      picBinding,
     )
-    .get(...picBinding) as unknown as ReturnStatusRow;
+  ).rows[0] as unknown as ReturnStatusRow;
 
   const returnStatus = {
-    pending: returnStatusRow.pending ?? 0,
-    returned: returnStatusRow.returned ?? 0,
-    overdue: returnStatusRow.overdue ?? 0,
+    pending: Number(returnStatusRow?.pending ?? 0),
+    returned: Number(returnStatusRow?.returned ?? 0),
+    overdue: Number(returnStatusRow?.overdue ?? 0),
   };
 
   // Top urgent items — expired + critical + warning, max 10
-  const urgentRows = db
-    .prepare(
+  const urgentRows = (
+    await pool.query(
       `
     SELECT
       id,
@@ -151,22 +152,23 @@ export async function GET(req: NextRequest) {
       category,
       expiry_date,
       pic_name,
-      CAST(julianday(expiry_date) - julianday('now') AS INTEGER) AS days_left
+      ((expiry_date)::date - CURRENT_DATE) AS days_left
     FROM expiry_logs
-    WHERE date(expiry_date) <= date('now', '+30 days')
+    WHERE (expiry_date)::date <= (CURRENT_DATE + INTERVAL '30 days')
       ${picFilter}
     ORDER BY expiry_date ASC
     LIMIT 10
   `,
+      picBinding,
     )
-    .all(...picBinding) as unknown as UrgentRow[];
+  ).rows as unknown as UrgentRow[];
 
   const topUrgentItems = urgentRows.map((r) => ({
     id: r.id,
     description: r.description,
     category: r.category,
     expiry_date: r.expiry_date,
-    days_left: r.days_left,
+    days_left: Number(r.days_left),
     urgency:
       r.days_left <= 0 ? "expired" : r.days_left <= 7 ? "critical" : "warning",
     pic_name: r.pic_name,

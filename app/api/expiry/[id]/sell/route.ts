@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import getDb from "@/lib/db";
+import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
@@ -45,10 +45,10 @@ export async function POST(
       { status: 400 },
     );
 
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT id, pic_id, pic_name, description, quantity, original_qty, notes FROM expiry_logs WHERE id = ?")
-    .get(id) as unknown as ExpiryRow | undefined;
+  const existing = (await pool.query(
+    "SELECT id, pic_id, pic_name, description, quantity, original_qty, notes FROM expiry_logs WHERE id = $1",
+    [id],
+  )).rows[0] as unknown as ExpiryRow | undefined;
 
   if (!existing)
     return NextResponse.json({ success: false, error: "Entry not found" }, { status: 404 });
@@ -74,75 +74,79 @@ export async function POST(
   const capturedOriginalQty = existing.original_qty ?? existing.quantity;
 
   if (fullySold) {
-    db.prepare(
+    await pool.query(
       `UPDATE expiry_logs
        SET item_status    = 'sold',
            quantity       = 0,
-           original_qty   = ?,
-           sold_at        = ?,
-           sold_by        = ?,
+           original_qty   = $1,
+           sold_at        = $2,
+           sold_by        = $3,
            completed_via  = 'sold',
-           completed_at   = ?,
-           completed_notes = ?,
+           completed_at   = $4,
+           completed_notes = $5,
            review_status  = 'resolved',
-           last_updated_at = ?,
-           last_reviewed_at = ?
-       WHERE id = ?`,
-    ).run(
-      capturedOriginalQty,
-      now,
-      user.picName,
-      now,
-      `All ${capturedOriginalQty} unit(s) sold`,
-      now,
-      now,
-      id,
+           last_updated_at = $6,
+           last_reviewed_at = $7
+       WHERE id = $8`,
+      [
+        capturedOriginalQty,
+        now,
+        user.picName,
+        now,
+        `All ${capturedOriginalQty} unit(s) sold`,
+        now,
+        now,
+        id,
+      ],
     );
 
-    db.prepare(
+    await pool.query(
       `INSERT INTO history_log
          (action, module, record_id, pic_id, pic_name, description, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      "UPDATE",
-      "expiry",
-      id,
-      user.userId,
-      user.picName,
-      `All ${capturedOriginalQty} unit(s) fully sold by ${user.picName}`,
-      now,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        "UPDATE",
+        "expiry",
+        id,
+        user.userId,
+        user.picName,
+        `All ${capturedOriginalQty} unit(s) fully sold by ${user.picName}`,
+        now,
+      ],
     );
   } else {
     const noteEntry = `[${dateLabel}]: ${unitsSold} unit(s) sold, ${remaining} remaining`;
     const existingNotes = (existing.notes ?? "").trim();
     const newNotes = existingNotes ? `${existingNotes}\n${noteEntry}` : noteEntry;
 
-    db.prepare(
+    await pool.query(
       `UPDATE expiry_logs
-       SET quantity        = ?,
-           original_qty    = ?,
-           notes           = ?,
-           last_updated_at = ?,
-           last_reviewed_at = ?,
+       SET quantity        = $1,
+           original_qty    = $2,
+           notes           = $3,
+           last_updated_at = $4,
+           last_reviewed_at = $5,
            review_status   = 'pending'
-       WHERE id = ?`,
-    ).run(remaining, capturedOriginalQty, newNotes, now, now, id);
+       WHERE id = $6`,
+      [remaining, capturedOriginalQty, newNotes, now, now, id],
+    );
 
-    db.prepare(
+    await pool.query(
       `INSERT INTO history_log
          (action, module, record_id, pic_id, pic_name, description, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    ).run(
-      "UPDATE",
-      "expiry",
-      id,
-      user.userId,
-      user.picName,
-      `${unitsSold} unit(s) sold by ${user.picName}. Remaining: ${remaining} units`,
-      now,
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        "UPDATE",
+        "expiry",
+        id,
+        user.userId,
+        user.picName,
+        `${unitsSold} unit(s) sold by ${user.picName}. Remaining: ${remaining} units`,
+        now,
+      ],
     );
   }
 
-  const entry = db.prepare("SELECT * FROM expiry_logs WHERE id = ?").get(id);
+  const entry = (await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])).rows[0];
   return NextResponse.json({ success: true, data: entry, fully_sold: fullySold, remaining });
 }
