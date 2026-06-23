@@ -662,7 +662,8 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
     setIsReviewing(true);
     try {
       const res = await fetch(`/api/expiry/${item.id}/review`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed");
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to mark as reviewed");
       const myt = new Date().toLocaleString("en-MY", {
         timeZone: "Asia/Kuala_Lumpur",
         weekday: "short",
@@ -679,8 +680,8 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
           : prev,
       );
       onUpdated();
-    } catch {
-      // ignore — keep modal open
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to mark as reviewed");
     } finally {
       setIsReviewing(false);
     }
