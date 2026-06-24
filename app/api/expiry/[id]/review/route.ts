@@ -85,10 +85,15 @@ export async function POST(
     ],
   );
 
-  const entry = (await pool.query(
-    "SELECT * FROM expiry_logs WHERE id = $1",
-    [id],
-  )).rows[0];
+  const last_reviewed_display = new Date(now).toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
 
-  return NextResponse.json({ success: true, data: entry });
+  return NextResponse.json({ success: true, last_reviewed_at: now, last_reviewed_display });
 }

@@ -625,11 +625,12 @@ interface Props {
   onClose: () => void;
   entryId: number | null;
   onUpdated: () => void;
+  onReviewed?: (ts: { last_reviewed_at: string; last_reviewed_display: string }) => void;
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
 }
 
-export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onSwitchToSales, onToast }: Props) {
+export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onReviewed, onSwitchToSales, onToast }: Props) {
   const [mounted, setMounted] = useState(false);
   const [item, setItem] = useState<FullItemDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -673,21 +674,15 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
       const res = await fetch(`/api/expiry/${item.id}/review`, { method: "POST" });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to mark as reviewed");
-      const myt = new Date().toLocaleString("en-MY", {
-        timeZone: "Asia/Kuala_Lumpur",
-        weekday: "short",
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
-      setReviewDone(myt);
+      const last_reviewed_at: string = json.last_reviewed_at;
+      const last_reviewed_display: string = json.last_reviewed_display;
+      setReviewDone(last_reviewed_display);
       setItem((prev) =>
         prev
-          ? { ...prev, review_status: "pending", last_reviewed_at: new Date().toISOString(), last_reviewed_display: myt }
+          ? { ...prev, review_status: "pending", last_reviewed_at, last_reviewed_display }
           : prev,
       );
+      onReviewed?.({ last_reviewed_at, last_reviewed_display });
       onUpdated();
       onToast?.("Review saved successfully");
       onClose();

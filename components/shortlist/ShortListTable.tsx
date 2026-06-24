@@ -314,25 +314,17 @@ export default function ShortListTable({
         }}
         entryId={reviewingEntryId}
         onUpdated={() => {
+          onMarkReviewed?.(reviewingEntryId!);
+        }}
+        onReviewed={(ts) => {
           if (reviewingEntryId !== null) {
-            const now = new Date();
-            const display = now.toLocaleString("en-MY", {
-              timeZone: "Asia/Kuala_Lumpur",
-              weekday: "short",
-              day: "numeric",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
             onPatchEntry?.(reviewingEntryId, {
-              last_reviewed_at: now.toISOString(),
-              last_reviewed_display: display,
+              last_reviewed_at: ts.last_reviewed_at,
+              last_reviewed_display: ts.last_reviewed_display,
               review_status: "pending",
             });
             setReviewedIds((prev) => { const s = new Set(prev); s.add(reviewingEntryId); return s; });
           }
-          onMarkReviewed?.(reviewingEntryId!);
         }}
         onSwitchToSales={onSwitchToSales}
         onToast={showSuccess}
