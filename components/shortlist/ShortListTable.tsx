@@ -209,7 +209,7 @@ export default function ShortListTable({
   const [hoveredRowId, setHoveredRowId]         = useState<number | null>(null);
   const [openMenuId, setOpenMenuId]             = useState<number | null>(null);
   const [mouseDownPos, setMouseDownPos]         = useState({ x: 0, y: 0 });
-  const { toasts, dismiss }                     = useToast();
+  const { toasts, showSuccess, dismiss }        = useToast();
 
   const menuCellRef = useRef<HTMLTableCellElement | null>(null);
 
@@ -305,6 +305,7 @@ export default function ShortListTable({
           onMarkReviewed?.(reviewingEntryId!);
         }}
         onSwitchToSales={onSwitchToSales}
+        onToast={showSuccess}
       />
 
       {/* Active sort / filter chips */}

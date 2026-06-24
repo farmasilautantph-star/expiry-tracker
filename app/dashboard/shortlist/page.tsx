@@ -6,10 +6,13 @@ import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
 import SalesRecord from "@/components/shortlist/SalesRecord";
 import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
+  const { toasts, showSuccess, dismiss } = useToast();
   const [activeTab, setActiveTab] = useState<"active" | "sales">("active");
   const [salesCount, setSalesCount] = useState<number | null>(null);
   const [deepLinkModalOpen, setDeepLinkModalOpen] = useState(false);
@@ -66,6 +69,8 @@ export default function ShortListPage() {
 
   return (
     <div className="space-y-5">
+      <Toast toasts={toasts} onDismiss={dismiss} />
+
       {/* Deep-link modal */}
       <ItemReviewModal
         isOpen={deepLinkModalOpen}
@@ -73,6 +78,7 @@ export default function ShortListPage() {
         entryId={deepLinkReviewId}
         onUpdated={refresh}
         onSwitchToSales={() => { setDeepLinkModalOpen(false); setActiveTab("sales"); }}
+        onToast={showSuccess}
       />
 
       {/* Page header */}

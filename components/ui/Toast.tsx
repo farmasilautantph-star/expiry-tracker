@@ -15,7 +15,10 @@ interface ToastProps {
 
 export default function Toast({ toasts, onDismiss }: ToastProps) {
   return (
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+    <div
+      className="fixed bottom-4 z-[1100] flex flex-col-reverse gap-2 pointer-events-none"
+      style={{ left: "50%", transform: "translateX(-50%)" }}
+    >
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={onDismiss} />
       ))}
@@ -40,7 +43,7 @@ function ToastItem({
         setVisible(false);
         setTimeout(() => onDismiss(toast.id), 300);
       },
-      toast.type === "error" ? 4000 : 3000,
+      toast.type === "error" ? 4000 : 2500,
     );
     return () => clearTimeout(timer);
   }, [toast.id, toast.type, onDismiss]);
@@ -53,8 +56,8 @@ function ToastItem({
   const s = styles[toast.type];
   return (
     <div
-      className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium transition-all duration-300 ${
-        visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-4"
+      className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg text-sm font-medium transition-all duration-300 whitespace-nowrap ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
       } ${s.wrap}`}
     >
       {s.icon}

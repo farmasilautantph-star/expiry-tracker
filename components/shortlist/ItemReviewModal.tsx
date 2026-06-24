@@ -180,9 +180,11 @@ type ReturnAction = "idle" | "confirming_returned" | "confirming_not_approved";
 function ReturnSection({
   item,
   onItemUpdate,
+  onToast,
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
+  onToast?: (msg: string) => void;
 }) {
   const [action, setAction] = useState<ReturnAction>("idle");
   const [notes, setNotes] = useState("");
@@ -201,6 +203,7 @@ function ReturnSection({
       onItemUpdate((prev) => ({ ...prev, return_status: status, return_notes: notes || null }));
       setAction("idle");
       setNotes("");
+      onToast?.(status === "returned" ? "Item marked as returned" : "Return marked as not approved");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update return status");
     } finally {
@@ -503,10 +506,12 @@ function SalesSection({
   item,
   onItemUpdate,
   onUpdated,
+  onToast,
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
   onUpdated: () => void;
+  onToast?: (msg: string) => void;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [units, setUnits] = useState(1);
@@ -533,6 +538,7 @@ function SalesSection({
         item_status: newQty === 0 ? "sold" : prev.item_status,
       }));
       setShowForm(false);
+      onToast?.("Sale recorded successfully");
       onUpdated();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to record sale");
@@ -620,9 +626,10 @@ interface Props {
   entryId: number | null;
   onUpdated: () => void;
   onSwitchToSales?: () => void;
+  onToast?: (msg: string) => void;
 }
 
-export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onSwitchToSales }: Props) {
+export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onSwitchToSales, onToast }: Props) {
   const [mounted, setMounted] = useState(false);
   const [item, setItem] = useState<FullItemDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -682,6 +689,8 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
           : prev,
       );
       onUpdated();
+      onToast?.("Review saved successfully");
+      onClose();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to mark as reviewed");
     } finally {
@@ -763,7 +772,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
               {showReturn && (
                 <>
                   <Divider />
-                  <ReturnSection item={item} onItemUpdate={handleItemUpdate} />
+                  <ReturnSection item={item} onItemUpdate={handleItemUpdate} onToast={onToast} />
                 </>
               )}
 
@@ -782,6 +791,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                     item={item}
                     onItemUpdate={handleItemUpdate}
                     onUpdated={onUpdated}
+                    onToast={onToast}
                   />
                 </>
               )}
