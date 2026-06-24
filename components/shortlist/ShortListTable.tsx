@@ -211,7 +211,8 @@ export default function ShortListTable({
   const [mouseDownPos, setMouseDownPos]         = useState({ x: 0, y: 0 });
   const { toasts, showSuccess, dismiss }        = useToast();
 
-  const menuCellRef = useRef<HTMLTableCellElement | null>(null);
+  const menuCellRef   = useRef<HTMLTableCellElement | null>(null);
+  const savedScrollY  = useRef<number>(0);
 
   useEffect(() => {
     if (openMenuId === null) return;
@@ -296,7 +297,10 @@ export default function ShortListTable({
 
       <ItemReviewModal
         isOpen={reviewModalOpen}
-        onClose={() => setReviewModalOpen(false)}
+        onClose={() => {
+          setReviewModalOpen(false);
+          window.scrollTo({ top: savedScrollY.current, behavior: "instant" });
+        }}
         entryId={reviewingEntryId}
         onUpdated={() => {
           if (reviewingEntryId !== null) {
@@ -420,6 +424,7 @@ export default function ShortListTable({
                         if (dx > 5 || dy > 5) return;
                         const sel = window.getSelection();
                         if (sel && sel.toString().length > 0) return;
+                        savedScrollY.current = window.scrollY;
                         setReviewingEntryId(entry.id);
                         setReviewModalOpen(true);
                       }}
