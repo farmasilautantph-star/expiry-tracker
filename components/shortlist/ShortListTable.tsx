@@ -205,7 +205,7 @@ export default function ShortListTable({
 }: Props) {
   const [reviewModalOpen, setReviewModalOpen]   = useState(false);
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
-  const [reviewedIds, setReviewedIds]           = useState<Set<number>>(new Set());
+  const [reviewedIds, setReviewedIds]           = useState<Map<number, { last_reviewed_at: string; last_reviewed_display: string }>>(new Map());
   const [hoveredRowId, setHoveredRowId]         = useState<number | null>(null);
   const [openMenuId, setOpenMenuId]             = useState<number | null>(null);
   const [mouseDownPos, setMouseDownPos]         = useState({ x: 0, y: 0 });
@@ -304,7 +304,21 @@ export default function ShortListTable({
         entryId={reviewingEntryId}
         onUpdated={() => {
           if (reviewingEntryId !== null) {
-            setReviewedIds((prev) => { const s = new Set(prev); s.add(reviewingEntryId); return s; });
+            const now = new Date();
+            const display = now.toLocaleString("en-MY", {
+              timeZone: "Asia/Kuala_Lumpur",
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
+            setReviewedIds((prev) => {
+              const m = new Map(prev);
+              m.set(reviewingEntryId, { last_reviewed_at: now.toISOString(), last_reviewed_display: display });
+              return m;
+            });
           }
           onMarkReviewed?.(reviewingEntryId!);
         }}
@@ -436,7 +450,7 @@ export default function ShortListTable({
                         <span className="text-sm font-semibold text-[#0f172a]">
                           {formatDate(entry.logged_at)}
                         </span>
-                        <ReviewSubLabel entry={reviewedIds.has(entry.id) ? { ...entry, review_status: "pending" } : entry} />
+                        <ReviewSubLabel entry={reviewedIds.has(entry.id) ? { ...entry, review_status: "pending", ...reviewedIds.get(entry.id) } : entry} />
                       </td>
 
                       {/* PIC */}
