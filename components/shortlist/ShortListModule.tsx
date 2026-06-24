@@ -10,6 +10,7 @@ import type {
   ShortListFilters as Filters,
   ShortListCounts,
 } from "@/hooks/useShortList";
+
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
   onEdit: (id: number, data: ExpiryFormData) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onRefresh: () => Promise<void>;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onSwitchToSales?: () => void;
 }
 
@@ -41,6 +43,7 @@ export default function ShortListModule({
   onEdit,
   onDelete,
   onRefresh,
+  onPatchEntry,
   onSwitchToSales,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
@@ -90,6 +93,7 @@ export default function ShortListModule({
         onEditRequest={setEditingEntry}
         onDeleteRequest={handleDeleteRequest}
         onMarkReviewed={onRefresh}
+        onPatchEntry={onPatchEntry}
         onSwitchToSales={onSwitchToSales}
       />
 

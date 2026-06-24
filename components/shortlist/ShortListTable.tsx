@@ -71,10 +71,19 @@ function ReviewSubLabel({ entry }: { entry: ShortListEntry }) {
   let cfg: StatusConfig | null = null;
 
   if (review_status === "pending") {
-    if (!last_reviewed_at || !last_reviewed_display) return null;
+    if (!last_reviewed_at) return null;
+    const displayText = last_reviewed_display ?? new Date(last_reviewed_at).toLocaleString("en-MY", {
+      timeZone: "Asia/Kuala_Lumpur",
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
     cfg = {
       icon: <CheckIcon className="w-3 h-3 flex-shrink-0 text-green-600" />,
-      text: last_reviewed_display,
+      text: displayText,
       color: "#16a34a",
     };
   } else if (review_status === "early_alert") {
@@ -187,6 +196,7 @@ interface Props {
   onEditRequest: (entry: ShortListEntry) => void;
   onDeleteRequest: (entry: ShortListEntry) => void;
   onMarkReviewed?: (id: number) => Promise<void>;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onSwitchToSales?: () => void;
 }
 
@@ -201,11 +211,12 @@ export default function ShortListTable({
   onEditRequest,
   onDeleteRequest,
   onMarkReviewed,
+  onPatchEntry,
   onSwitchToSales,
 }: Props) {
   const [reviewModalOpen, setReviewModalOpen]   = useState(false);
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
-  const [reviewedIds, setReviewedIds]           = useState<Map<number, { last_reviewed_at: string; last_reviewed_display: string }>>(new Map());
+  const [reviewedIds, setReviewedIds]           = useState<Set<number>>(new Set());
   const [hoveredRowId, setHoveredRowId]         = useState<number | null>(null);
   const [openMenuId, setOpenMenuId]             = useState<number | null>(null);
   const [mouseDownPos, setMouseDownPos]         = useState({ x: 0, y: 0 });
@@ -314,11 +325,12 @@ export default function ShortListTable({
               minute: "2-digit",
               hour12: true,
             });
-            setReviewedIds((prev) => {
-              const m = new Map(prev);
-              m.set(reviewingEntryId, { last_reviewed_at: now.toISOString(), last_reviewed_display: display });
-              return m;
+            onPatchEntry?.(reviewingEntryId, {
+              last_reviewed_at: now.toISOString(),
+              last_reviewed_display: display,
+              review_status: "pending",
             });
+            setReviewedIds((prev) => { const s = new Set(prev); s.add(reviewingEntryId); return s; });
           }
           onMarkReviewed?.(reviewingEntryId!);
         }}
@@ -450,7 +462,7 @@ export default function ShortListTable({
                         <span className="text-sm font-semibold text-[#0f172a]">
                           {formatDate(entry.logged_at)}
                         </span>
-                        <ReviewSubLabel entry={reviewedIds.has(entry.id) ? { ...entry, review_status: "pending", ...reviewedIds.get(entry.id) } : entry} />
+                        <ReviewSubLabel entry={reviewedIds.has(entry.id) ? { ...entry, review_status: "pending" } : entry} />
                       </td>
 
                       {/* PIC */}

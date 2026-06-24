@@ -27,6 +27,7 @@ export default function ShortListPage() {
     clearFilters,
     activeFilterCount,
     refresh,
+    patchEntry,
   } = useShortList();
 
   useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
@@ -172,6 +173,7 @@ export default function ShortListPage() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onRefresh={refresh}
+          onPatchEntry={patchEntry}
           onSwitchToSales={() => setActiveTab("sales")}
         />
       ) : (
