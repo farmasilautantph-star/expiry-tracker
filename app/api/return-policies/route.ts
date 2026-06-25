@@ -26,7 +26,7 @@ export interface ReturnPolicyStats {
   non_returnable: number;
   strict_suppliers: number;
   brand_linked: number;
-  last_updated: string | null;
+  last_uploaded: string | null;
 }
 
 async function auth(req: NextRequest) {
@@ -86,20 +86,35 @@ export async function GET(req: NextRequest) {
   `;
   const rows = (await pool.query(dataSql, [...bindings, limit, offset])).rows as ReturnPolicyRow[];
 
-  // Stats are over the unfiltered table (so the cards always show the global totals)
-  const statsRow = (
-    await pool.query(`
+  // Stats — counts from return_policies, upload timestamp from app_settings
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  const [countsRes, uploadedRes] = await Promise.all([
+    pool.query(`
       SELECT
         COUNT(*)::int AS total,
         COUNT(*) FILTER (WHERE return_type = 'RETURNABLE')::int AS returnable,
         COUNT(*) FILTER (WHERE return_type = 'EXCHANGEABLE')::int AS exchangeable,
         COUNT(*) FILTER (WHERE return_type = 'NON_RETURNABLE')::int AS non_returnable,
         COUNT(*) FILTER (WHERE strict_supplier = true)::int AS strict_suppliers,
-        COUNT(*) FILTER (WHERE COALESCE(brand,'') <> '')::int AS brand_linked,
-        to_char(MAX(last_updated), 'YYYY-MM-DD') AS last_updated
+        COUNT(*) FILTER (WHERE COALESCE(brand,'') <> '')::int AS brand_linked
       FROM return_policies
-    `)
-  ).rows[0] as ReturnPolicyStats;
+    `),
+    pool.query(
+      `SELECT value FROM app_settings WHERE key = 'return_policy_last_uploaded'`,
+    ),
+  ]);
+
+  const counts = countsRes.rows[0] as Omit<ReturnPolicyStats, "last_uploaded">;
+  const lastUploaded = (uploadedRes.rows[0]?.value as string | undefined) ?? null;
+
+  const statsRow: ReturnPolicyStats = { ...counts, last_uploaded: lastUploaded };
 
   return NextResponse.json({
     success: true,

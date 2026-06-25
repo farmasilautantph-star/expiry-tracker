@@ -69,10 +69,11 @@ export default function PolicyModule({ isManager }: Props) {
     };
   }, [allPolicies, search]);
 
-  const staleDays = useMemo(() => {
-    const d = daysSince(stats.last_updated);
-    return d !== null && d > STALE_THRESHOLD_DAYS ? d : null;
-  }, [stats.last_updated]);
+  // null  → never uploaded via UI (show "initial import" message)
+  // >= 0  → uploaded, check staleness threshold
+  const uploadedDays = useMemo(() => daysSince(stats.last_uploaded), [stats.last_uploaded]);
+  const isNeverUploaded = stats.last_uploaded === null;
+  const isStale = isNeverUploaded || (uploadedDays !== null && uploadedDays > STALE_THRESHOLD_DAYS);
 
   function handleExport() {
     const headers = [
@@ -129,22 +130,35 @@ export default function PolicyModule({ isManager }: Props) {
     <div className="space-y-4">
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      {/* Stale alert */}
-      {staleDays !== null && (
+      {/* Stale alert — shown when never uploaded via UI, or upload is older than threshold */}
+      {!isLoading && isStale && (
         <div
           className="flex items-start gap-3 rounded-xl px-4 py-3 text-sm"
           style={{ background: "#fefce8", border: "1px solid #fde68a", color: "#854d0e" }}
         >
           <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 text-[#ca8a04] mt-0.5" />
           <div className="flex-1">
-            <p className="font-semibold">
-              Return policies were last updated {staleDays} days ago.
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: "#a16207" }}>
-              {isManager
-                ? "Upload a new Excel file to keep data current."
-                : "Ask a manager to upload a refreshed Excel file."}
-            </p>
+            {isNeverUploaded ? (
+              <>
+                <p className="font-semibold">Return policies loaded from initial import.</p>
+                <p className="text-xs mt-0.5" style={{ color: "#a16207" }}>
+                  {isManager
+                    ? "Upload a new Excel file to keep data current."
+                    : "Ask a manager to upload a refreshed Excel file."}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold">
+                  Return policies were last uploaded {uploadedDays} days ago.
+                </p>
+                <p className="text-xs mt-0.5" style={{ color: "#a16207" }}>
+                  {isManager
+                    ? "Upload a new Excel file to keep data current."
+                    : "Ask a manager to upload a refreshed Excel file."}
+                </p>
+              </>
+            )}
           </div>
           {isManager && (
             <button

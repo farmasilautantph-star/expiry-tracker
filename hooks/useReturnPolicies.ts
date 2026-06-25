@@ -26,7 +26,7 @@ export interface ReturnPolicyStats {
   non_returnable: number;
   strict_suppliers: number;
   brand_linked: number;
-  last_updated: string | null;
+  last_uploaded: string | null;
 }
 
 export type ReturnPolicyTypeFilter = "" | "RETURNABLE" | "EXCHANGEABLE" | "NON_RETURNABLE";
@@ -38,7 +38,7 @@ const EMPTY_STATS: ReturnPolicyStats = {
   non_returnable: 0,
   strict_suppliers: 0,
   brand_linked: 0,
-  last_updated: null,
+  last_uploaded: null,
 };
 
 export function useReturnPolicies() {

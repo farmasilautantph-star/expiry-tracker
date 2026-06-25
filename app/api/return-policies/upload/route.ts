@@ -168,6 +168,16 @@ export async function POST(req: NextRequest) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    // Ensure settings table exists
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
     await client.query("TRUNCATE TABLE return_policies RESTART IDENTITY");
     for (const r of valid) {
       await client.query(
@@ -183,6 +193,15 @@ export async function POST(req: NextRequest) {
         ],
       );
     }
+
+    // Record the upload timestamp
+    await client.query(`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES ('return_policy_last_uploaded', NOW()::TEXT, NOW())
+      ON CONFLICT (key) DO UPDATE
+        SET value = NOW()::TEXT, updated_at = NOW()
+    `);
+
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK");
