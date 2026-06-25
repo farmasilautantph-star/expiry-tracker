@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     await pool.query(
       `SELECT id, stock_id, barcode, description, uom, category_id
        FROM products
-       WHERE stock_id LIKE $1 OR barcode LIKE $2 OR description LIKE $3
+       WHERE stock_id ILIKE $1 OR barcode ILIKE $2 OR description ILIKE $3
        LIMIT 10`,
       [like, like, like],
     )
