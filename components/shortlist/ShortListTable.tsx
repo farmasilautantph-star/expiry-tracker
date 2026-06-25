@@ -216,7 +216,7 @@ export default function ShortListTable({
 }: Props) {
   const [reviewModalOpen, setReviewModalOpen]   = useState(false);
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
-  const [reviewedIds, setReviewedIds]           = useState<Set<number>>(new Set());
+  const [reviewedIds, setReviewedIds]           = useState<Map<number, { last_reviewed_at: string; last_reviewed_display: string }>>(new Map());
   const [hoveredRowId, setHoveredRowId]         = useState<number | null>(null);
   const [openMenuId, setOpenMenuId]             = useState<number | null>(null);
   const [mouseDownPos, setMouseDownPos]         = useState({ x: 0, y: 0 });
@@ -323,7 +323,7 @@ export default function ShortListTable({
               last_reviewed_display: ts.last_reviewed_display,
               review_status: "pending",
             });
-            setReviewedIds((prev) => { const s = new Set(prev); s.add(reviewingEntryId); return s; });
+            setReviewedIds((prev) => new Map(prev).set(reviewingEntryId, { last_reviewed_at: ts.last_reviewed_at, last_reviewed_display: ts.last_reviewed_display }));
           }
         }}
         onSwitchToSales={onSwitchToSales}
@@ -422,9 +422,10 @@ export default function ShortListTable({
               </thead>
               <tbody>
                 {processedEntries.map((entry) => {
-                  const isHovered = hoveredRowId === entry.id;
-                  const menuOpen  = openMenuId === entry.id;
-                  const showMenu  = isHovered || menuOpen;
+                  const isHovered    = hoveredRowId === entry.id;
+                  const menuOpen     = openMenuId === entry.id;
+                  const showMenu     = isHovered || menuOpen;
+                  const localReview  = reviewedIds.get(entry.id);
 
                   return (
                     <tr
@@ -454,7 +455,10 @@ export default function ShortListTable({
                         <span className="text-sm font-semibold text-[#0f172a]">
                           {formatDate(entry.logged_at)}
                         </span>
-                        <ReviewSubLabel entry={reviewedIds.has(entry.id) ? { ...entry, review_status: "pending" } : entry} />
+                        <ReviewSubLabel entry={localReview
+                          ? { ...entry, review_status: "pending", last_reviewed_at: localReview.last_reviewed_at, last_reviewed_display: localReview.last_reviewed_display }
+                          : entry
+                        } />
                       </td>
 
                       {/* PIC */}
