@@ -24,6 +24,7 @@ interface ExpiryRow {
   item_status: string;
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
+  remarks: string | null;
 }
 
 interface OfferRow {
@@ -140,6 +141,7 @@ export async function GET(
       last_reviewed_by: row.last_reviewed_by,
       review_status: reviewStatus,
       last_reviewed_display: formatReviewedAt(row.last_reviewed_at),
+      remarks: row.remarks ?? null,
     },
   });
 }

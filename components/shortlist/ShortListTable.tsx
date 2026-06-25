@@ -327,6 +327,7 @@ export default function ShortListTable({
           }
         }}
         onSwitchToSales={onSwitchToSales}
+        onPatchEntry={onPatchEntry}
         onToast={showSuccess}
       />
 

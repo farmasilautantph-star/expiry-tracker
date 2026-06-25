@@ -7,6 +7,8 @@ import {
   XMarkIcon,
   BuildingStorefrontIcon,
   BanknotesIcon,
+  PencilIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import OfferForm from "@/components/offers/OfferForm";
@@ -47,6 +49,7 @@ export interface FullItemDetail {
   last_reviewed_by: string | null;
   review_status: string;
   last_reviewed_display: string | null;
+  remarks: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -618,6 +621,128 @@ function SalesSection({
   );
 }
 
+// ─── Section 5: Remarks ───────────────────────────────────────────────────────
+
+type RemarksMode = "view" | "editing" | "confirming_delete";
+
+function RemarksSection({
+  item,
+  onItemUpdate,
+  onPatchEntry,
+}: {
+  item: FullItemDetail;
+  onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
+  onPatchEntry?: (id: number, patch: { remarks: string | null }) => void;
+}) {
+  const [mode, setMode] = useState<RemarksMode>("view");
+  const [draft, setDraft] = useState(item.remarks ?? "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function save(value: string | null) {
+    setSaving(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}/remarks`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ remarks: value }),
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      onItemUpdate((prev) => ({ ...prev, remarks: json.remarks }));
+      onPatchEntry?.(item.id, { remarks: json.remarks });
+      setMode("view");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div>
+      <SectionHeader>Remarks</SectionHeader>
+
+      {mode === "view" && !item.remarks && (
+        <button
+          type="button"
+          onClick={() => { setDraft(""); setMode("editing"); setErr(null); }}
+          className="w-full text-left text-sm text-slate-400 italic py-2 px-3 rounded-xl transition-colors hover:bg-slate-50"
+          style={{ border: "1px dashed #e2e8f0" }}
+        >
+          Add a remark…
+        </button>
+      )}
+
+      {mode === "view" && item.remarks && (
+        <div className="flex items-start gap-2">
+          <p className="flex-1 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+            {item.remarks}
+          </p>
+          <div className="flex gap-1 flex-shrink-0 mt-0.5">
+            <button
+              type="button"
+              title="Edit"
+              onClick={() => { setDraft(item.remarks ?? ""); setMode("editing"); setErr(null); }}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <PencilIcon className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Delete"
+              onClick={() => setMode("confirming_delete")}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            >
+              <TrashIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === "editing" && (
+        <div className="space-y-2">
+          <textarea
+            rows={3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Write a remark…"
+            autoFocus
+            className="w-full text-sm text-slate-800 rounded-xl px-3 py-2 resize-none outline-none leading-relaxed"
+            style={{ border: "1px solid #2563eb", boxShadow: "0 0 0 2px rgba(37,99,235,0.1)" }}
+          />
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <div className="flex gap-2">
+            <Btn variant="slate" onClick={() => { setMode("view"); setErr(null); }} disabled={saving}>
+              Cancel
+            </Btn>
+            <Btn variant="blue" onClick={() => save(draft.trim() || null)} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Btn>
+          </div>
+        </div>
+      )}
+
+      {mode === "confirming_delete" && (
+        <div className="rounded-xl p-3 space-y-2" style={{ border: "1px solid #fee2e2", background: "#fff5f5" }}>
+          <p className="text-xs font-medium text-red-600">Delete this remark?</p>
+          {err && <p className="text-xs text-red-500">{err}</p>}
+          <div className="flex gap-2">
+            <Btn variant="slate" onClick={() => { setMode("view"); setErr(null); }} disabled={saving}>
+              Cancel
+            </Btn>
+            <Btn variant="red" onClick={() => save(null)} disabled={saving}>
+              {saving ? "Deleting…" : "Delete"}
+            </Btn>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 interface Props {
@@ -628,9 +753,10 @@ interface Props {
   onReviewed?: (ts: { last_reviewed_at: string; last_reviewed_display: string }) => void;
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
+  onPatchEntry?: (id: number, patch: { remarks: string | null }) => void;
 }
 
-export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onReviewed, onSwitchToSales, onToast }: Props) {
+export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onReviewed, onSwitchToSales, onToast, onPatchEntry }: Props) {
   const [mounted, setMounted] = useState(false);
   const [item, setItem] = useState<FullItemDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -776,6 +902,13 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                 isManager={isManager}
                 onItemUpdate={handleItemUpdate}
                 onUpdated={onUpdated}
+              />
+
+              <Divider />
+              <RemarksSection
+                item={item}
+                onItemUpdate={handleItemUpdate}
+                onPatchEntry={onPatchEntry}
               />
 
               {showSales && (
