@@ -696,7 +696,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
   if (!mounted || !isOpen) return null;
 
   const u = item ? (URGENCY[item.urgency] ?? URGENCY.safe) : URGENCY.safe;
-  const showReturn = !!item && item.return_status !== null;
+  const showReturn = !!item && item.return_status !== null && item.return_status !== "non-returnable";
   const showSales  = !!item && item.qty > 0 && item.item_status === "active";
   const canReview  = !isManager && !!item && item.item_status === "active" && !reviewDone;
 
