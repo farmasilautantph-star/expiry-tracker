@@ -91,7 +91,14 @@ export async function POST(req: NextRequest) {
   )).rows[0] as { category_id: string | null } | undefined;
   const resolvedCategory = productRow?.category_id?.trim() || category.trim();
 
-  const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
+  const qtyNum = Math.round(Number(quantity));
+  if (!Number.isFinite(qtyNum) || qtyNum < 1) {
+    return NextResponse.json(
+      { success: false, error: "Quantity must be at least 1 to log a new item" },
+      { status: 400 },
+    );
+  }
+  const qty = qtyNum;
   const validReturnStatus = ["pending", "non-returnable", "returned"];
   const rs =
     return_status && validReturnStatus.includes(return_status)
