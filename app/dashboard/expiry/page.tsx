@@ -7,16 +7,6 @@ import ExpiryModule from "@/components/expiry/ExpiryModule";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 
-const CATEGORIES = [
-  "MOM & BABY",
-  "FS",
-  "OTC",
-  "Poison B",
-  "Poison C",
-  "PET CARE",
-  "HS",
-] as const;
-
 export default function ExpiryPage() {
   const { user, isManager } = useAuth();
   const { entries, isLoading, error, addEntry, editEntry, deleteEntry, refresh } =
@@ -30,6 +20,14 @@ export default function ExpiryPage() {
   const [categoryFilter, setCategoryFilter] = useState("");
   const [picFilter, setPicFilter] = useState("");
   const [returnFilter, setReturnFilter] = useState("");
+
+  const categoryOptions = useMemo(() => {
+    const seen: Record<string, true> = {};
+    for (const e of entries) {
+      if (e.category) seen[e.category] = true;
+    }
+    return Object.keys(seen).sort();
+  }, [entries]);
 
   const picOptions = useMemo(() => {
     const seen = new Set<string>();
@@ -145,7 +143,7 @@ export default function ExpiryPage() {
           className="px-3 py-2 rounded-lg bg-white border border-[#e2e8f0] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
         >
           <option value="">All Categories</option>
-          {CATEGORIES.map((c) => (
+          {categoryOptions.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
