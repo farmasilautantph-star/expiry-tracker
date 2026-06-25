@@ -683,7 +683,6 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
           : prev,
       );
       onReviewed?.({ last_reviewed_at, last_reviewed_display });
-      onUpdated();
       onToast?.("Review saved successfully");
       onClose();
     } catch (err) {
