@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import xlsx from "xlsx";
+import * as xlsx from "xlsx";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
@@ -88,19 +88,32 @@ export async function POST(req: NextRequest) {
 
   let wb;
   try {
-    const buf = Buffer.from(await file.arrayBuffer());
-    wb = xlsx.read(buf, { type: "buffer" });
-  } catch {
-    return NextResponse.json({ success: false, error: "Failed to read Excel file" }, { status: 400 });
-  }
-
-  const sheet = wb.Sheets["Return Policy"];
-  if (!sheet) {
+    const arrayBuffer = await file.arrayBuffer();
+    const buf = Buffer.from(arrayBuffer);
+    wb = xlsx.read(buf, { type: "buffer", cellDates: false });
+  } catch (parseErr) {
+    const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+    console.error("[return-policies/upload] Excel parse error:", msg);
     return NextResponse.json(
-      { success: false, error: 'Sheet "Return Policy" not found' },
+      { success: false, error: `Failed to read Excel file: ${msg}` },
       { status: 400 },
     );
   }
+
+  const sheetNames = wb.SheetNames;
+  const sheetName = sheetNames.find(
+    (n) => n.trim().toLowerCase() === "return policy",
+  );
+  if (!sheetName) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Sheet "Return Policy" not found. Available sheets: ${sheetNames.join(", ")}`,
+      },
+      { status: 400 },
+    );
+  }
+  const sheet = wb.Sheets[sheetName];
 
   const rows = xlsx.utils.sheet_to_json<RawRow>(sheet, { defval: null });
   const valid: Array<{

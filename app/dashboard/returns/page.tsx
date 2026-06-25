@@ -101,7 +101,7 @@ export default function ReturnsPage() {
       {/* Tabs */}
       <div className="px-6 mt-4">
         <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "#f1f5f9" }}>
-          {(isManager ? (["active", "history", "policy"] as const) : (["active", "history"] as const)).map((t) => (
+          {(["active", "history", "policy"] as const).map((t) => (
             <button
               key={t}
               onClick={() => handleTabChange(t)}
@@ -120,7 +120,7 @@ export default function ReturnsPage() {
 
       {/* Content */}
       <div className="px-6 pb-6 mt-4">
-        {tab === "policy" && isManager ? (
+        {tab === "policy" ? (
           <PolicyModule isManager={isManager} />
         ) : (
           <ReturnsModule
