@@ -4,8 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useReturns } from "@/hooks/useReturns";
 import ReturnsModule from "@/components/returns/ReturnsModule";
+import PolicyModule from "@/components/returns/PolicyModule";
 import type { MonthValue } from "@/components/ui/MonthPicker";
 import { InformationCircleIcon } from "@heroicons/react/24/outline";
+
+type TabKey = "active" | "history" | "policy";
 
 function toYearMonth(val: MonthValue | null): string {
   if (!val) return "";
@@ -20,7 +23,7 @@ function currentMonthValue(): MonthValue {
 export default function ReturnsPage() {
   const { user, isManager } = useAuth();
   useEffect(() => { document.title = "Return Management | Expiry Tracker"; }, []);
-  const [tab, setTab] = useState<"active" | "history">("active");
+  const [tab, setTab] = useState<TabKey>("active");
   const [activeMonth, setActiveMonth] = useState<MonthValue | null>(null);
   const [historyMonth, setHistoryMonth] = useState<MonthValue | null>(currentMonthValue());
 
@@ -61,7 +64,7 @@ export default function ReturnsPage() {
     });
   }, [entries, historyMonth]);
 
-  function handleTabChange(newTab: "active" | "history") {
+  function handleTabChange(newTab: TabKey) {
     setTab(newTab);
     setFilter("status", "");
   }
@@ -98,7 +101,7 @@ export default function ReturnsPage() {
       {/* Tabs */}
       <div className="px-6 mt-4">
         <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "#f1f5f9" }}>
-          {(["active", "history"] as const).map((t) => (
+          {(["active", "history", "policy"] as const).map((t) => (
             <button
               key={t}
               onClick={() => handleTabChange(t)}
@@ -109,7 +112,7 @@ export default function ReturnsPage() {
                   : { color: "#64748b" }
               }
             >
-              {t === "active" ? "Active Returns" : "Return History"}
+              {t === "active" ? "Active Returns" : t === "history" ? "Return History" : "Return Policy"}
             </button>
           ))}
         </div>
@@ -117,26 +120,30 @@ export default function ReturnsPage() {
 
       {/* Content */}
       <div className="px-6 pb-6 mt-4">
-        <ReturnsModule
-          entries={tab === "active" ? activeEntries : historyEntries}
-          allEntries={entries}
-          counts={counts}
-          isLoading={isLoading}
-          isManager={isManager}
-          mode={tab}
-          filters={filters}
-          setFilter={setFilter}
-          clearFilters={clearFilters}
-          activeFilterCount={activeFilterCount}
-          activeMonth={activeMonth}
-          onActiveMonthChange={setActiveMonth}
-          historyMonth={historyMonth}
-          onHistoryMonthChange={setHistoryMonth}
-          onMarkReturned={markReturned}
-          onMarkNotApproved={markNotApproved}
-          onUpdateReturnDate={updateReturnDate}
-          onRefresh={refresh}
-        />
+        {tab === "policy" ? (
+          <PolicyModule />
+        ) : (
+          <ReturnsModule
+            entries={tab === "active" ? activeEntries : historyEntries}
+            allEntries={entries}
+            counts={counts}
+            isLoading={isLoading}
+            isManager={isManager}
+            mode={tab === "active" ? "active" : "history"}
+            filters={filters}
+            setFilter={setFilter}
+            clearFilters={clearFilters}
+            activeFilterCount={activeFilterCount}
+            activeMonth={activeMonth}
+            onActiveMonthChange={setActiveMonth}
+            historyMonth={historyMonth}
+            onHistoryMonthChange={setHistoryMonth}
+            onMarkReturned={markReturned}
+            onMarkNotApproved={markNotApproved}
+            onUpdateReturnDate={updateReturnDate}
+            onRefresh={refresh}
+          />
+        )}
       </div>
     </div>
   );
