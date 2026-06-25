@@ -84,6 +84,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Always use the canonical category from products table; fall back to client value only when barcode is unknown
+  const productRow = (await pool.query(
+    "SELECT category_id FROM products WHERE barcode = $1 LIMIT 1",
+    [barcode.trim()],
+  )).rows[0] as { category_id: string | null } | undefined;
+  const resolvedCategory = productRow?.category_id?.trim() || category.trim();
+
   const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
   const validReturnStatus = ["pending", "non-returnable", "returned"];
   const rs =
@@ -102,7 +109,7 @@ export async function POST(req: NextRequest) {
     [
       barcode.trim(),
       description.trim(),
-      category.trim(),
+      resolvedCategory,
       expiry_date,
       user.userId,
       user.picName,

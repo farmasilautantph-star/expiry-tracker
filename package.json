@@ -16,7 +16,9 @@
     "verify": "npx ts-node --project tsconfig.scripts.json scripts/verify.ts",
     "migrate:excel": "npx ts-node --project tsconfig.scripts.json scripts/migrate-excel.ts",
     "setup:neon": "npx ts-node --project tsconfig.scripts.json scripts/setup-neon-schema.ts",
-    "migrate:neon": "npx ts-node --project tsconfig.scripts.json scripts/migrate-sqlite-to-neon.ts"
+    "migrate:neon": "npx ts-node --project tsconfig.scripts.json scripts/migrate-sqlite-to-neon.ts",
+    "fix:categories": "npx tsx scripts/fix-categories-neon.ts",
+    "fix:categories:run": "npx tsx scripts/fix-categories-neon.ts --execute"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
