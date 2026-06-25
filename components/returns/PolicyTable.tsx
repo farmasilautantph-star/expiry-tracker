@@ -217,13 +217,13 @@ export default function PolicyTable({ policies, isLoading }: Props) {
                 </td>
 
                 {/* MONTHS */}
-                <td className={`${TD} text-center whitespace-nowrap`}>
+                <td className={`${TD} whitespace-nowrap text-sm`}>
                   {p.months_before_expiry !== null ? (
-                    <span
-                      className="inline-flex items-center justify-center min-w-[32px] h-7 px-2 rounded-lg text-sm font-semibold"
-                      style={{ background: "#f1f5f9", color: "#334155" }}
-                    >
-                      {p.months_before_expiry}
+                    <span className="text-[#334155]">
+                      <span className="font-semibold">{p.months_before_expiry}</span>{" "}
+                      <span className="text-[#94a3b8]">
+                        {p.months_before_expiry === 1 ? "month" : "months"}
+                      </span>
                     </span>
                   ) : (
                     <span className="text-xs text-[#cbd5e1]">—</span>

@@ -26,6 +26,7 @@ export interface ReturnPolicyStats {
   non_returnable: number;
   strict_suppliers: number;
   brand_linked: number;
+  last_updated: string | null;
 }
 
 async function auth(req: NextRequest) {
@@ -94,7 +95,8 @@ export async function GET(req: NextRequest) {
         COUNT(*) FILTER (WHERE return_type = 'EXCHANGEABLE')::int AS exchangeable,
         COUNT(*) FILTER (WHERE return_type = 'NON_RETURNABLE')::int AS non_returnable,
         COUNT(*) FILTER (WHERE strict_supplier = true)::int AS strict_suppliers,
-        COUNT(*) FILTER (WHERE COALESCE(brand,'') <> '')::int AS brand_linked
+        COUNT(*) FILTER (WHERE COALESCE(brand,'') <> '')::int AS brand_linked,
+        to_char(MAX(last_updated), 'YYYY-MM-DD') AS last_updated
       FROM return_policies
     `)
   ).rows[0] as ReturnPolicyStats;

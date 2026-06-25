@@ -5,6 +5,7 @@ import {
   MagnifyingGlassIcon,
   ArrowPathIcon,
   ArrowDownTrayIcon,
+  CloudArrowUpIcon,
 } from "@heroicons/react/24/outline";
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   setTypeFilter: (v: ReturnPolicyTypeFilter) => void;
   onRefresh: () => void;
   onExport: () => void;
+  onUpload?: () => void;
+  isManager: boolean;
   isLoading: boolean;
   counts: { all: number; returnable: number; exchangeable: number; non_returnable: number };
 }
@@ -32,6 +35,8 @@ export default function PolicyFilters({
   setTypeFilter,
   onRefresh,
   onExport,
+  onUpload,
+  isManager,
   isLoading,
   counts,
 }: Props) {
@@ -82,14 +87,33 @@ export default function PolicyFilters({
 
         <button
           onClick={onExport}
-          className="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-[10px] text-sm font-medium text-white transition-colors"
-          style={{ background: "#2563eb" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#1d4ed8")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#2563eb")}
+          className="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-[10px] text-sm font-medium transition-colors"
+          style={{ background: "white", color: "#334155", border: "1px solid #e2e8f0" }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "#2563eb";
+            (e.currentTarget as HTMLElement).style.color = "#2563eb";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+            (e.currentTarget as HTMLElement).style.color = "#334155";
+          }}
         >
           <ArrowDownTrayIcon className="w-4 h-4" />
-          Export
+          Export CSV
         </button>
+
+        {isManager && onUpload && (
+          <button
+            onClick={onUpload}
+            className="inline-flex items-center gap-1.5 px-3.5 h-10 rounded-[10px] text-sm font-medium text-white transition-colors"
+            style={{ background: "#2563eb" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#1d4ed8")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#2563eb")}
+          >
+            <CloudArrowUpIcon className="w-4 h-4" />
+            Upload Policy Data
+          </button>
+        )}
       </div>
 
       {/* Type filter tabs */}

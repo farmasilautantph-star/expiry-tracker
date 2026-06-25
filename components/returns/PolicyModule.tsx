@@ -1,10 +1,18 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import PolicyStatsCards from "./PolicyStatsCards";
 import PolicyFilters from "./PolicyFilters";
 import PolicyTable from "./PolicyTable";
+import PolicyUploadModal from "./PolicyUploadModal";
 import { useReturnPolicies } from "@/hooks/useReturnPolicies";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
+
+interface Props {
+  isManager: boolean;
+}
 
 function csvEscape(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -13,7 +21,17 @@ function csvEscape(v: unknown): string {
   return s;
 }
 
-export default function PolicyModule() {
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  const diff = Date.now() - d.getTime();
+  return Math.floor(diff / (24 * 60 * 60 * 1000));
+}
+
+const STALE_THRESHOLD_DAYS = 14;
+
+export default function PolicyModule({ isManager }: Props) {
   const {
     policies,
     allPolicies,
@@ -27,8 +45,9 @@ export default function PolicyModule() {
     refresh,
   } = useReturnPolicies();
 
-  // Counts shown next to filter tabs are derived from the search-narrowed pool,
-  // so the user always sees what each tab will contain.
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const { toasts, showSuccess, dismiss } = useToast();
+
   const tabCounts = useMemo(() => {
     const q = search.trim().toLowerCase();
     const matchSearch = (p: (typeof allPolicies)[number]) => {
@@ -49,6 +68,11 @@ export default function PolicyModule() {
       non_returnable: narrowed.filter((p) => p.return_type === "NON_RETURNABLE").length,
     };
   }, [allPolicies, search]);
+
+  const staleDays = useMemo(() => {
+    const d = daysSince(stats.last_updated);
+    return d !== null && d > STALE_THRESHOLD_DAYS ? d : null;
+  }, [stats.last_updated]);
 
   function handleExport() {
     const headers = [
@@ -96,8 +120,46 @@ export default function PolicyModule() {
     URL.revokeObjectURL(url);
   }
 
+  async function handleUploadSuccess(inserted: number) {
+    showSuccess(`${inserted} policies imported successfully`);
+    await refresh();
+  }
+
   return (
     <div className="space-y-4">
+      <Toast toasts={toasts} onDismiss={dismiss} />
+
+      {/* Stale alert */}
+      {staleDays !== null && (
+        <div
+          className="flex items-start gap-3 rounded-xl px-4 py-3 text-sm"
+          style={{ background: "#fefce8", border: "1px solid #fde68a", color: "#854d0e" }}
+        >
+          <ExclamationTriangleIcon className="w-5 h-5 flex-shrink-0 text-[#ca8a04] mt-0.5" />
+          <div className="flex-1">
+            <p className="font-semibold">
+              Return policies were last updated {staleDays} days ago.
+            </p>
+            <p className="text-xs mt-0.5" style={{ color: "#a16207" }}>
+              {isManager
+                ? "Upload a new Excel file to keep data current."
+                : "Ask a manager to upload a refreshed Excel file."}
+            </p>
+          </div>
+          {isManager && (
+            <button
+              onClick={() => setUploadOpen(true)}
+              className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors flex-shrink-0"
+              style={{ background: "#ca8a04" }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#a16207")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#ca8a04")}
+            >
+              Upload Now
+            </button>
+          )}
+        </div>
+      )}
+
       <PolicyStatsCards stats={stats} isLoading={isLoading} />
 
       {error && (
@@ -116,11 +178,21 @@ export default function PolicyModule() {
         setTypeFilter={setTypeFilter}
         onRefresh={() => void refresh()}
         onExport={handleExport}
+        onUpload={isManager ? () => setUploadOpen(true) : undefined}
+        isManager={isManager}
         isLoading={isLoading}
         counts={tabCounts}
       />
 
       <PolicyTable policies={policies} isLoading={isLoading} />
+
+      {isManager && (
+        <PolicyUploadModal
+          isOpen={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+          onSuccess={handleUploadSuccess}
+        />
+      )}
     </div>
   );
 }
