@@ -4,16 +4,6 @@ import type { ReturnFilters } from "@/hooks/useReturns";
 import { MagnifyingGlassIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import MonthPicker, { type MonthValue } from "@/components/ui/MonthPicker";
 
-const CATEGORIES = [
-  "MOM & BABY",
-  "FS",
-  "OTC",
-  "Poison B",
-  "Poison C",
-  "PET CARE",
-  "HS",
-] as const;
-
 interface Props {
   filters: ReturnFilters;
   setFilter: <K extends keyof ReturnFilters>(key: K, value: ReturnFilters[K]) => void;
@@ -21,6 +11,7 @@ interface Props {
   activeFilterCount: number;
   isManager: boolean;
   picOptions: string[];
+  categoryOptions: string[];
   mode: "active" | "history";
   activeMonth?: MonthValue | null;
   onActiveMonthChange?: (val: MonthValue | null) => void;
@@ -38,6 +29,7 @@ export default function ReturnsFilters({
   activeFilterCount,
   isManager,
   picOptions,
+  categoryOptions,
   mode,
   activeMonth,
   onActiveMonthChange,
@@ -122,7 +114,7 @@ export default function ReturnsFilters({
           onBlur={blurStyle}
         >
           <option value="">All Categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
       </div>

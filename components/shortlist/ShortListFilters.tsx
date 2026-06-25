@@ -3,16 +3,6 @@
 import type { ShortListFilters } from "@/hooks/useShortList";
 import { MagnifyingGlassIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
-const CATEGORIES = [
-  "MOM & BABY",
-  "FS",
-  "OTC",
-  "Poison B",
-  "Poison C",
-  "PET CARE",
-  "HS",
-] as const;
-
 interface Props {
   filters: ShortListFilters;
   setFilter: <K extends keyof ShortListFilters>(
@@ -23,6 +13,7 @@ interface Props {
   activeFilterCount: number;
   isManager: boolean;
   picOptions: string[];
+  categoryOptions: string[];
 }
 
 const SELECT_CLS =
@@ -35,6 +26,7 @@ export default function ShortListFilters({
   activeFilterCount,
   isManager,
   picOptions,
+  categoryOptions,
 }: Props) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
@@ -86,7 +78,7 @@ export default function ShortListFilters({
           }}
         >
           <option value="">All Categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
       </div>

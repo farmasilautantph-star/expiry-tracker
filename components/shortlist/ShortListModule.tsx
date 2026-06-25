@@ -60,6 +60,14 @@ export default function ShortListModule({
     return names.sort();
   }, [entries]);
 
+  const categoryOptions = useMemo(() => {
+    const seen: Record<string, true> = {};
+    for (const e of entries) {
+      if (e.category) seen[e.category] = true;
+    }
+    return Object.keys(seen).sort();
+  }, [entries]);
+
   async function handleDeleteRequest(entry: ShortListEntry) {
     if (!confirm(`Delete "${entry.description}"?\n\nThis cannot be undone.`))
       return;
@@ -81,6 +89,7 @@ export default function ShortListModule({
         activeFilterCount={activeFilterCount}
         isManager={isManager}
         picOptions={picOptions}
+        categoryOptions={categoryOptions}
       />
 
       <ShortListSummary counts={counts} isLoading={isLoading} />

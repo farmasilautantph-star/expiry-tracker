@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import OffersFilters from "./OffersFilters";
 import OffersSummary from "./OffersSummary";
 import OffersTable from "./OffersTable";
@@ -40,6 +41,14 @@ export default function OffersModule({
   onToggleAlert,
   onRefresh,
 }: Props) {
+  const categoryOptions = useMemo(() => {
+    const seen: Record<string, true> = {};
+    for (const e of entries) {
+      if (e.category) seen[e.category] = true;
+    }
+    return Object.keys(seen).sort();
+  }, [entries]);
+
   return (
     <div className="space-y-4">
       <OffersSummary counts={counts} isLoading={isLoading} />
@@ -49,6 +58,7 @@ export default function OffersModule({
         setFilter={setFilter}
         clearFilters={clearFilters}
         activeFilterCount={activeFilterCount}
+        categoryOptions={categoryOptions}
       />
 
       <OffersTable

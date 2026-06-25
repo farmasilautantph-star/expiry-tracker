@@ -67,6 +67,14 @@ export default function ReturnsModule({
     return names.sort();
   }, [allEntries]);
 
+  const categoryOptions = useMemo(() => {
+    const seen: Record<string, true> = {};
+    for (const e of allEntries) {
+      if (e.category) seen[e.category] = true;
+    }
+    return Object.keys(seen).sort();
+  }, [allEntries]);
+
   return (
     <div className="space-y-4">
       <ReturnsFilters
@@ -76,6 +84,7 @@ export default function ReturnsModule({
         activeFilterCount={activeFilterCount}
         isManager={isManager}
         picOptions={picOptions}
+        categoryOptions={categoryOptions}
         mode={mode}
         activeMonth={activeMonth}
         onActiveMonthChange={onActiveMonthChange}

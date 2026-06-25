@@ -4,16 +4,6 @@ import { useMemo } from "react";
 import type { OfferFilters } from "@/hooks/useOffers";
 import { MagnifyingGlassIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 
-const CATEGORIES = [
-  "MOM & BABY",
-  "FS",
-  "OTC",
-  "Poison B",
-  "Poison C",
-  "PET CARE",
-  "HS",
-] as const;
-
 function monthOptions(): { value: string; label: string }[] {
   const now = new Date();
   const opts: { value: string; label: string }[] = [];
@@ -37,6 +27,7 @@ interface Props {
   ) => void;
   clearFilters: () => void;
   activeFilterCount: number;
+  categoryOptions: string[];
 }
 
 const SELECT_CLS =
@@ -47,6 +38,7 @@ export default function OffersFilters({
   setFilter,
   clearFilters,
   activeFilterCount,
+  categoryOptions,
 }: Props) {
   const months = useMemo(() => monthOptions(), []);
 
@@ -94,7 +86,7 @@ export default function OffersFilters({
           onBlur={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.boxShadow = ""; }}
         >
           <option value="">All Categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
       </div>
