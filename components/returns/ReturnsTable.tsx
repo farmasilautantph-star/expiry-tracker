@@ -290,7 +290,7 @@ export default function ReturnsTable({
 
                   {/* RETURN DATE */}
                   <td className={`${TD} text-xs text-[#475569] whitespace-nowrap`}>
-                    {formatShortDate(entry.completed_at)}
+                    {formatShortDate(mode === "active" ? entry.return_by_date : entry.completed_at)}
                   </td>
 
                   {/* ACTION */}
