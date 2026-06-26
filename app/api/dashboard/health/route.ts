@@ -105,8 +105,10 @@ export async function GET(req: NextRequest) {
   }
 
   const totalActive  = rows.length;
-  const totalPenalty = expiredCount * 3 + criticalCount * 2 + warningCount * 0.5;
-  const score        = Math.max(0, Math.round(100 - totalPenalty));
+  const rawPenalty   = expiredCount * 3 + criticalCount * 2;
+  const safeBonus    = Math.round(safeCount * 0.5 * 10) / 10;
+  const netAdjustment = Math.round((safeBonus - rawPenalty) * 10) / 10;
+  const score        = Math.min(100, Math.max(0, Math.round(100 - rawPenalty + safeBonus)));
   const { label, color } = scoreLabel(score);
 
   // ── Sunday-rule review compliance ─────────────────────────────────────────
@@ -247,11 +249,11 @@ export async function GET(req: NextRequest) {
         label,
         color,
         totalActive,
-        expired:  { count: expiredCount,  penalty: expiredCount  * 3   },
-        critical: { count: criticalCount, penalty: criticalCount * 2   },
-        warning:  { count: warningCount,  penalty: warningCount  * 0.5 },
-        safe:     { count: safeCount,     penalty: 0                  },
-        totalPenalty,
+        expired:  { count: expiredCount,  penalty: expiredCount  * 3 },
+        critical: { count: criticalCount, penalty: criticalCount * 2 },
+        warning:  { count: warningCount,  penalty: 0               },
+        safe:     { count: safeCount,     bonus: safeBonus         },
+        netAdjustment,
       },
       reviewDeadline: {
         lastSunday:  lastSundayStr,

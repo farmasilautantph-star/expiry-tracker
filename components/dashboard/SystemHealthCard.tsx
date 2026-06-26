@@ -13,12 +13,19 @@ const CX          = 60;
 const CY          = 60;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-const URGENCY_ROWS = [
-  { key: "expired",  label: "Expired",  dot: "#dc2626", penaltyColor: "#dc2626" },
-  { key: "critical", label: "Critical", dot: "#ea580c", penaltyColor: "#ea580c" },
-  { key: "warning",  label: "Warning",  dot: "#ca8a04", penaltyColor: "#ca8a04" },
-  { key: "safe",     label: "Safe",     dot: "#16a34a", penaltyColor: null      },
-] as const;
+type RowType = "penalty" | "neutral" | "bonus";
+const URGENCY_ROWS: Array<{
+  key: "expired" | "critical" | "warning" | "safe";
+  label: string;
+  dot: string;
+  type: RowType;
+  ptColor: string | null;
+}> = [
+  { key: "expired",  label: "Expired",  dot: "#dc2626", type: "penalty",  ptColor: "#dc2626" },
+  { key: "critical", label: "Critical", dot: "#ea580c", type: "penalty",  ptColor: "#ea580c" },
+  { key: "warning",  label: "Warning",  dot: "#ca8a04", type: "neutral",  ptColor: null      },
+  { key: "safe",     label: "Safe",     dot: "#16a34a", type: "bonus",    ptColor: "#16a34a" },
+];
 
 function getHealthSummary(score: number) {
   if (score >= 80) {
@@ -121,9 +128,15 @@ export default function SystemHealthCard({ data, isLoading, isManager = false }:
 
           {/* Breakdown table */}
           <div className="flex-1 min-w-0 pt-1">
-            {URGENCY_ROWS.map(({ key, label, dot, penaltyColor }, i) => {
+            {URGENCY_ROWS.map(({ key, label, dot, type, ptColor }, i) => {
               const bucket = data[key];
               const isLast = i === URGENCY_ROWS.length - 1;
+              const pts =
+                type === "penalty"
+                  ? `−${(bucket as { count: number; penalty: number }).penalty} pts`
+                  : type === "bonus"
+                  ? `+${(bucket as { count: number; bonus: number }).bonus} pts`
+                  : "—";
               return (
                 <div
                   key={key}
@@ -140,35 +153,34 @@ export default function SystemHealthCard({ data, isLoading, isManager = false }:
                       {bucket.count}
                     </span>
                   </span>
-                  {penaltyColor ? (
-                    <span className="text-xs font-semibold" style={{ color: penaltyColor }}>
-                      -{bucket.penalty} pts
-                    </span>
-                  ) : (
-                    <span className="text-xs text-[#cbd5e1]">—</span>
-                  )}
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: type === "neutral" ? "#cbd5e1" : ptColor! }}
+                  >
+                    {pts}
+                  </span>
                 </div>
               );
             })}
 
-            {/* Total penalty */}
+            {/* Net score */}
             <div
               className="flex items-center justify-between mt-2 pt-2"
               style={{ borderTop: "1px solid #e2e8f0" }}
             >
-              <span className="text-xs font-semibold text-[#475569]">Total penalty</span>
+              <span className="text-xs font-semibold text-[#475569]">Net score</span>
               <span className="text-xs font-bold" style={{ color }}>
-                -{data.totalPenalty} pts
+                {data.netAdjustment >= 0 ? "+" : "−"}{Math.abs(data.netAdjustment)} pts
               </span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Score formula — staff only */}
-      {data && !isLoading && !isManager && (
+      {/* Note — all roles */}
+      {data && !isLoading && (
         <p className="mt-4 text-[11px] text-[#94a3b8]">
-          Score = 100 - penalty · Expired -3 ea · Critical -2 ea · Warning -0.5 ea
+          Resolve expired &amp; critical items to improve score. Safe stock earns bonus points.
         </p>
       )}
 

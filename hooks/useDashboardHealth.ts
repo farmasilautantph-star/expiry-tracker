@@ -39,8 +39,8 @@ export interface SystemHealth {
   expired:  { count: number; penalty: number };
   critical: { count: number; penalty: number };
   warning:  { count: number; penalty: number };
-  safe:     { count: number; penalty: number };
-  totalPenalty: number;
+  safe:     { count: number; bonus: number };
+  netAdjustment: number;
 }
 
 export interface UrgentItem {
