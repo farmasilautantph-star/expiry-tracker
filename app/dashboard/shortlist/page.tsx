@@ -17,6 +17,7 @@ export default function ShortListPage() {
   const [salesCount, setSalesCount] = useState<number | null>(null);
   const [deepLinkModalOpen, setDeepLinkModalOpen] = useState(false);
   const [deepLinkReviewId, setDeepLinkReviewId]   = useState<number | null>(null);
+  const [mobileMoreOpen, setMobileMoreOpen]       = useState(false);
   const {
     entries,
     counts,
@@ -90,8 +91,34 @@ export default function ShortListPage() {
         onDeleted={removeEntry}
       />
 
-      {/* Page header */}
-      <div className="flex items-center justify-between">
+      {/* Mobile header (below md) */}
+      <div className="md:hidden flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#94a3b8] mb-0.5">
+            Outlet Inventory
+          </p>
+          <h2 className="text-xl font-extrabold text-[#0f172a] tracking-tight">
+            Expiry Monitor
+          </h2>
+        </div>
+        <button
+          onClick={() => setMobileMoreOpen((o) => !o)}
+          aria-label="More filters"
+          aria-pressed={mobileMoreOpen}
+          className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors"
+          style={{
+            background: mobileMoreOpen ? "#1e3a5f" : "#f1f5f9",
+            color: mobileMoreOpen ? "#fff" : "#475569",
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M7 12h10M11 18h2" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Desktop header (md and up) */}
+      <div className="hidden md:flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-[#1e293b]">Expiry Monitor</h2>
           <p className="text-sm text-[#64748b] mt-0.5">
@@ -184,6 +211,7 @@ export default function ShortListPage() {
           onPatchEntry={patchEntry}
           onRemoveEntry={removeEntry}
           onSwitchToSales={() => setActiveTab("sales")}
+          mobileMoreOpen={mobileMoreOpen}
         />
       ) : (
         <SalesRecord

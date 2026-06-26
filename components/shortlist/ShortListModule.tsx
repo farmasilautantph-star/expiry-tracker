@@ -29,6 +29,7 @@ interface Props {
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
+  mobileMoreOpen?: boolean;
 }
 
 export default function ShortListModule({
@@ -47,6 +48,7 @@ export default function ShortListModule({
   onPatchEntry,
   onRemoveEntry,
   onSwitchToSales,
+  mobileMoreOpen = false,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
 
@@ -92,9 +94,13 @@ export default function ShortListModule({
         isManager={isManager}
         picOptions={picOptions}
         categoryOptions={categoryOptions}
+        counts={counts}
+        mobileMoreOpen={mobileMoreOpen}
       />
 
-      <ShortListSummary counts={counts} isLoading={isLoading} />
+      <div className="hidden md:block">
+        <ShortListSummary counts={counts} isLoading={isLoading} />
+      </div>
 
       <ShortListTable
         entries={entries}
