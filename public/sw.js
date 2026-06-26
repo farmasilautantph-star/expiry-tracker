@@ -1,4 +1,4 @@
-const CACHE = "expiry-v3";
+const CACHE = "expiry-v4";
 const PRECACHE = ["/", "/login"];
 
 self.addEventListener("install", (e) => {

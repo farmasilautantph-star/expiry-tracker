@@ -47,6 +47,15 @@ export default function RootLayout({
             __html: `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js')})}`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+document.addEventListener('touchmove',function(e){if(e.touches.length>1){e.preventDefault();}},{passive:false});
+var _lte=0;document.addEventListener('touchend',function(e){var n=Date.now();if(n-_lte<=300){e.preventDefault();}_lte=n;},{passive:false});
+document.addEventListener('wheel',function(e){if(e.ctrlKey){e.preventDefault();}},{passive:false});
+`,
+          }}
+        />
       </body>
     </html>
   );
