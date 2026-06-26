@@ -137,7 +137,7 @@ export async function PUT(
       // Step 3: calculate new qty
       new_qty = current_qty - offer.quantity;
 
-      // Step 4a / 4b: update expiry_logs
+      // Step 4a / 4b: update expiry_logs (auto-mark reviewed)
       if (new_qty <= 0) {
         await pool.query(
           `UPDATE expiry_logs SET
@@ -146,17 +146,19 @@ export async function PUT(
              completed_via = 'offer_received',
              completed_at = $1,
              review_status = 'resolved',
-             last_updated_at = $2
-           WHERE id = $3`,
-          [now, now, offer.expiry_log_id],
+             last_reviewed_at = $2,
+             last_updated_at = $3
+           WHERE id = $4`,
+          [now, now, now, offer.expiry_log_id],
         );
       } else {
         await pool.query(
           `UPDATE expiry_logs SET
              quantity = $1,
-             last_updated_at = $2
-           WHERE id = $3`,
-          [new_qty, now, offer.expiry_log_id],
+             last_reviewed_at = $2,
+             last_updated_at = $3
+           WHERE id = $4`,
+          [new_qty, now, now, offer.expiry_log_id],
         );
       }
     }

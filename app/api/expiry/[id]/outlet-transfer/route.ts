@@ -76,24 +76,26 @@ export async function POST(
   if (fullyClosed) {
     await pool.query(
       `UPDATE expiry_logs
-       SET quantity       = 0,
-           original_qty   = $1,
-           item_status    = 'completed',
-           completed_via  = 'offer_received',
-           completed_at   = $2,
-           review_status  = 'resolved',
-           last_updated_at = $3
-       WHERE id = $4`,
-      [capturedOriginalQty, now, now, id],
+       SET quantity         = 0,
+           original_qty     = $1,
+           item_status      = 'completed',
+           completed_via    = 'offer_received',
+           completed_at     = $2,
+           review_status    = 'resolved',
+           last_updated_at  = $3,
+           last_reviewed_at = $4
+       WHERE id = $5`,
+      [capturedOriginalQty, now, now, now, id],
     );
   } else {
     await pool.query(
       `UPDATE expiry_logs
-       SET quantity        = $1,
-           original_qty    = $2,
-           last_updated_at = $3
-       WHERE id = $4`,
-      [new_qty, capturedOriginalQty, now, id],
+       SET quantity         = $1,
+           original_qty     = $2,
+           last_updated_at  = $3,
+           last_reviewed_at = $4
+       WHERE id = $5`,
+      [new_qty, capturedOriginalQty, now, now, id],
     );
   }
 

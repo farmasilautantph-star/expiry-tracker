@@ -63,19 +63,17 @@ export async function GET(req: NextRequest) {
   const bindings: unknown[] = [];
 
   if (user.role !== "manager") {
-    conditions.push(
-      `expiry_log_id IN (SELECT id FROM expiry_logs WHERE pic_id = $${p++})`,
-    );
+    conditions.push(`el.pic_id = $${p++}`);
     bindings.push(user.userId);
   }
 
   if (expiryLogId) {
-    conditions.push(`expiry_log_id = $${p++}`);
+    conditions.push(`o.expiry_log_id = $${p++}`);
     bindings.push(Number(expiryLogId));
   }
 
   if (category) {
-    conditions.push(`category = $${p++}`);
+    conditions.push(`o.category = $${p++}`);
     bindings.push(category);
   }
 
@@ -83,34 +81,38 @@ export async function GET(req: NextRequest) {
     offerSt &&
     ["offered", "accepted", "rejected", "completed"].includes(offerSt)
   ) {
-    conditions.push(`offer_status = $${p++}`);
+    conditions.push(`o.offer_status = $${p++}`);
     bindings.push(offerSt);
   }
 
   if (hasAlert === "true" || hasAlert === "1") {
-    conditions.push("has_alert = TRUE");
+    conditions.push("o.has_alert = TRUE");
   } else if (hasAlert === "false" || hasAlert === "0") {
-    conditions.push("has_alert = FALSE");
+    conditions.push("o.has_alert = FALSE");
   }
 
   if (month) {
-    conditions.push(`to_char((created_at)::timestamp, 'YYYY-MM') = $${p++}`);
+    conditions.push(`to_char((o.created_at)::timestamp, 'YYYY-MM') = $${p++}`);
     bindings.push(month);
   }
 
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      `(LOWER(description) LIKE LOWER($${p++}) OR LOWER(barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(outlet_name,'')) LIKE LOWER($${p++}))`,
+      `(LOWER(o.description) LIKE LOWER($${p++}) OR LOWER(o.barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(o.outlet_name,'')) LIKE LOWER($${p++}))`,
     );
     bindings.push(like, like, like);
   }
 
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  // INNER JOIN expiry_logs guarantees orphaned offers (no matching expiry log) never surface.
   const rows = (
     await pool.query(
-      `SELECT *, ((expiry_date)::date - CURRENT_DATE) AS days_left
-       FROM offers ${where} ORDER BY created_at DESC`,
+      `SELECT o.*, ((o.expiry_date)::date - CURRENT_DATE) AS days_left
+         FROM offers o
+         JOIN expiry_logs el ON o.expiry_log_id = el.id
+       ${where}
+       ORDER BY o.created_at DESC`,
       bindings,
     )
   ).rows as unknown as OfferRow[];
@@ -159,6 +161,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Offers MUST link to an expiry_logs row — keeps Outlet Offers 100% synced with Expiry Monitor.
+  const linkedId = Number(expiry_log_id);
+  if (!Number.isInteger(linkedId) || linkedId <= 0) {
+    return NextResponse.json(
+      { success: false, error: "expiry_log_id is required" },
+      { status: 400 },
+    );
+  }
+
   const validStatus = ["offered", "accepted", "rejected", "completed"];
   const oStatus =
     offer_status && validStatus.includes(offer_status)
@@ -167,36 +178,37 @@ export async function POST(req: NextRequest) {
   const qty = Number(quantity) > 0 ? Math.round(Number(quantity)) : 1;
   const now = new Date().toISOString();
 
-  let linkedExpiryDate: string | null = null;
+  const logRow = (
+    await pool.query(
+      "SELECT quantity, expiry_date FROM expiry_logs WHERE id = $1",
+      [linkedId],
+    )
+  ).rows[0] as { quantity: number; expiry_date: string } | undefined;
 
-  // Validate against expiry_logs.quantity when linked to a log entry
-  if (expiry_log_id) {
-    const logRow = (
-      await pool.query(
-        "SELECT quantity, expiry_date FROM expiry_logs WHERE id = $1",
-        [expiry_log_id],
-      )
-    ).rows[0] as { quantity: number; expiry_date: string } | undefined;
-    if (logRow) {
-      const sumRow = (
-        await pool.query(
-          "SELECT COALESCE(SUM(quantity), 0) AS total FROM offers WHERE expiry_log_id = $1",
-          [expiry_log_id],
-        )
-      ).rows[0] as { total: number };
-      const remaining = logRow.quantity - (Number(sumRow.total) ?? 0);
-      if (qty > remaining) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Cannot offer more than ${remaining} available unit${remaining === 1 ? "" : "s"} (${logRow.quantity} logged, ${sumRow.total} already offered)`,
-          },
-          { status: 400 },
-        );
-      }
-      linkedExpiryDate = logRow.expiry_date ?? null;
-    }
+  if (!logRow) {
+    return NextResponse.json(
+      { success: false, error: "Linked expiry log not found" },
+      { status: 400 },
+    );
   }
+
+  const sumRow = (
+    await pool.query(
+      "SELECT COALESCE(SUM(quantity), 0) AS total FROM offers WHERE expiry_log_id = $1 AND offer_status = 'offered'",
+      [linkedId],
+    )
+  ).rows[0] as { total: number };
+  const remaining = logRow.quantity - (Number(sumRow.total) ?? 0);
+  if (qty > remaining) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Cannot offer more than ${remaining} available unit${remaining === 1 ? "" : "s"} (${logRow.quantity} logged, ${sumRow.total} already offered)`,
+      },
+      { status: 400 },
+    );
+  }
+  const linkedExpiryDate: string | null = logRow.expiry_date ?? null;
   try {
     const result = await pool.query(
       `INSERT INTO offers
@@ -205,7 +217,7 @@ export async function POST(req: NextRequest) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        RETURNING id`,
       [
-        expiry_log_id ?? null,
+        linkedId,
         stock_id?.trim() || null,
         barcode.trim(),
         description.trim(),
