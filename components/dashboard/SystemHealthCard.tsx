@@ -27,6 +27,13 @@ const URGENCY_ROWS: Array<{
   { key: "safe",     label: "Safe",     dot: "#16a34a", type: "bonus",    ptColor: "#16a34a" },
 ];
 
+function getHealthGradient(score: number): string {
+  if (score >= 80) return "linear-gradient(135deg,#15803d,#166534)";
+  if (score >= 60) return "linear-gradient(135deg,#1e3a5f,#2d5490)";
+  if (score >= 40) return "linear-gradient(135deg,#92400e,#b45309)";
+  return "linear-gradient(135deg,#991b1b,#b91c1c)";
+}
+
 function getHealthSummary(score: number) {
   if (score >= 80) {
     return {
@@ -63,12 +70,47 @@ function getHealthSummary(score: number) {
 export default function SystemHealthCard({ data, isLoading, isManager = false }: Props) {
   const color   = data?.color ?? "#94a3b8";
   const dashLen = data ? (data.score / 100) * CIRCUMFERENCE : 0;
+  const urgentCount = data ? data.expired.count + data.critical.count : 0;
 
   return (
-    <div
-      className="rounded-2xl bg-white shadow-sm p-6 h-full"
-      style={{ border: "1px solid #e2e8f0" }}
-    >
+    <>
+      {/* Mobile-only hero card (below md) */}
+      <div className="md:hidden rounded-2xl p-5 relative overflow-hidden" style={{ background: data ? getHealthGradient(data.score) : "#94a3b8" }}>
+        <div className="absolute -right-5 -top-5 w-[130px] h-[130px] rounded-full" style={{ background: "rgba(255,255,255,0.07)" }} />
+        <div className="absolute right-[70px] -bottom-9 w-[80px] h-[80px] rounded-full" style={{ background: "rgba(255,255,255,0.04)" }} />
+        {isLoading || !data ? (
+          <div className="h-[110px] flex items-center">
+            <div className="h-12 w-32 bg-white/20 rounded animate-pulse" />
+          </div>
+        ) : (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+              Inventory Health Score
+            </p>
+            <div className="flex items-end gap-1 mb-1.5">
+              <span className="font-black text-white leading-none" style={{ fontSize: "64px", letterSpacing: "-3px" }}>
+                {data.score}
+              </span>
+              <span className="pb-2.5 pl-0.5 text-lg" style={{ color: "rgba(255,255,255,0.5)" }}>/100</span>
+            </div>
+            <p className="text-[12.5px] font-semibold mb-3.5" style={{ color: "rgba(255,255,255,0.8)" }}>
+              {data.label} · {urgentCount} {urgentCount === 1 ? "item needs" : "items need"} action
+            </p>
+            <div className="h-[5px] rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${data.score}%`, background: "rgba(255,255,255,0.85)" }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Desktop card (md and up) */}
+      <div
+        className="hidden md:block rounded-2xl bg-white shadow-sm p-6 h-full"
+        style={{ border: "1px solid #e2e8f0" }}
+      >
       <div className="mb-4">
         <p className="text-sm font-bold text-[#0f172a]">System Health</p>
         <p className="text-xs text-[#94a3b8]">
@@ -195,6 +237,7 @@ export default function SystemHealthCard({ data, isLoading, isManager = false }:
           </div>
         );
       })()}
-    </div>
+      </div>
+    </>
   );
 }

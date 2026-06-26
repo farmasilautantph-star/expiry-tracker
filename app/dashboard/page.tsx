@@ -71,11 +71,11 @@ interface StatCardProps {
 function StatCard({ label, value, description, color, trend, rangeLabel }: StatCardProps) {
   return (
     <div
-      className="rounded-2xl bg-white px-5 pt-4 pb-5 shadow-sm"
+      className="rounded-2xl bg-white px-4 pt-3 pb-4 md:px-5 md:pt-4 md:pb-5 shadow-sm"
       style={{ border: "1px solid #e2e8f0" }}
     >
       {/* Top row: dot + label / badge */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2 md:mb-3">
         <div className="flex items-center gap-1.5">
           <span
             className="w-2 h-2 rounded-full flex-shrink-0"
@@ -96,16 +96,19 @@ function StatCard({ label, value, description, color, trend, rangeLabel }: StatC
       </div>
 
       {/* Big number */}
-      <p className="font-black leading-none" style={{ fontSize: "46px", color }}>
+      <p
+        className="font-black leading-none text-[32px] md:text-[46px]"
+        style={{ color }}
+      >
         {value === null ? (
-          <span className="inline-block w-12 h-9 bg-[#f1f5f9] animate-pulse rounded" />
+          <span className="inline-block w-10 h-7 md:w-12 md:h-9 bg-[#f1f5f9] animate-pulse rounded" />
         ) : (
           value
         )}
       </p>
 
       {/* Description */}
-      <p className="text-xs font-medium text-[#94a3b8] mt-2">{description}</p>
+      <p className="text-[11px] md:text-xs font-medium text-[#94a3b8] mt-1.5 md:mt-2">{description}</p>
     </div>
   );
 }
@@ -167,33 +170,32 @@ export default function DashboardPage() {
       {/* Quick Log banner — staff only */}
       {!isManager && (
         <div
-          className="rounded-2xl px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+          className="rounded-2xl px-4 py-4 md:px-6 md:py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 md:gap-4"
           style={{
             background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)",
             boxShadow: "0 4px 20px rgba(37,99,235,0.30)",
           }}
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              className="w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0"
               style={{ background: "rgba(255,255,255,0.18)" }}
             >
               <ClipboardDocumentListIcon className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-base font-bold text-white">Log New Expiry Entry</p>
-              <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.75)" }}>
+              <p className="text-sm md:text-base font-bold text-white">Log New Expiry Entry</p>
+              <p className="text-xs md:text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.75)" }}>
                 Record a short-expiry item for your outlet inventory
               </p>
             </div>
           </div>
           <button
             onClick={() => setFormOpen(true)}
-            className="flex-shrink-0 flex items-center justify-center gap-2 font-semibold text-[#2563eb] transition-colors"
+            className="flex-shrink-0 flex items-center justify-center gap-2 font-semibold text-[#2563eb] transition-colors text-sm md:text-base px-5 py-2.5 md:px-[22px] md:py-[10px]"
             style={{
               background: "white",
               borderRadius: "12px",
-              padding: "10px 22px",
             }}
             onMouseEnter={(e) =>
               ((e.currentTarget as HTMLElement).style.background = "#eff6ff")
@@ -215,7 +217,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
             <StatCard
               label="EXPIRED"
               value={stats?.expired ?? null}
