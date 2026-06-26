@@ -51,7 +51,8 @@ export async function GET(req: NextRequest) {
 
   let p = 1;
   const conditions: string[] = [
-    "return_status IN ('pending', 'returned', 'not_approved')",
+    // Active pending must still be on the floor; history rows are terminal (item_status='completed').
+    "((return_status = 'pending' AND item_status = 'active') OR return_status IN ('returned', 'not_approved'))",
   ];
   const bindings: (string | number)[] = [];
 

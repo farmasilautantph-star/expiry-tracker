@@ -105,7 +105,8 @@ export async function PUT(
       `UPDATE expiry_logs
        SET return_status = 'not_approved',
            return_notes = $1,
-           completed_via = 'return_not_approved',
+           item_status = 'completed',
+           completed_via = 'not_approved',
            completed_at = $2,
            review_status = 'resolved',
            last_updated_at = $3

@@ -116,20 +116,22 @@ export async function GET(req: NextRequest) {
     count: Number(r.count),
   }));
 
-  // Return status — from returns table
+  // Return status — derived from expiry_logs.return_status
   const returnStatusRow = (
     await pool.query(
       `
     SELECT
-      SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS returned,
-      SUM(CASE WHEN status = 'pending'
+      SUM(CASE WHEN return_status = 'returned' THEN 1 ELSE 0 END) AS returned,
+      SUM(CASE WHEN return_status = 'pending'
+               AND item_status = 'active'
                AND (return_by_date IS NULL OR (return_by_date)::date >= CURRENT_DATE)
                THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN status = 'pending'
+      SUM(CASE WHEN return_status = 'pending'
+               AND item_status = 'active'
                AND return_by_date IS NOT NULL
                AND (return_by_date)::date < CURRENT_DATE
                THEN 1 ELSE 0 END) AS overdue
-    FROM returns
+    FROM expiry_logs
     WHERE 1=1 ${picFilter}
   `,
       picBinding,

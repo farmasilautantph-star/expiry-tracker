@@ -21,7 +21,6 @@ if (!APPEND) {
   console.log("Clearing existing data...");
   db.exec(`
     DELETE FROM history_log;
-    DELETE FROM returns;
     DELETE FROM offers;
     DELETE FROM expiry_logs;
     DELETE FROM users;
@@ -331,98 +330,6 @@ for (const offer of offerItems) {
   );
 }
 console.log(`✓ ${offerItems.length} offers inserted`);
-
-// ── Returns ───────────────────────────────────────────────────────────────────
-const insertReturn = db.prepare(`
-  INSERT INTO returns (logged_date, pic_id, pic_name, category, description, barcode, created_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?)
-`);
-
-const returnItems = [
-  {
-    logged_date: "2026-04-10",
-    pic: "nadiah",
-    category: "MOM & BABY",
-    description: "Dumex Mamil Gold Step 3 1.2kg",
-    barcode: "9556234001",
-  },
-  {
-    logged_date: "2026-04-15",
-    pic: "najihah",
-    category: "FS",
-    description: "Milo Active 1kg",
-    barcode: "9555678001",
-  },
-  {
-    logged_date: "2026-04-22",
-    pic: "anis",
-    category: "OTC",
-    description: "Zyrtec 10mg 10s",
-    barcode: "9501234002",
-  },
-  {
-    logged_date: "2026-05-03",
-    pic: "nuraini",
-    category: "Poison B",
-    description: "Arcoxia 90mg 10s",
-    barcode: "9502345002",
-  },
-  {
-    logged_date: "2026-05-10",
-    pic: "nadiah",
-    category: "HS",
-    description: "Dettol Hand Sanitiser 50ml",
-    barcode: "9558901004",
-  },
-  {
-    logged_date: "2026-05-18",
-    pic: "najihah",
-    category: "Poison C",
-    description: "Brufen 400mg 10s",
-    barcode: "9503456002",
-  },
-  {
-    logged_date: "2026-05-25",
-    pic: "anis",
-    category: "PET CARE",
-    description: "Whiskas Ocean Fish 1.2kg",
-    barcode: "9557890002",
-  },
-  {
-    logged_date: "2026-06-01",
-    pic: "nuraini",
-    category: "FS",
-    description: "Nestlé Bliss Yogurt Peach",
-    barcode: "9555678002",
-  },
-  {
-    logged_date: "2026-06-08",
-    pic: "nadiah",
-    category: "MOM & BABY",
-    description: "Enfalac A+ Step 1 900g",
-    barcode: "9556234002",
-  },
-  {
-    logged_date: "2026-06-12",
-    pic: "najihah",
-    category: "HS",
-    description: "Dove Body Lotion 250ml",
-    barcode: "9558901002",
-  },
-];
-
-for (const r of returnItems) {
-  insertReturn.run(
-    r.logged_date,
-    userIds[r.pic],
-    r.pic.toUpperCase(),
-    r.category,
-    r.description,
-    r.barcode,
-    now,
-  );
-}
-console.log(`✓ ${returnItems.length} returns inserted`);
 
 // ── History Log ───────────────────────────────────────────────────────────────
 const insertHistory = db.prepare(`

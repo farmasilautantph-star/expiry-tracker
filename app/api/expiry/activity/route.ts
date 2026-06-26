@@ -297,7 +297,7 @@ function buildTimeline(
         color: "#16a34a",
         icon: "check",
       });
-    } else if (entry.completed_via === "return_not_approved") {
+    } else if (entry.completed_via === "not_approved") {
       events.push({
         id: `ev-${idx++}`,
         date: returnDate,

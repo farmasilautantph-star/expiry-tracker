@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
     sold_count:           data.filter((r) => r.completed_via === "sold").length,
     sold_units:           data.reduce((s, r) => s + (r.units_sold ?? 0), 0),
     returned_count:       data.filter((r) => r.completed_via === "returned").length,
-    not_approved_count:   data.filter((r) => r.completed_via === "return_not_approved").length,
+    not_approved_count:   data.filter((r) => r.completed_via === "not_approved").length,
     offer_received_count: data.filter((r) => r.completed_via === "offer_received").length,
     offer_rejected_count: data.filter((r) => r.completed_via === "offer_rejected").length,
   };
