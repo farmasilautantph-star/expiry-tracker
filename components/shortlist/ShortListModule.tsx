@@ -27,6 +27,7 @@ interface Props {
   onDelete: (id: number) => Promise<void>;
   onRefresh: () => Promise<void>;
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
+  onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
 }
 
@@ -44,6 +45,7 @@ export default function ShortListModule({
   onDelete,
   onRefresh,
   onPatchEntry,
+  onRemoveEntry,
   onSwitchToSales,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
@@ -103,6 +105,7 @@ export default function ShortListModule({
         onDeleteRequest={handleDeleteRequest}
         onMarkReviewed={onRefresh}
         onPatchEntry={onPatchEntry}
+        onRemoveEntry={onRemoveEntry}
         onSwitchToSales={onSwitchToSales}
       />
 

@@ -28,6 +28,7 @@ export default function ShortListPage() {
     activeFilterCount,
     refresh,
     patchEntry,
+    removeEntry,
   } = useShortList();
 
   useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
@@ -61,7 +62,13 @@ export default function ShortListPage() {
   }
 
   async function handleDelete(id: number): Promise<void> {
-    const res = await fetch(`/api/expiry/${id}`, { method: "DELETE" });
+    const reason = window.prompt("Reason for deleting this entry (required):");
+    if (!reason?.trim()) return;
+    const res = await fetch(`/api/expiry/${id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: reason.trim() }),
+    });
     const json = await res.json();
     if (!res.ok || !json.success)
       throw new Error(json.error ?? "Failed to delete entry");
@@ -80,6 +87,7 @@ export default function ShortListPage() {
         onUpdated={refresh}
         onSwitchToSales={() => { setDeepLinkModalOpen(false); setActiveTab("sales"); }}
         onToast={showSuccess}
+        onDeleted={removeEntry}
       />
 
       {/* Page header */}
@@ -174,6 +182,7 @@ export default function ShortListPage() {
           onDelete={handleDelete}
           onRefresh={refresh}
           onPatchEntry={patchEntry}
+          onRemoveEntry={removeEntry}
           onSwitchToSales={() => setActiveTab("sales")}
         />
       ) : (

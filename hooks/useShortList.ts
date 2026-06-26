@@ -86,6 +86,7 @@ interface UseShortListReturn {
   activeFilterCount: number;
   refresh: () => Promise<void>;
   patchEntry: (id: number, patch: Partial<ShortListEntry>) => void;
+  removeEntry: (id: number) => void;
 }
 
 export function useShortList(): UseShortListReturn {
@@ -162,6 +163,10 @@ export function useShortList(): UseShortListReturn {
     setEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   }, []);
 
+  const removeEntry = useCallback((id: number) => {
+    setEntries(prev => prev.filter(e => e.id !== id));
+  }, []);
+
   return {
     entries,
     counts,
@@ -173,5 +178,6 @@ export function useShortList(): UseShortListReturn {
     activeFilterCount,
     refresh: () => fetchData(filters),
     patchEntry,
+    removeEntry,
   };
 }

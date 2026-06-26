@@ -197,6 +197,7 @@ interface Props {
   onDeleteRequest: (entry: ShortListEntry) => void;
   onMarkReviewed?: (id: number) => Promise<void>;
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
+  onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
 }
 
@@ -212,6 +213,7 @@ export default function ShortListTable({
   onDeleteRequest,
   onMarkReviewed,
   onPatchEntry,
+  onRemoveEntry,
   onSwitchToSales,
 }: Props) {
   const [reviewModalOpen, setReviewModalOpen]   = useState(false);
@@ -328,6 +330,7 @@ export default function ShortListTable({
         }}
         onSwitchToSales={onSwitchToSales}
         onPatchEntry={onPatchEntry}
+        onDeleted={onRemoveEntry}
         onToast={showSuccess}
       />
 

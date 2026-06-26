@@ -754,14 +754,19 @@ interface Props {
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
   onPatchEntry?: (id: number, patch: { remarks: string | null }) => void;
+  onDeleted?: (id: number) => void;
 }
 
-export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onReviewed, onSwitchToSales, onToast, onPatchEntry }: Props) {
+export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onReviewed, onSwitchToSales, onToast, onPatchEntry, onDeleted }: Props) {
   const [mounted, setMounted] = useState(false);
   const [item, setItem] = useState<FullItemDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
   const [reviewDone, setReviewDone] = useState<string | null>(null);
+  const [deleteState, setDeleteState] = useState<"idle" | "confirming">("idle");
+  const [deleteReason, setDeleteReason] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { user, isManager } = useAuth();
 
@@ -771,6 +776,9 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
     if (!isOpen || !entryId) return;
     setItem(null);
     setReviewDone(null);
+    setDeleteState("idle");
+    setDeleteReason("");
+    setDeleteError(null);
     setIsLoading(true);
     fetch(`/api/expiry/${entryId}/full-detail`)
       .then((r) => r.json())
@@ -815,6 +823,33 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
       alert(err instanceof Error ? err.message : "Failed to mark as reviewed");
     } finally {
       setIsReviewing(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!item) return;
+    const reason = deleteReason.trim();
+    if (reason.length < 10) {
+      setDeleteError("Reason must be at least 10 characters.");
+      return;
+    }
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed to delete");
+      onDeleted?.(item.id);
+      onToast?.("Entry deleted");
+      onClose();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete");
+    } finally {
+      setDeleteSubmitting(false);
     }
   }
 
@@ -947,6 +982,31 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
 
         {/* ── Footer ───────────────────────────────────────── */}
         <div className="border-t border-slate-100 p-4 flex-shrink-0">
+          {/* Delete confirmation section */}
+          {deleteState === "confirming" && (
+            <div className="mb-3 rounded-xl p-3 space-y-2" style={{ border: "1px solid #fecaca", background: "#fff5f5" }}>
+              <p className="text-xs font-semibold text-red-600">This will permanently delete this entry.</p>
+              <textarea
+                rows={2}
+                value={deleteReason}
+                onChange={(e) => { setDeleteReason(e.target.value); setDeleteError(null); }}
+                placeholder="Reason for deletion * (min. 10 characters)"
+                className="w-full text-xs text-slate-800 rounded-lg px-3 py-2 resize-none outline-none leading-relaxed"
+                style={{ border: deleteError ? "1px solid #dc2626" : "1px solid #e2e8f0" }}
+                autoFocus
+              />
+              {deleteError && <p className="text-[10px] text-red-500">{deleteError}</p>}
+              <div className="flex gap-2">
+                <Btn variant="slate" onClick={() => { setDeleteState("idle"); setDeleteReason(""); setDeleteError(null); }} disabled={deleteSubmitting}>
+                  Cancel
+                </Btn>
+                <Btn variant="red" onClick={handleDelete} disabled={deleteSubmitting}>
+                  {deleteSubmitting ? "Deleting…" : "Confirm Delete"}
+                </Btn>
+              </div>
+            </div>
+          )}
+
           {reviewDone ? (
             <div className="space-y-3">
               <div
@@ -973,44 +1033,57 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
               </button>
             </div>
           ) : (
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 h-10 rounded-xl text-sm font-medium transition-colors"
-                style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
-              >
-                {item && item.item_status !== "active" ? "Close" : "Cancel"}
-              </button>
-              {item && item.item_status !== "active" && onSwitchToSales && (
+            <div className="flex items-center gap-3">
+              {isManager && item && deleteState === "idle" && (
                 <button
                   type="button"
-                  onClick={() => { onClose(); onSwitchToSales(); }}
-                  className="flex-1 h-10 rounded-xl text-sm font-semibold transition-colors"
-                  style={{ background: "#eff6ff", color: "#2563eb" }}
+                  onClick={() => setDeleteState("confirming")}
+                  className="text-xs font-semibold flex items-center gap-1 flex-shrink-0 transition-colors hover:opacity-80"
+                  style={{ color: "#dc2626" }}
                 >
-                  View Sales Record →
+                  <TrashIcon className="w-3.5 h-3.5" />
+                  Delete Entry
                 </button>
               )}
-              {canReview && (
+              <div className="flex gap-3 flex-1">
                 <button
                   type="button"
-                  onClick={handleMarkReviewed}
-                  disabled={isReviewing}
-                  className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70"
-                  style={{ background: "#22c55e" }}
+                  onClick={onClose}
+                  className="flex-1 h-10 rounded-xl text-sm font-medium transition-colors"
+                  style={{ border: "1px solid #e2e8f0", color: "#64748b" }}
                 >
-                  {isReviewing ? (
-                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  ) : (
-                    <CheckIcon className="w-4 h-4" />
-                  )}
-                  {isReviewing ? "Saving…" : "Mark Reviewed"}
+                  {item && item.item_status !== "active" ? "Close" : "Cancel"}
                 </button>
-              )}
+                {item && item.item_status !== "active" && onSwitchToSales && (
+                  <button
+                    type="button"
+                    onClick={() => { onClose(); onSwitchToSales(); }}
+                    className="flex-1 h-10 rounded-xl text-sm font-semibold transition-colors"
+                    style={{ background: "#eff6ff", color: "#2563eb" }}
+                  >
+                    View Sales Record →
+                  </button>
+                )}
+                {canReview && (
+                  <button
+                    type="button"
+                    onClick={handleMarkReviewed}
+                    disabled={isReviewing}
+                    className="flex-1 h-10 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70"
+                    style={{ background: "#22c55e" }}
+                  >
+                    {isReviewing ? (
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      <CheckIcon className="w-4 h-4" />
+                    )}
+                    {isReviewing ? "Saving…" : "Mark Reviewed"}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

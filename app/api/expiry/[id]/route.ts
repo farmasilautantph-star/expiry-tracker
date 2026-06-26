@@ -178,6 +178,15 @@ export async function DELETE(
     );
   }
 
+  const body = await req.json().catch(() => null);
+  const reason: string = body?.reason?.trim() ?? "";
+  if (!reason) {
+    return NextResponse.json(
+      { success: false, error: "Reason is required" },
+      { status: 400 },
+    );
+  }
+
   const existing = (
     await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
   ).rows[0] as unknown as ExpiryRow | undefined;
@@ -201,7 +210,7 @@ export async function DELETE(
       id,
       user.userId,
       user.picName,
-      `Deleted expiry log #${id}: ${existing.description} (${existing.expiry_date})`,
+      `Deleted by ${user.picName}. Reason: ${reason} | Entry: ${existing.description} (${existing.barcode}, ${existing.expiry_date})`,
       now,
     ],
   );
