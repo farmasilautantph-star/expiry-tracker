@@ -161,11 +161,22 @@ export async function PUT(
   return NextResponse.json({ success: true, data: entry });
 }
 
+async function authAny(req: NextRequest) {
+  const token = getTokenFromRequest(req);
+  if (!token) return { user: null, error: "Unauthorized", status: 401 };
+  try {
+    const user = await verifyToken(token);
+    return { user, error: null, status: 200 };
+  } catch {
+    return { user: null, error: "Unauthorized", status: 401 };
+  }
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const { user, error, status } = await authManager(req);
+  const { user, error, status } = await authAny(req);
   if (!user) {
     return NextResponse.json({ success: false, error }, { status });
   }

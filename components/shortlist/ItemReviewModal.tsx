@@ -906,13 +906,25 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                 </div>
               ) : null}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-slate-100"
-            >
-              <XMarkIcon className="w-5 h-5 text-slate-400" />
-            </button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {item && deleteState === "idle" && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteState("confirming")}
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-colors hover:bg-red-50"
+                  title="Delete entry"
+                >
+                  <TrashIcon className="w-4 h-4 text-red-400" />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors hover:bg-slate-100"
+              >
+                <XMarkIcon className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1034,17 +1046,6 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
             </div>
           ) : (
             <div className="flex items-center gap-3">
-              {isManager && item && deleteState === "idle" && (
-                <button
-                  type="button"
-                  onClick={() => setDeleteState("confirming")}
-                  className="text-xs font-semibold flex items-center gap-1 flex-shrink-0 transition-colors hover:opacity-80"
-                  style={{ color: "#dc2626" }}
-                >
-                  <TrashIcon className="w-3.5 h-3.5" />
-                  Delete Entry
-                </button>
-              )}
               <div className="flex gap-3 flex-1">
                 <button
                   type="button"
