@@ -518,18 +518,20 @@ function SalesSection({
   onToast?: (msg: string) => void;
 }) {
   const [showForm, setShowForm] = useState<"idle" | "sell" | "transfer">("idle");
-  const [units, setUnits] = useState(1);
+  const [unitsInput, setUnitsInput] = useState("1");
   const [submitting, setSubmitting] = useState(false);
 
   // Transfer form state
   const [outletName, setOutletName] = useState("");
-  const [transferQty, setTransferQty] = useState(1);
+  const [transferQtyInput, setTransferQtyInput] = useState("1");
   const [transferError, setTransferError] = useState<string | null>(null);
 
   const maxQty = item.qty;
-  const remaining = maxQty - units;
-  const isValid = Number.isInteger(units) && units >= 1 && units <= maxQty;
-  const transferValid = outletName.trim().length > 0 && Number.isInteger(transferQty) && transferQty >= 1 && transferQty <= maxQty;
+  const units = parseInt(unitsInput, 10);
+  const transferQty = parseInt(transferQtyInput, 10);
+  const remaining = maxQty - (isNaN(units) ? 0 : units);
+  const isValid = !isNaN(units) && units >= 1 && units <= maxQty;
+  const transferValid = outletName.trim().length > 0 && !isNaN(transferQty) && transferQty >= 1 && transferQty <= maxQty;
 
   async function confirmSell() {
     setSubmitting(true);
@@ -580,7 +582,7 @@ function SalesSection({
       }));
       setShowForm("idle");
       setOutletName("");
-      setTransferQty(1);
+      setTransferQtyInput("1");
       onToast?.(`Transferred ${transferQty} unit${transferQty !== 1 ? "s" : ""} to ${name}`);
       onUpdated();
     } catch (err) {
@@ -602,7 +604,7 @@ function SalesSection({
           <div className="flex gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => { setUnits(1); setShowForm("sell"); }}
+              onClick={() => { setUnitsInput("1"); setShowForm("sell"); }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors"
               style={{ background: "#2563eb" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1d4ed8"; }}
@@ -613,7 +615,7 @@ function SalesSection({
             </button>
             <button
               type="button"
-              onClick={() => { setTransferQty(1); setOutletName(""); setTransferError(null); setShowForm("transfer"); }}
+              onClick={() => { setTransferQtyInput("1"); setOutletName(""); setTransferError(null); setShowForm("transfer"); }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
               style={{ border: "1px solid #2563eb", color: "#2563eb", background: "white" }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#eff6ff"; }}
@@ -636,8 +638,13 @@ function SalesSection({
               type="number"
               min={1}
               max={maxQty}
-              value={units}
-              onChange={(e) => setUnits(parseInt(e.target.value, 10) || 1)}
+              value={unitsInput}
+              onChange={(e) => setUnitsInput(e.target.value)}
+              onBlur={() => {
+                const val = parseInt(unitsInput, 10);
+                if (isNaN(val) || val < 1) setUnitsInput("1");
+                else if (val > maxQty) setUnitsInput(String(maxQty));
+              }}
               className="w-full text-sm font-medium text-slate-800 rounded-lg px-3 py-2 outline-none"
               style={{
                 border: isValid ? "1px solid #e2e8f0" : "1px solid #dc2626",
@@ -645,7 +652,7 @@ function SalesSection({
               }}
               autoFocus
             />
-            {units > maxQty && (
+            {!isNaN(units) && units > maxQty && (
               <p className="text-[10px] text-[#dc2626] mt-1">Cannot exceed {maxQty}</p>
             )}
           </div>
@@ -696,8 +703,13 @@ function SalesSection({
               type="number"
               min={1}
               max={maxQty}
-              value={transferQty}
-              onChange={(e) => { setTransferQty(parseInt(e.target.value, 10) || 1); setTransferError(null); }}
+              value={transferQtyInput}
+              onChange={(e) => { setTransferQtyInput(e.target.value); setTransferError(null); }}
+              onBlur={() => {
+                const val = parseInt(transferQtyInput, 10);
+                if (isNaN(val) || val < 1) setTransferQtyInput("1");
+                else if (val > maxQty) setTransferQtyInput(String(maxQty));
+              }}
               className="w-full text-sm font-medium text-slate-800 rounded-lg px-3 py-2 outline-none"
               style={{ border: "1px solid #e2e8f0", background: "white" }}
             />
