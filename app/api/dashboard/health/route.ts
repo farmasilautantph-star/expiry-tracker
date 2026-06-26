@@ -53,7 +53,7 @@ function calcDaysSince(isoDate: string): number {
 
 function scoreLabel(score: number): { label: string; color: string } {
   if (score >= 80) return { label: "Good",      color: "#16a34a" };
-  if (score >= 60) return { label: "Monitor",   color: "#ca8a04" };
+  if (score >= 60) return { label: "Warning",   color: "#ca8a04" };
   if (score >= 40) return { label: "Attention", color: "#ea580c" };
   return               { label: "Critical",  color: "#dc2626" };
 }
@@ -105,7 +105,7 @@ export async function GET(req: NextRequest) {
   }
 
   const totalActive  = rows.length;
-  const totalPenalty = expiredCount * 10 + criticalCount * 5 + warningCount * 1;
+  const totalPenalty = expiredCount * 3 + criticalCount * 2 + warningCount * 0.5;
   const score        = Math.max(0, Math.round(100 - totalPenalty));
   const { label, color } = scoreLabel(score);
 
@@ -247,9 +247,9 @@ export async function GET(req: NextRequest) {
         label,
         color,
         totalActive,
-        expired:  { count: expiredCount,  penalty: expiredCount  * 10 },
-        critical: { count: criticalCount, penalty: criticalCount * 5  },
-        warning:  { count: warningCount,  penalty: warningCount  * 1  },
+        expired:  { count: expiredCount,  penalty: expiredCount  * 3   },
+        critical: { count: criticalCount, penalty: criticalCount * 2   },
+        warning:  { count: warningCount,  penalty: warningCount  * 0.5 },
         safe:     { count: safeCount,     penalty: 0                  },
         totalPenalty,
       },

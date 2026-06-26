@@ -20,12 +20,10 @@ const URGENCY_ROWS = [
   { key: "safe",     label: "Safe",     dot: "#16a34a", penaltyColor: null      },
 ] as const;
 
-function getHealthSummary(score: number, expired: number, critical: number, isManager = false) {
+function getHealthSummary(score: number) {
   if (score >= 80) {
     return {
-      message: expired === 0 && critical === 0
-        ? "Your inventory is in great shape! All items are well within safe expiry range."
-        : `Your inventory is healthy. Monitor ${critical} critical item${critical !== 1 ? "s" : ""} before they expire.`,
+      message: "Inventory health is good. Keep monitoring expiry dates.",
       color: "text-green-700",
       bgColor: "bg-green-50",
       borderColor: "border-green-200",
@@ -33,7 +31,7 @@ function getHealthSummary(score: number, expired: number, critical: number, isMa
   }
   if (score >= 60) {
     return {
-      message: `Inventory needs attention. ${critical} critical item${critical !== 1 ? "s" : ""} expiring within 3 months. Review and take action soon.`,
+      message: "Some items need attention. Review critical and warning items.",
       color: "text-amber-600",
       bgColor: "bg-amber-50",
       borderColor: "border-amber-200",
@@ -41,19 +39,14 @@ function getHealthSummary(score: number, expired: number, critical: number, isMa
   }
   if (score >= 40) {
     return {
-      message: `Several items require immediate action.${expired > 0 ? ` ${expired} item${expired !== 1 ? "s" : ""} already expired.` : ""} Prioritize clearing critical stock now.`,
+      message: "Inventory needs attention. Take action on expiring items.",
       color: "text-orange-600",
       bgColor: "bg-orange-50",
       borderColor: "border-orange-200",
     };
   }
-  const message = isManager
-    ? expired >= 5
-      ? `Urgent! ${expired} expired items detected across all staff. Immediate action required to prevent further stock losses.`
-      : `Critical inventory health. ${critical} items expiring within 3 months. Review staff activity immediately.`
-    : `Urgent! ${expired} expired item${expired !== 1 ? "s" : ""} detected. Immediate action required to prevent further losses.`;
   return {
-    message,
+    message: "Critical inventory health. Immediate action required.",
     color: "text-red-600",
     bgColor: "bg-red-50",
     borderColor: "border-red-200",
@@ -175,13 +168,13 @@ export default function SystemHealthCard({ data, isLoading, isManager = false }:
       {/* Score formula — staff only */}
       {data && !isLoading && !isManager && (
         <p className="mt-4 text-[11px] text-[#94a3b8]">
-          Score = 100 - penalty · Expired -10 ea · Critical -5 ea · Warning -1 ea
+          Score = 100 - penalty · Expired -3 ea · Critical -2 ea · Warning -0.5 ea
         </p>
       )}
 
       {/* Summary — all roles */}
       {data && !isLoading && (() => {
-        const summary = getHealthSummary(data.score, data.expired.count, data.critical.count, isManager);
+        const summary = getHealthSummary(data.score);
         return (
           <div className={`mt-3 p-3 rounded-xl border ${summary.bgColor} ${summary.borderColor}`}>
             <p className={`text-xs font-medium leading-relaxed ${summary.color}`}>
