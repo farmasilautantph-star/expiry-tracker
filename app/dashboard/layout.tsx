@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -375,10 +376,16 @@ export default function DashboardLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6" style={{ background: "#eef2f7" }}>
+        <main
+          className="flex-1 overflow-y-auto p-6 pb-[calc(74px+env(safe-area-inset-bottom)+24px)] md:pb-6"
+          style={{ background: "#eef2f7" }}
+        >
           {children}
         </main>
       </div>
+
+      {/* Mobile bottom nav — below md only */}
+      <MobileBottomNav />
     </div>
   );
 }
