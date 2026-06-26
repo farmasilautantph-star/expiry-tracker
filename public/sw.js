@@ -1,4 +1,4 @@
-const CACHE = "expiry-v2";
+const CACHE = "expiry-v3";
 const PRECACHE = ["/", "/login"];
 
 self.addEventListener("install", (e) => {
@@ -38,7 +38,7 @@ self.addEventListener("fetch", (e) => {
             cached ||
             new Response(
               `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Expiry Tracker</title>
-              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
+              <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
               <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8fafc}
               .box{text-align:center;padding:2rem;max-width:320px}h1{color:#1e3a5f;font-size:1.5rem;margin-bottom:.5rem}p{color:#64748b}</style></head>
               <body><div class="box"><h1>You're Offline</h1><p>Please check your connection and try again.</p></div></body></html>`,
