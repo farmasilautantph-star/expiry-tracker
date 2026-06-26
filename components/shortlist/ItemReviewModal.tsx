@@ -9,6 +9,7 @@ import {
   BanknotesIcon,
   PencilIcon,
   TrashIcon,
+  ArrowRightCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import OfferForm from "@/components/offers/OfferForm";
@@ -516,13 +517,19 @@ function SalesSection({
   onUpdated: () => void;
   onToast?: (msg: string) => void;
 }) {
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState<"idle" | "sell" | "transfer">("idle");
   const [units, setUnits] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+
+  // Transfer form state
+  const [outletName, setOutletName] = useState("");
+  const [transferQty, setTransferQty] = useState(1);
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   const maxQty = item.qty;
   const remaining = maxQty - units;
   const isValid = Number.isInteger(units) && units >= 1 && units <= maxQty;
+  const transferValid = outletName.trim().length > 0 && Number.isInteger(transferQty) && transferQty >= 1 && transferQty <= maxQty;
 
   async function confirmSell() {
     setSubmitting(true);
@@ -540,7 +547,7 @@ function SalesSection({
         qty: newQty,
         item_status: newQty === 0 ? "sold" : prev.item_status,
       }));
-      setShowForm(false);
+      setShowForm("idle");
       onToast?.("Sale recorded successfully");
       onUpdated();
     } catch (err) {
@@ -550,27 +557,76 @@ function SalesSection({
     }
   }
 
+  async function confirmTransfer() {
+    const name = outletName.trim();
+    if (!name) { setTransferError("Outlet name is required"); return; }
+    if (!Number.isInteger(transferQty) || transferQty < 1) { setTransferError("Quantity must be at least 1"); return; }
+    if (transferQty > maxQty) { setTransferError(`Cannot exceed available quantity (${maxQty})`); return; }
+    setTransferError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}/outlet-transfer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ outlet_name: name, qty_transferred: transferQty }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      const newQty: number = json.new_qty;
+      onItemUpdate((prev) => ({
+        ...prev,
+        qty: newQty,
+        item_status: newQty === 0 ? "completed" : prev.item_status,
+      }));
+      setShowForm("idle");
+      setOutletName("");
+      setTransferQty(1);
+      onToast?.(`Transferred ${transferQty} unit${transferQty !== 1 ? "s" : ""} to ${name}`);
+      onUpdated();
+    } catch (err) {
+      setTransferError(err instanceof Error ? err.message : "Failed to record transfer");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div>
       <SectionHeader>Sales</SectionHeader>
 
-      {!showForm ? (
-        <div className="rounded-xl p-3 flex items-center justify-between bg-slate-50">
+      {showForm === "idle" && (
+        <div className="rounded-xl p-3 space-y-2 bg-slate-50">
           <p className="text-sm font-semibold text-slate-700">
             Available: {maxQty} unit{maxQty !== 1 ? "s" : ""}
           </p>
-          <button
-            onClick={() => { setUnits(1); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors"
-            style={{ background: "#2563eb" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1d4ed8"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#2563eb"; }}
-          >
-            <BanknotesIcon className="w-4 h-4" />
-            Mark as Sold
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => { setUnits(1); setShowForm("sell"); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors"
+              style={{ background: "#2563eb" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1d4ed8"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#2563eb"; }}
+            >
+              <BanknotesIcon className="w-4 h-4" />
+              Mark as Sold
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTransferQty(1); setOutletName(""); setTransferError(null); setShowForm("transfer"); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+              style={{ border: "1px solid #2563eb", color: "#2563eb", background: "white" }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#eff6ff"; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "white"; }}
+            >
+              <ArrowRightCircleIcon className="w-4 h-4" />
+              Outlet Transfer
+            </button>
+          </div>
         </div>
-      ) : (
+      )}
+
+      {showForm === "sell" && (
         <div className="rounded-xl p-3 space-y-3" style={{ border: "1px solid #e2e8f0" }}>
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
@@ -599,20 +655,60 @@ function SalesSection({
               style={{ background: "#f8fafc" }}
             >
               <span className="text-slate-500">Remaining after sale:</span>
-              <span
-                className="font-bold"
-                style={{ color: remaining === 0 ? "#16a34a" : "#334155" }}
-              >
+              <span className="font-bold" style={{ color: remaining === 0 ? "#16a34a" : "#334155" }}>
                 {remaining} unit{remaining !== 1 ? "s" : ""}
               </span>
             </div>
           )}
           <div className="flex gap-2">
-            <Btn variant="slate" onClick={() => setShowForm(false)} disabled={submitting}>
+            <Btn variant="slate" onClick={() => setShowForm("idle")} disabled={submitting}>
               Cancel
             </Btn>
             <Btn variant="green" onClick={confirmSell} disabled={!isValid || submitting}>
               {submitting ? "Saving…" : "Confirm Sold"}
+            </Btn>
+          </div>
+        </div>
+      )}
+
+      {showForm === "transfer" && (
+        <div className="rounded-xl p-3 space-y-3" style={{ border: "1px solid #bfdbfe", background: "#f8faff" }}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Outlet Transfer</p>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Outlet Name *
+            </label>
+            <input
+              type="text"
+              value={outletName}
+              onChange={(e) => { setOutletName(e.target.value); setTransferError(null); }}
+              placeholder="Enter outlet name..."
+              className="w-full text-sm text-slate-800 rounded-lg px-3 py-2 outline-none"
+              style={{ border: "1px solid #e2e8f0", background: "white" }}
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+              Qty to Transfer * <span className="normal-case font-normal text-slate-400">(max {maxQty})</span>
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={maxQty}
+              value={transferQty}
+              onChange={(e) => { setTransferQty(parseInt(e.target.value, 10) || 1); setTransferError(null); }}
+              className="w-full text-sm font-medium text-slate-800 rounded-lg px-3 py-2 outline-none"
+              style={{ border: "1px solid #e2e8f0", background: "white" }}
+            />
+          </div>
+          {transferError && <p className="text-[10px] text-red-500">{transferError}</p>}
+          <div className="flex gap-2">
+            <Btn variant="slate" onClick={() => { setShowForm("idle"); setTransferError(null); }} disabled={submitting}>
+              Cancel
+            </Btn>
+            <Btn variant="blue" onClick={confirmTransfer} disabled={!transferValid || submitting}>
+              {submitting ? "Saving…" : "Confirm Transfer"}
             </Btn>
           </div>
         </div>
