@@ -15,6 +15,25 @@ interface Props {
   onAddStockSuccess?: (result: { additionalQty: number; newQty: number }) => void;
 }
 
+const CATEGORIES = [
+  "FOOD AND BEVERAGE",
+  "FOOD SUPPLEMENT",
+  "HEALTH SUPPLEMENT",
+  "HOUSEHOLD PRODUCT",
+  "MEDICAL DEVICE",
+  "MOM AND BABY",
+  "OTC MEDICINE",
+  "PERSONAL CARE",
+  "PET CARE",
+  "POISON A MEDICINE",
+  "POISON B MEDICINE",
+  "POISON C MEDICINE",
+  "PREMIUMS",
+  "REHAB",
+  "TRADITIONAL MEDICINE",
+  "NA",
+] as const;
+
 const EMPTY: ExpiryFormData = {
   stock_id: "",
   barcode: "",
@@ -71,6 +90,10 @@ export default function ExpiryForm({
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [existingEntryForStock, setExistingEntryForStock] = useState<ExistingEntry | null>(null);
 
+  type EntryMode = "search" | "manual";
+  const [entryMode, setEntryMode] = useState<EntryMode>("search");
+  const [noResultsFound, setNoResultsFound] = useState(false);
+
   const productSelected = !!(form.barcode || form.description);
 
   useEffect(() => {
@@ -107,6 +130,8 @@ export default function ExpiryForm({
     setDupStatus("idle");
     setDupInfo(null);
     setDupConfirmed(false);
+    setEntryMode("search");
+    setNoResultsFound(false);
   }, [isOpen, editingEntry]);
 
   useEffect(() => {
@@ -183,7 +208,8 @@ export default function ExpiryForm({
         const data = await res.json();
         if (data.success) {
           setResults(data.data);
-          setShowDropdown(true);
+          setShowDropdown(data.data.length > 0);
+          setNoResultsFound(data.data.length === 0);
         }
       } catch {
         /* silent */
@@ -195,10 +221,32 @@ export default function ExpiryForm({
 
   function handleSearchChange(val: string) {
     setSearchQuery(val);
+    setNoResultsFound(false);
     if (productSelected) {
       setForm((prev) => ({ ...prev, stock_id: "", barcode: "", description: "", category: "", uom: "" }));
     }
     triggerSearch(val);
+  }
+
+  function enterManualMode() {
+    setEntryMode("manual");
+    setShowDropdown(false);
+    setResults([]);
+    setForm((prev) => ({
+      ...prev,
+      barcode: searchQuery.trim(),
+      description: "",
+      category: "",
+      uom: "",
+      stock_id: "",
+    }));
+  }
+
+  function returnToSearch() {
+    setEntryMode("search");
+    setNoResultsFound(false);
+    setForm((prev) => ({ ...prev, stock_id: "", barcode: "", description: "", category: "", uom: "" }));
+    setSearchQuery("");
   }
 
   function selectProduct(p: ProductResult) {
@@ -218,9 +266,10 @@ export default function ExpiryForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
-    if (!form.barcode.trim()) { setError("Barcode is required — select a product from the search results."); return; }
+    if (!form.barcode.trim()) { setError("Barcode is required."); return; }
     if (!form.description.trim()) { setError("Description is required."); return; }
-    if (!form.category.trim()) { setError("Category is required — select a product from the search results."); return; }
+    if (!form.category.trim()) { setError("Category is required."); return; }
+    if (entryMode === "manual" && !form.uom.trim()) { setError("UOM is required for manual entries."); return; }
     if (!form.expiry_date) { setError("Expiry date is required."); return; }
     if ((form.quantity ?? 1) < 1) { setError("Quantity must be at least 1."); return; }
     if (form.return_status === "pending" && !form.return_by_date) {
@@ -295,7 +344,7 @@ export default function ExpiryForm({
           <form onSubmit={handleSubmit} className="overflow-y-auto px-6 py-5 flex-1">
 
             {/* SECTION 2 — Product Search (new entry only) */}
-            {!editingEntry && (
+            {!editingEntry && entryMode === "search" && (
               <div ref={dropdownRef}>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
                   Product Search
@@ -352,60 +401,169 @@ export default function ExpiryForm({
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Type barcode or name to auto-fill product details
-                </p>
+                {noResultsFound && !isSearching ? (
+                  <div className="mt-2 flex items-center justify-between">
+                    <p className="text-xs text-slate-500">Product not found in database.</p>
+                    <button
+                      type="button"
+                      onClick={enterManualMode}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline underline-offset-2 transition-colors"
+                    >
+                      Fill in manually
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Type barcode or name to auto-fill product details
+                  </p>
+                )}
               </div>
             )}
 
             {/* SECTION 3 — Product Details */}
             <div className={!editingEntry ? "mt-4" : ""}>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                Product Details
-              </p>
-              {productSelected ? (
-                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                  <div className="grid grid-cols-2 gap-4 mb-3">
+              {entryMode === "manual" ? (
+                <>
+                  {/* Manual mode header with back link */}
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                      Product Details
+                    </p>
+                    <button
+                      type="button"
+                      onClick={returnToSearch}
+                      className="text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1"
+                    >
+                      ← Search again
+                    </button>
+                  </div>
+
+                  {/* Manual mode banner */}
+                  <div className="mb-3 rounded-xl border border-yellow-200 bg-yellow-50 px-3.5 py-2.5 flex items-center gap-2">
+                    <span className="text-sm text-yellow-700 font-medium">⚠️ Manual entry — product not in database</span>
+                  </div>
+
+                  {/* Editable fields */}
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
-                        Barcode
-                      </p>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {form.barcode || "—"}
-                      </p>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        Description *
+                      </label>
+                      <input
+                        type="text"
+                        value={form.description}
+                        onChange={(e) => set("description", e.target.value)}
+                        placeholder="e.g. PANADOL EXTRA 500MG 20 TAB"
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                        autoFocus
+                      />
                     </div>
                     <div>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
-                        Category
-                      </p>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {form.category || "—"}
-                      </p>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        Category *
+                      </label>
+                      <select
+                        value={form.category}
+                        onChange={(e) => set("category", e.target.value)}
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors bg-white"
+                      >
+                        <option value="">Select category…</option>
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                          UOM *
+                        </label>
+                        <input
+                          type="text"
+                          value={form.uom}
+                          onChange={(e) => set("uom", e.target.value)}
+                          placeholder="e.g. BOX, TC, ST"
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                          Barcode
+                        </label>
+                        <input
+                          type="text"
+                          value={form.barcode}
+                          onChange={(e) => set("barcode", e.target.value)}
+                          placeholder="Barcode / SKU"
+                          className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                        Stock ID{" "}
+                        <span className="text-slate-400 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.stock_id}
+                        onChange={(e) => set("stock_id", e.target.value)}
+                        placeholder="Internal stock ID"
+                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                      />
                     </div>
                   </div>
-                  <div className="mb-3">
-                    <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
-                      Description
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800 leading-snug">
-                      {form.description || "—"}
-                    </p>
-                  </div>
-                  {form.uom && (
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
-                        Unit of Measure
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                    Product Details
+                  </p>
+                  {productSelected ? (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+                      <div className="grid grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                            Barcode
+                          </p>
+                          <p className="text-sm font-semibold text-slate-800">
+                            {form.barcode || "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                            Category
+                          </p>
+                          <p className="text-sm font-semibold text-slate-800">
+                            {form.category || "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                          Description
+                        </p>
+                        <p className="text-sm font-semibold text-slate-800 leading-snug">
+                          {form.description || "—"}
+                        </p>
+                      </div>
+                      {form.uom && (
+                        <div>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-1">
+                            Unit of Measure
+                          </p>
+                          <p className="text-sm font-semibold text-slate-800">{form.uom}</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-200 text-center">
+                      <p className="text-sm text-slate-400">
+                        Search for a product above to auto-fill details
                       </p>
-                      <p className="text-sm font-semibold text-slate-800">{form.uom}</p>
                     </div>
                   )}
-                </div>
-              ) : (
-                <div className="bg-slate-50 rounded-xl p-4 border border-dashed border-slate-200 text-center">
-                  <p className="text-sm text-slate-400">
-                    Search for a product above to auto-fill details
-                  </p>
-                </div>
+                </>
               )}
             </div>
 
