@@ -372,7 +372,70 @@ export default function ShortListTable({
 
       {processedEntries.length > 0 && (
         <>
-          <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+          {/* Mobile card list — below md */}
+          <div className="md:hidden flex flex-col gap-2.5">
+            {processedEntries.map((entry) => {
+              const localReview = reviewedIds.get(entry.id);
+              const reviewEntry = localReview
+                ? { ...entry, review_status: "pending" as const, last_reviewed_at: localReview.last_reviewed_at, last_reviewed_display: localReview.last_reviewed_display }
+                : entry;
+              const initial = (entry.pic_name?.charAt(0) ?? "?").toUpperCase();
+              return (
+                <div
+                  key={entry.id}
+                  onClick={() => {
+                    savedScrollY.current = window.scrollY;
+                    setReviewingEntryId(entry.id);
+                    setReviewModalOpen(true);
+                  }}
+                  className="bg-white rounded-2xl px-4 py-3.5 cursor-pointer active:bg-[#f8fafc]"
+                  style={{ border: "1px solid #eef1f6", boxShadow: "0 1px 4px rgba(15,23,42,0.06)" }}
+                >
+                  {/* Top row: category chip + PIC */}
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span
+                      className="text-[10.5px] font-semibold px-2 py-0.5 rounded-md text-[#64748b] truncate max-w-[160px]"
+                      style={{ background: "#f1f5f9" }}
+                    >
+                      {entry.category}
+                    </span>
+                    <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#1e3a5f" }}>
+                        <span className="text-[8px] font-extrabold text-white">{initial}</span>
+                      </div>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap" style={{ color: "#1e3a5f", background: "#eef3fa" }}>
+                        {entry.pic_name}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Name — 2-line clamp */}
+                  <p
+                    className="text-sm font-bold text-[#0f172a] leading-[1.35] mb-2.5"
+                    style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                  >
+                    {entry.description}
+                  </p>
+                  {/* Bottom row: expiry + days-left + return */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0">
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <path d="M3 10h18M8 2v4M16 2v4" />
+                    </svg>
+                    <span className="text-[12px] font-medium text-[#64748b] flex-1">
+                      {formatShortDate(entry.expiry_date)}
+                    </span>
+                    <DaysLeftBadge entry={entry} onClick={stop} />
+                    <ReturnBadge status={entry.return_status} onClick={stop} />
+                  </div>
+                  {/* Review sub-label, if any */}
+                  <ReviewSubLabel entry={reviewEntry} />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table — md and up */}
+          <div className="hidden md:block overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
