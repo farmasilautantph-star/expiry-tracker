@@ -81,9 +81,10 @@ export async function PUT(
            completed_via = 'returned',
            completed_at = $2,
            review_status = 'resolved',
-           last_updated_at = $3
-       WHERE id = $4`,
-      [return_notes ?? null, now, now, id],
+           last_reviewed_at = $3,
+           last_updated_at = $4
+       WHERE id = $5`,
+      [return_notes ?? null, now, now, now, id],
     );
 
     await pool.query(
@@ -109,9 +110,10 @@ export async function PUT(
            completed_via = 'not_approved',
            completed_at = $2,
            review_status = 'resolved',
-           last_updated_at = $3
-       WHERE id = $4`,
-      [return_notes ?? null, now, now, id],
+           last_reviewed_at = $3,
+           last_updated_at = $4
+       WHERE id = $5`,
+      [return_notes ?? null, now, now, now, id],
     );
 
     await pool.query(

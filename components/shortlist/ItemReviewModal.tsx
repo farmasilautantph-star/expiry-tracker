@@ -207,7 +207,7 @@ function ReturnSection({
       onItemUpdate((prev) => ({ ...prev, return_status: status, return_notes: notes || null }));
       setAction("idle");
       setNotes("");
-      onToast?.(status === "returned" ? "Item marked as returned" : "Return marked as not approved");
+      onToast?.(status === "returned" ? "Marked as returned & reviewed" : "Return not approved & marked reviewed");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update return status");
     } finally {
@@ -550,7 +550,7 @@ function SalesSection({
         item_status: newQty === 0 ? "sold" : prev.item_status,
       }));
       setShowForm("idle");
-      onToast?.("Sale recorded successfully");
+      onToast?.("Sale recorded & marked reviewed");
       onUpdated();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to record sale");
@@ -583,7 +583,7 @@ function SalesSection({
       setShowForm("idle");
       setOutletName("");
       setTransferQtyInput("1");
-      onToast?.(`Transferred ${transferQty} unit${transferQty !== 1 ? "s" : ""} to ${name}`);
+      onToast?.("Transfer recorded & marked reviewed");
       onUpdated();
     } catch (err) {
       setTransferError(err instanceof Error ? err.message : "Failed to record transfer");
