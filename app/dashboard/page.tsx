@@ -170,7 +170,7 @@ export default function DashboardPage() {
     <>
       {/* Mobile dashboard — below md */}
       <MobileDashboard
-        user={user!}
+        user={user}
         isManager={isManager}
         stats={stats}
         healthData={healthData}

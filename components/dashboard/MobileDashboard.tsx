@@ -24,7 +24,7 @@ interface Stats {
 }
 
 interface Props {
-  user: MobileUser;
+  user: MobileUser | null;
   isManager: boolean;
   stats: Stats | null;
   healthData: HealthData | null;
@@ -94,6 +94,8 @@ export default function MobileDashboard({
       .then((d) => { if (d.success) setRecentActivity((d.data as HistoryEntry[]).slice(0, 3)); })
       .catch(() => {});
   }, [isManager]);
+
+  if (!user) return null;
 
   const dayOfWeek = getMYTDayOfWeek();
   const isSunday = dayOfWeek === 0;
