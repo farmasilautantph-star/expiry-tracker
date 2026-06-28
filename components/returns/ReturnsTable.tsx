@@ -50,12 +50,32 @@ function StatusBadge({ entry }: { entry: ReturnEntry }) {
   );
 }
 
+function MobileStatusPill({ entry }: { entry: ReturnEntry }) {
+  let bg = "#fffbeb", border = "#fde68a", color = "#b45309", label = "Pending";
+  if (entry.return_status === "returned") {
+    bg = "#eff6ff"; border = "#bfdbfe"; color = "#1d4ed8"; label = "Returned";
+  } else if (entry.return_status === "not_approved") {
+    bg = "#ffedd5"; border = "#fed7aa"; color = "#c2410c"; label = "Not Approved";
+  } else if (entry.overdue) {
+    bg = "#fee2e2"; border = "#fecaca"; color = "#b91c1c"; label = "Overdue";
+  }
+  return (
+    <span
+      className="text-[11.5px] font-bold px-2.5 py-[3px] rounded-full"
+      style={{ background: bg, border: `1.5px solid ${border}`, color }}
+    >
+      {label}
+    </span>
+  );
+}
+
 interface EditDateCellProps {
   entry: ReturnEntry;
   onSave: (id: number, date: string) => Promise<void>;
+  alwaysShowEdit?: boolean;
 }
 
-function EditDateCell({ entry, onSave }: EditDateCellProps) {
+function EditDateCell({ entry, onSave, alwaysShowEdit = false }: EditDateCellProps) {
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(entry.return_by_date?.split("T")[0] ?? "");
   const [saving, setSaving] = useState(false);
@@ -68,7 +88,7 @@ function EditDateCell({ entry, onSave }: EditDateCellProps) {
         </span>
         <button
           onClick={() => setEditing(true)}
-          className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-[#94a3b8] hover:text-[#2563eb] transition-all"
+          className={`${alwaysShowEdit ? "opacity-100" : "opacity-0 group-hover:opacity-100"} p-0.5 rounded text-[#94a3b8] hover:text-[#2563eb] transition-all`}
           title="Edit return date"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +234,101 @@ export default function ReturnsTable({
     <>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
+      {/* Mobile card list — below md */}
+      <div className="md:hidden flex flex-col gap-2.5">
+        {entries.map((entry) => {
+          const isPending = entry.return_status === "pending";
+          const headerDate = mode === "active"
+            ? (entry.return_by_date ? `Due: ${formatShortDate(entry.return_by_date)}` : "")
+            : (entry.completed_at ? formatShortDate(entry.completed_at) : "");
+          const metaParts = [
+            entry.uom ? `UOM: ${entry.uom}` : null,
+            `Exp: ${formatShortDate(entry.expiry_date)}`,
+            `PIC: ${entry.pic_name}`,
+          ].filter(Boolean);
+
+          return (
+            <div
+              key={entry.id}
+              className="bg-white p-4"
+              style={{
+                borderRadius: 18,
+                border: "1px solid #eef1f6",
+                boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                opacity: mode === "history" ? 0.78 : 1,
+              }}
+            >
+              {/* Header: status pill + date */}
+              <div className="flex items-center justify-between mb-2.5">
+                <MobileStatusPill entry={entry} />
+                {headerDate && (
+                  <span className="text-[11px] font-medium text-[#94a3b8]">
+                    {headerDate}
+                  </span>
+                )}
+              </div>
+
+              {/* Name */}
+              <p
+                className="text-[13.5px] font-bold text-[#0f172a] leading-[1.3] mb-1.5"
+                style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                title={entry.description}
+              >
+                {entry.description}
+              </p>
+
+              {/* Meta */}
+              <p className="text-xs text-[#64748b] mb-3 leading-[1.45]">
+                {metaParts.join(" · ")}
+              </p>
+
+              {/* Active + Pending: action buttons */}
+              {mode === "active" && isPending && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setConfirmEntry(entry); setActionNotes(""); }}
+                    className="flex-1 h-11 rounded-xl text-[13px] font-bold text-white"
+                    style={{ background: "#1e3a5f", border: "none" }}
+                  >
+                    Mark Returned
+                  </button>
+                  <button
+                    onClick={() => { setNotApprovingEntry(entry); setActionNotes(""); }}
+                    className="flex-1 h-11 rounded-xl text-[13px] font-bold"
+                    style={{ background: "#fef2f2", color: "#b91c1c", border: "1.5px solid #fecaca" }}
+                  >
+                    Not Approved
+                  </button>
+                </div>
+              )}
+
+              {/* History: view link */}
+              {mode === "history" && (
+                <button
+                  onClick={() => router.push(`/dashboard/shortlist?review=${entry.id}`)}
+                  className="text-xs font-bold mt-1"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  View Details →
+                </button>
+              )}
+
+              {/* Manager edit-return-date (active mode) */}
+              {mode === "active" && isManager && (
+                <div className="mt-2.5 pt-2.5 border-t flex items-center justify-between" style={{ borderColor: "#f1f5f9" }}>
+                  <span className="text-[10.5px] font-semibold uppercase tracking-wider text-[#94a3b8]">
+                    Return By
+                  </span>
+                  <EditDateCell entry={entry} onSave={onUpdateReturnDate} alwaysShowEdit />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table — md and up */}
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
         {/* Row count */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-[#f8fafc]"
           style={{ borderBottom: "1px solid #e2e8f0" }}>

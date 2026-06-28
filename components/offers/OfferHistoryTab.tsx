@@ -137,7 +137,68 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
           <p className="text-sm text-[#94a3b8] mt-2">Completed offers will appear here.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white">
+        <>
+          {/* Mobile card list — below md */}
+          <div className="md:hidden flex flex-col gap-2.5">
+            {filtered.map((entry) => {
+              const s = STATUS_STYLE[entry.offer_status as "accepted" | "rejected"] ?? STATUS_STYLE.rejected;
+              const completedDate = entry.offer_status === "accepted"
+                ? (entry.received_at ?? entry.updated_at)
+                : entry.updated_at;
+              const isAccepted = entry.offer_status === "accepted";
+              const pillBg = isAccepted ? "#eff6ff" : "#fef2f2";
+              const pillBorder = isAccepted ? "#bfdbfe" : "#fecaca";
+              const pillColor = isAccepted ? "#1d4ed8" : "#b91c1c";
+              return (
+                <div
+                  key={entry.id}
+                  className="bg-white p-4"
+                  style={{
+                    borderRadius: 18,
+                    border: "1px solid #eef1f6",
+                    boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                    opacity: 0.85,
+                  }}
+                >
+                  {/* Header: status pill + completed date */}
+                  <div className="flex items-center justify-between mb-2.5 gap-2">
+                    <span
+                      className="text-[11.5px] font-bold px-2.5 py-[3px] rounded-full"
+                      style={{ background: pillBg, border: `1.5px solid ${pillBorder}`, color: pillColor }}
+                    >
+                      {s.label}
+                    </span>
+                    <span className="text-[11px] font-medium text-[#94a3b8] whitespace-nowrap">
+                      {formatShortDate(completedDate)}
+                    </span>
+                  </div>
+                  {/* Name */}
+                  <p
+                    className="text-[13.5px] font-bold text-[#0f172a] leading-[1.3] mb-1.5"
+                    style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                    title={entry.description}
+                  >
+                    {entry.description}
+                  </p>
+                  <p className="text-xs text-[#64748b] leading-[1.45]">
+                    {entry.outlet_name} · Qty: {entry.quantity}
+                  </p>
+                  {entry.rejection_notes && (
+                    <p
+                      className="text-xs text-[#94a3b8] mt-1.5 italic leading-[1.45]"
+                      title={entry.rejection_notes}
+                      style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                    >
+                      Note: {entry.rejection_notes}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop table — md and up */}
+          <div className="hidden md:block overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white">
           <div className="flex items-center px-4 py-2.5 bg-[#f8fafc]" style={{ borderBottom: "1px solid #e2e8f0" }}>
             <span className="text-xs text-[#94a3b8]">{filtered.length} {filtered.length === 1 ? "offer" : "offers"}</span>
           </div>
@@ -201,7 +262,8 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

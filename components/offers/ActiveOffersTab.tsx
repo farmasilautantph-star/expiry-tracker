@@ -175,7 +175,73 @@ export default function ActiveOffersTab({ entries, isLoading, activeMonth, searc
           </button>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white">
+        <>
+          {/* Mobile card list — below md */}
+          <div className="md:hidden flex flex-col gap-2.5">
+            {filtered.map((entry) => (
+              <div
+                key={entry.id}
+                className="bg-white p-4"
+                style={{
+                  borderRadius: 18,
+                  border: "1px solid #eef1f6",
+                  boxShadow: "0 1px 4px rgba(15,23,42,0.06)",
+                }}
+              >
+                {/* Header: days-left badge + offered date */}
+                <div className="flex items-center justify-between mb-2.5 gap-2">
+                  <DaysLeftBadge expiryDate={entry.expiry_date} />
+                  <span className="text-[11px] font-medium text-[#94a3b8] whitespace-nowrap">
+                    Offered: {formatShortDate(entry.created_at)}
+                  </span>
+                </div>
+
+                {/* Name */}
+                <p
+                  className="text-[13.5px] font-bold text-[#0f172a] leading-[1.3] mb-1.5"
+                  style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+                  title={entry.description}
+                >
+                  {entry.description}
+                </p>
+
+                {/* Outlet + meta */}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <BuildingStorefrontIcon className="w-3.5 h-3.5 text-[#94a3b8] flex-shrink-0" />
+                  <span className="text-xs font-semibold text-[#334155] truncate">{entry.outlet_name}</span>
+                </div>
+                <p className="text-xs text-[#64748b] mb-3 leading-[1.45]">
+                  Qty: {entry.quantity} · Exp: {formatShortDate(entry.expiry_date)}
+                </p>
+
+                {/* Actions */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setReceivingOffer(entry);
+                      setReceivedAt(new Date().toISOString().split("T")[0]);
+                    }}
+                    className="flex-1 h-11 rounded-xl text-[13px] font-bold text-white inline-flex items-center justify-center gap-1.5"
+                    style={{ background: "#1e3a5f", border: "none" }}
+                  >
+                    <CheckIcon className="w-4 h-4" />
+                    Received
+                  </button>
+                  <button
+                    onClick={() => { setRejectingOffer(entry); setRejectionNotes(""); }}
+                    className="flex-1 h-11 rounded-xl text-[13px] font-bold inline-flex items-center justify-center gap-1.5"
+                    style={{ background: "#fef2f2", color: "#b91c1c", border: "1.5px solid #fecaca" }}
+                  >
+                    <XMarkIcon className="w-4 h-4" />
+                    Rejected
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table — md and up */}
+          <div className="hidden md:block overflow-x-auto rounded-2xl border border-[#e2e8f0] bg-white">
           <div className="flex items-center px-4 py-2.5 bg-[#f8fafc]" style={{ borderBottom: "1px solid #e2e8f0" }}>
             <span className="text-xs text-[#94a3b8]">{filtered.length} {filtered.length === 1 ? "offer" : "offers"}</span>
           </div>
@@ -255,7 +321,8 @@ export default function ActiveOffersTab({ entries, isLoading, activeMonth, searc
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Received modal */}
