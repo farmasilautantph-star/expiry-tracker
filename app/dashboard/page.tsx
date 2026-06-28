@@ -20,6 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
+import MobileDashboard from "@/components/dashboard/MobileDashboard";
 
 interface Stats {
   expired: number;
@@ -166,7 +167,19 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      {/* Mobile dashboard — below md */}
+      <MobileDashboard
+        user={user!}
+        isManager={isManager}
+        stats={stats}
+        healthData={healthData}
+        healthLoading={healthLoading}
+        onOpenForm={() => setFormOpen(true)}
+      />
+
+      {/* Desktop dashboard — md and up */}
+      <div className="hidden md:block space-y-4">
       {/* Quick Log banner — staff only */}
       {!isManager && (
         <div
@@ -326,7 +339,9 @@ export default function DashboardPage() {
       {/* Weekly chart */}
       <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} />
 
-      {/* ExpiryForm modal */}
+      </div>{/* end hidden md:block */}
+
+      {/* Shared: ExpiryForm modal + Toast (used by both mobile FAB and desktop banner) */}
       <ExpiryForm
         isOpen={formOpen}
         onClose={() => setFormOpen(false)}
@@ -341,6 +356,6 @@ export default function DashboardPage() {
         }}
       />
       <Toast toasts={toasts} onDismiss={dismiss} />
-    </div>
+    </>
   );
 }

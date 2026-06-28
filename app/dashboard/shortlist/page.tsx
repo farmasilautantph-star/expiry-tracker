@@ -34,7 +34,7 @@ export default function ShortListPage() {
 
   useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
 
-  // Deep-link: /dashboard/shortlist?review=<id> opens the modal directly
+  // Deep-link: ?review=<id> opens modal, ?urgency=<value> pre-sets status filter
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const reviewId = params.get("review");
@@ -43,9 +43,17 @@ export default function ShortListPage() {
       if (!isNaN(id)) {
         setDeepLinkReviewId(id);
         setDeepLinkModalOpen(true);
-        window.history.replaceState({}, "", "/dashboard/shortlist");
       }
     }
+    const urgency = params.get("urgency");
+    const validUrgency = ["expired", "critical", "warning", "safe"];
+    if (urgency && validUrgency.includes(urgency)) {
+      setFilter("status", urgency);
+    }
+    if (reviewId || urgency) {
+      window.history.replaceState({}, "", "/dashboard/shortlist");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!user) return null;
