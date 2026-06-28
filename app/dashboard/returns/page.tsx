@@ -64,6 +64,13 @@ export default function ReturnsPage() {
     });
   }, [entries, historyMonth]);
 
+  // Redirect to "active" if on policy tab on mobile
+  useEffect(() => {
+    if (tab === "policy" && window.matchMedia("(max-width: 767px)").matches) {
+      setTab("active");
+    }
+  }, [tab]);
+
   function handleTabChange(newTab: TabKey) {
     setTab(newTab);
     setFilter("status", "");
@@ -100,9 +107,9 @@ export default function ReturnsPage() {
 
       {/* Tabs — mobile: full-width equal spacing; desktop: inline-flex with long labels */}
       <div className="px-4 md:px-6 mt-3 md:mt-4">
-        {/* Mobile */}
+        {/* Mobile — Policy tab hidden; only Active + History */}
         <div className="md:hidden flex gap-1 p-1 rounded-xl w-full" style={{ background: "#f1f5f9" }}>
-          {(["active", "history", "policy"] as const).map((t) => (
+          {(["active", "history"] as const).map((t) => (
             <button
               key={t}
               onClick={() => handleTabChange(t)}
@@ -113,7 +120,7 @@ export default function ReturnsPage() {
                   : { color: "#64748b" }
               }
             >
-              {t === "active" ? "Active" : t === "history" ? "History" : "Policy"}
+              {t === "active" ? "Active" : "History"}
             </button>
           ))}
         </div>
