@@ -30,6 +30,7 @@ interface Props {
   onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
   mobileMoreOpen?: boolean;
+  onToggleMobileMore?: () => void;
 }
 
 export default function ShortListModule({
@@ -49,6 +50,7 @@ export default function ShortListModule({
   onRemoveEntry,
   onSwitchToSales,
   mobileMoreOpen = false,
+  onToggleMobileMore,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
 
@@ -96,6 +98,7 @@ export default function ShortListModule({
         categoryOptions={categoryOptions}
         counts={counts}
         mobileMoreOpen={mobileMoreOpen}
+        onToggleMobileMore={onToggleMobileMore}
       />
 
       <div className="hidden md:block">

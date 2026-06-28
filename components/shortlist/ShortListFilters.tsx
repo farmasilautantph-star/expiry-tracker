@@ -16,6 +16,7 @@ interface Props {
   categoryOptions: string[];
   counts: ShortListCounts;
   mobileMoreOpen?: boolean;
+  onToggleMobileMore?: () => void;
 }
 
 const SELECT_CLS =
@@ -39,32 +40,52 @@ export default function ShortListFilters({
   categoryOptions,
   counts,
   mobileMoreOpen = false,
+  onToggleMobileMore,
 }: Props) {
   return (
     <>
       {/* ─── Mobile (below md) ─────────────────────────────────────── */}
       <div className="md:hidden flex flex-col gap-3">
-        {/* Pill search */}
-        <div
-          className="flex items-center gap-2.5 px-3.5 rounded-2xl h-[46px]"
-          style={{ background: "#f4f7fb", border: "1.5px solid #eef1f6" }}
-        >
-          <MagnifyingGlassIcon className="w-4 h-4 text-[#94a3b8] flex-shrink-0" />
-          <input
-            type="text"
-            placeholder="Search items, category, PIC…"
-            value={filters.search}
-            onChange={(e) => setFilter("search", e.target.value)}
-            className="flex-1 bg-transparent text-sm text-[#0f172a] placeholder-[#94a3b8] outline-none min-w-0"
-          />
-          {filters.search && (
+        {/* Pill search + filter toggle */}
+        <div className="flex items-center gap-2">
+          <div
+            className="flex-1 flex items-center gap-2.5 px-3.5 rounded-2xl h-[46px]"
+            style={{ background: "#f4f7fb", border: "1.5px solid #eef1f6" }}
+          >
+            <MagnifyingGlassIcon className="w-4 h-4 text-[#94a3b8] flex-shrink-0" />
+            <input
+              type="text"
+              placeholder="Search items, category, PIC…"
+              value={filters.search}
+              onChange={(e) => setFilter("search", e.target.value)}
+              className="flex-1 bg-transparent text-sm text-[#0f172a] placeholder-[#94a3b8] outline-none min-w-0"
+            />
+            {filters.search && (
+              <button
+                type="button"
+                onClick={() => setFilter("search", "")}
+                className="text-[#94a3b8] flex-shrink-0"
+                aria-label="Clear search"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          {onToggleMobileMore && (
             <button
               type="button"
-              onClick={() => setFilter("search", "")}
-              className="text-[#94a3b8] flex-shrink-0"
-              aria-label="Clear search"
+              onClick={onToggleMobileMore}
+              aria-label="More filters"
+              aria-pressed={mobileMoreOpen}
+              className="w-[46px] h-[46px] flex-shrink-0 rounded-xl flex items-center justify-center transition-colors"
+              style={{
+                background: mobileMoreOpen ? "#1e3a5f" : "#f1f5f9",
+                color: mobileMoreOpen ? "#fff" : "#475569",
+              }}
             >
-              <XMarkIcon className="w-4 h-4" />
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18M7 12h10M11 18h2" />
+              </svg>
             </button>
           )}
         </div>

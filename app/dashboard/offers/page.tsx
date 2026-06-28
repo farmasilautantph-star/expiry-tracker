@@ -44,15 +44,15 @@ export default function OffersPage() {
 
   return (
     <div className="rounded-2xl bg-white shadow-sm" style={{ border: "1px solid #e2e8f0" }}>
-      {/* Header */}
-      <div className="px-6 pt-6">
+      {/* Desktop header (md and up) */}
+      <div className="hidden md:block px-6 pt-6">
         <h2 className="text-xl font-bold text-[#0f172a]">Outlet Offers</h2>
         <p className="text-sm text-[#94a3b8] mt-0.5">Track items offered to outlets</p>
       </div>
 
-      {/* Info banner */}
+      {/* Info banner — desktop only */}
       <div
-        className="mx-6 mt-4 flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm text-[#1e3a8a]"
+        className="hidden md:flex mx-6 mt-4 items-center gap-2.5 rounded-xl px-4 py-3 text-sm text-[#1e3a8a]"
         style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}
       >
         <InformationCircleIcon className="w-4 h-4 flex-shrink-0 text-[#3b82f6]" />
@@ -65,15 +65,61 @@ export default function OffersPage() {
       {/* Error */}
       {error && (
         <div
-          className="mx-6 mt-3 rounded-xl px-4 py-3 text-sm text-[#ef4444]"
+          className="mx-4 md:mx-6 mt-3 rounded-xl px-4 py-3 text-sm text-[#ef4444]"
           style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
         >
           {error}
         </div>
       )}
 
-      {/* Tabs row + inline filters */}
-      <div className="px-6 mt-4 flex items-center gap-3 flex-wrap">
+      {/* Mobile: tabs row, then pill search below */}
+      <div className="md:hidden px-4 mt-3 space-y-2.5">
+        {/* Tabs */}
+        <div className="overflow-x-auto -mx-1 px-1">
+          <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "#f1f5f9" }}>
+            {(["active", "history"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => handleTabChange(t)}
+                className="px-3 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all"
+                style={
+                  tab === t
+                    ? { background: "white", color: "#0f172a", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
+                    : { color: "#64748b" }
+                }
+              >
+                {t === "active" ? "Active" : "History"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pill search */}
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+          <input
+            type="text"
+            placeholder="Search item, outlet…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-10 pl-10 pr-9 text-[13px] text-[#0f172a] placeholder-[#94a3b8] focus:outline-none"
+            style={{ background: "#f1f5f9", border: "none", borderRadius: "999px" }}
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94a3b8]"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop: tabs row + inline filters */}
+      <div className="hidden md:flex px-6 mt-4 items-center gap-3 flex-wrap">
         {/* Tabs */}
         <div className="inline-flex gap-1 p-1 rounded-xl flex-shrink-0" style={{ background: "#f1f5f9" }}>
           {(["active", "history"] as const).map((t) => (
@@ -131,7 +177,7 @@ export default function OffersPage() {
       </div>
 
       {/* Tab content */}
-      <div className="px-6 pb-6 mt-4">
+      <div className="px-4 md:px-6 pb-6 mt-4">
         {tab === "active" ? (
           <ActiveOffersTab
             entries={activeEntries}
