@@ -45,140 +45,244 @@ export default function ReturnsFilters({
     e.currentTarget.style.boxShadow = "";
   };
 
+  const MOBILE_SELECT = "w-full appearance-none border border-[#e2e8f0] bg-white text-[#334155] text-sm focus:outline-none pr-8 pl-3 py-2.5";
+
   return (
-    <div className="flex items-center gap-3 flex-wrap">
-      {/* Active: month filter (return_by_date) */}
-      {mode === "active" && onActiveMonthChange && (
-        <MonthPicker
-          value={activeMonth ?? null}
-          onChange={onActiveMonthChange}
-          placeholder="All Months"
-        />
-      )}
-
-      {/* History: month filter (completed_at) */}
-      {mode === "history" && onHistoryMonthChange && (
-        <MonthPicker
-          value={historyMonth ?? null}
-          onChange={onHistoryMonthChange}
-          placeholder="All Time"
-        />
-      )}
-
-      {/* Active: status filter */}
-      {mode === "active" && (
+    <>
+      {/* ─── Mobile (below md) ──────────────────────────────────── */}
+      <div className="md:hidden flex flex-col gap-2.5">
+        {/* ROW 1 — Search (full width, pill) */}
         <div className="relative">
-          <select
-            value={filters.status}
-            onChange={(e) => setFilter("status", e.target.value)}
-            className={SELECT_CLS}
-            style={{ borderRadius: "10px" }}
-            onFocus={focusStyle}
-            onBlur={blurStyle}
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="overdue">Overdue</option>
-          </select>
-          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+          <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+          <input
+            type="text"
+            placeholder="Search desc, barcode, stock ID…"
+            value={filters.search}
+            onChange={(e) => setFilter("search", e.target.value)}
+            className="w-full h-11 pl-10 pr-9 text-sm text-[#0f172a] placeholder-[#94a3b8] focus:outline-none"
+            style={{ background: "#f4f7fb", border: "1.5px solid #eef1f6", borderRadius: "999px" }}
+          />
+          {filters.search && (
+            <button
+              type="button"
+              onClick={() => setFilter("search", "")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94a3b8]"
+              aria-label="Clear search"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
-      )}
 
-      {/* History: status filter */}
-      {mode === "history" && (
-        <div className="relative">
-          <select
-            value={filters.status}
-            onChange={(e) => setFilter("status", e.target.value)}
-            className={SELECT_CLS}
-            style={{ borderRadius: "10px" }}
-            onFocus={focusStyle}
-            onBlur={blurStyle}
-          >
-            <option value="">All Statuses</option>
-            <option value="returned">Returned</option>
-            <option value="not_approved">Not Approved</option>
-          </select>
-          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+        {/* ROW 2 — Month picker + Status filter (50/50) */}
+        <div className="grid grid-cols-2 gap-2">
+          {/* Month picker — flex-col wrapper stretches button to fill cell */}
+          <div className="flex flex-col">
+            {mode === "active" && onActiveMonthChange && (
+              <MonthPicker value={activeMonth ?? null} onChange={onActiveMonthChange} placeholder="All Months" />
+            )}
+            {mode === "history" && onHistoryMonthChange && (
+              <MonthPicker value={historyMonth ?? null} onChange={onHistoryMonthChange} placeholder="All Time" />
+            )}
+          </div>
+
+          {/* Status dropdown */}
+          <div className="relative">
+            <select
+              value={filters.status}
+              onChange={(e) => setFilter("status", e.target.value)}
+              className={MOBILE_SELECT}
+              style={{ borderRadius: "10px" }}
+            >
+              {mode === "active" ? (
+                <>
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="overdue">Overdue</option>
+                </>
+              ) : (
+                <>
+                  <option value="">All Statuses</option>
+                  <option value="returned">Returned</option>
+                  <option value="not_approved">Not Approved</option>
+                </>
+              )}
+            </select>
+            <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+          </div>
         </div>
-      )}
 
-      {/* Category */}
-      <div className="relative">
-        <select
-          value={filters.category}
-          onChange={(e) => setFilter("category", e.target.value)}
-          className={SELECT_CLS}
-          style={{ borderRadius: "10px" }}
-          onFocus={focusStyle}
-          onBlur={blurStyle}
-        >
-          <option value="">All Categories</option>
-          {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
-      </div>
+        {/* ROW 3 — Category (full width) */}
+        {categoryOptions.length > 0 && (
+          <div className="relative">
+            <select
+              value={filters.category}
+              onChange={(e) => setFilter("category", e.target.value)}
+              className={MOBILE_SELECT}
+              style={{ borderRadius: "10px" }}
+            >
+              <option value="">All Categories</option>
+              {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+          </div>
+        )}
 
-      {/* PIC */}
-      {isManager && (
-        <div className="relative">
-          <select
-            value={filters.pic}
-            onChange={(e) => setFilter("pic", e.target.value)}
-            className={SELECT_CLS}
-            style={{ borderRadius: "10px" }}
-            onFocus={focusStyle}
-            onBlur={blurStyle}
-          >
-            <option value="">All PICs</option>
-            {picOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-          </select>
-          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
-        </div>
-      )}
-
-      {/* Search */}
-      <div className="relative flex-1 min-w-[240px]">
-        <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
-        <input
-          type="text"
-          placeholder="Search desc, barcode, stock ID…"
-          value={filters.search}
-          onChange={(e) => setFilter("search", e.target.value)}
-          className="w-full pl-9 pr-4 py-2 text-sm text-[#0f172a] bg-white placeholder-[#94a3b8] transition-colors focus:outline-none"
-          style={{ border: "1px solid #e2e8f0", borderRadius: "10px" }}
-          onFocus={focusStyle}
-          onBlur={blurStyle}
-        />
-        {filters.search && (
+        {/* Clear filters (shown when any filter is active) */}
+        {(activeFilterCount > 0 || (activeMonth != null && mode === "active") || (historyMonth != null && mode === "history")) && (
           <button
-            onClick={() => setFilter("search", "")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0f172a]"
+            type="button"
+            onClick={() => { clearFilters(); onActiveMonthChange?.(null); onHistoryMonthChange?.(null); }}
+            className="self-start text-xs font-medium flex items-center gap-1.5"
+            style={{ color: "#64748b" }}
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            Clear filters
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-semibold" style={{ background: "#2563eb" }}>
+                {activeFilterCount}
+              </span>
+            )}
           </button>
         )}
       </div>
 
-      {/* Clear */}
-      {(activeFilterCount > 0 || (activeMonth != null && mode === "active") || (historyMonth != null && mode === "history")) && (
-        <button
-          onClick={() => { clearFilters(); onActiveMonthChange?.(null); onHistoryMonthChange?.(null); }}
-          className="flex items-center gap-1.5 text-sm transition-colors"
-          style={{ color: "#64748b" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#ef4444")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#64748b")}
-        >
-          Clear
-          {activeFilterCount > 0 && (
-            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-xs font-semibold" style={{ background: "#2563eb" }}>
-              {activeFilterCount}
-            </span>
+      {/* ─── Desktop (md and up) ────────────────────────────────── */}
+      <div className="hidden md:flex items-center gap-3 flex-wrap">
+        {/* Active: month filter (return_by_date) */}
+        {mode === "active" && onActiveMonthChange && (
+          <MonthPicker
+            value={activeMonth ?? null}
+            onChange={onActiveMonthChange}
+            placeholder="All Months"
+          />
+        )}
+
+        {/* History: month filter (completed_at) */}
+        {mode === "history" && onHistoryMonthChange && (
+          <MonthPicker
+            value={historyMonth ?? null}
+            onChange={onHistoryMonthChange}
+            placeholder="All Time"
+          />
+        )}
+
+        {/* Active: status filter */}
+        {mode === "active" && (
+          <div className="relative">
+            <select
+              value={filters.status}
+              onChange={(e) => setFilter("status", e.target.value)}
+              className={SELECT_CLS}
+              style={{ borderRadius: "10px" }}
+              onFocus={focusStyle}
+              onBlur={blurStyle}
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="overdue">Overdue</option>
+            </select>
+            <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+          </div>
+        )}
+
+        {/* History: status filter */}
+        {mode === "history" && (
+          <div className="relative">
+            <select
+              value={filters.status}
+              onChange={(e) => setFilter("status", e.target.value)}
+              className={SELECT_CLS}
+              style={{ borderRadius: "10px" }}
+              onFocus={focusStyle}
+              onBlur={blurStyle}
+            >
+              <option value="">All Statuses</option>
+              <option value="returned">Returned</option>
+              <option value="not_approved">Not Approved</option>
+            </select>
+            <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+          </div>
+        )}
+
+        {/* Category */}
+        <div className="relative">
+          <select
+            value={filters.category}
+            onChange={(e) => setFilter("category", e.target.value)}
+            className={SELECT_CLS}
+            style={{ borderRadius: "10px" }}
+            onFocus={focusStyle}
+            onBlur={blurStyle}
+          >
+            <option value="">All Categories</option>
+            {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+        </div>
+
+        {/* PIC */}
+        {isManager && (
+          <div className="relative">
+            <select
+              value={filters.pic}
+              onChange={(e) => setFilter("pic", e.target.value)}
+              className={SELECT_CLS}
+              style={{ borderRadius: "10px" }}
+              onFocus={focusStyle}
+              onBlur={blurStyle}
+            >
+              <option value="">All PICs</option>
+              {picOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />
+          </div>
+        )}
+
+        {/* Search */}
+        <div className="relative flex-1 min-w-[240px]">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
+          <input
+            type="text"
+            placeholder="Search desc, barcode, stock ID…"
+            value={filters.search}
+            onChange={(e) => setFilter("search", e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm text-[#0f172a] bg-white placeholder-[#94a3b8] transition-colors focus:outline-none"
+            style={{ border: "1px solid #e2e8f0", borderRadius: "10px" }}
+            onFocus={focusStyle}
+            onBlur={blurStyle}
+          />
+          {filters.search && (
+            <button
+              onClick={() => setFilter("search", "")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#94a3b8] hover:text-[#0f172a]"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           )}
-        </button>
-      )}
-    </div>
+        </div>
+
+        {/* Clear */}
+        {(activeFilterCount > 0 || (activeMonth != null && mode === "active") || (historyMonth != null && mode === "history")) && (
+          <button
+            onClick={() => { clearFilters(); onActiveMonthChange?.(null); onHistoryMonthChange?.(null); }}
+            className="flex items-center gap-1.5 text-sm transition-colors"
+            style={{ color: "#64748b" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#ef4444")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#64748b")}
+          >
+            Clear
+            {activeFilterCount > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-xs font-semibold" style={{ background: "#2563eb" }}>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+    </>
   );
 }

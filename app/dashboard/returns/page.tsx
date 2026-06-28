@@ -98,24 +98,43 @@ export default function ReturnsPage() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="px-4 md:px-6 mt-3 md:mt-4 overflow-x-auto">
-        <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "#f1f5f9" }}>
+      {/* Tabs — mobile: full-width equal spacing; desktop: inline-flex with long labels */}
+      <div className="px-4 md:px-6 mt-3 md:mt-4">
+        {/* Mobile */}
+        <div className="md:hidden flex gap-1 p-1 rounded-xl w-full" style={{ background: "#f1f5f9" }}>
           {(["active", "history", "policy"] as const).map((t) => (
             <button
               key={t}
               onClick={() => handleTabChange(t)}
-              className="px-3 md:px-4 py-1.5 rounded-lg text-[13px] md:text-sm font-medium whitespace-nowrap transition-all"
+              className="flex-1 py-2 rounded-lg text-[13px] font-semibold text-center transition-all"
               style={
                 tab === t
                   ? { background: "white", color: "#0f172a", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
                   : { color: "#64748b" }
               }
             >
-              <span className="md:hidden">{t === "active" ? "Active" : t === "history" ? "History" : "Policy"}</span>
-              <span className="hidden md:inline">{t === "active" ? "Active Returns" : t === "history" ? "Return History" : "Return Policy"}</span>
+              {t === "active" ? "Active" : t === "history" ? "History" : "Policy"}
             </button>
           ))}
+        </div>
+        {/* Desktop */}
+        <div className="hidden md:block overflow-x-auto">
+          <div className="inline-flex gap-1 p-1 rounded-xl" style={{ background: "#f1f5f9" }}>
+            {(["active", "history", "policy"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => handleTabChange(t)}
+                className="px-4 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all"
+                style={
+                  tab === t
+                    ? { background: "white", color: "#0f172a", boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }
+                    : { color: "#64748b" }
+                }
+              >
+                {t === "active" ? "Active Returns" : t === "history" ? "Return History" : "Return Policy"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
