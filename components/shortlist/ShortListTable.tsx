@@ -400,10 +400,10 @@ export default function ShortListTable({
                       {entry.category}
                     </span>
                     <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#1e3a5f" }}>
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#1d4ed8" }}>
                         <span className="text-[8px] font-extrabold text-white">{initial}</span>
                       </div>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap" style={{ color: "#1e3a5f", background: "#eef3fa" }}>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md whitespace-nowrap" style={{ color: "#1d4ed8", background: "#eef3fa" }}>
                         {entry.pic_name}
                       </span>
                     </div>

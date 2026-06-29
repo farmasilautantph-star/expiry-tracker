@@ -222,7 +222,7 @@ export default function ActiveOffersTab({ entries, isLoading, activeMonth, searc
                       setReceivedAt(new Date().toISOString().split("T")[0]);
                     }}
                     className="flex-1 h-11 rounded-xl text-[13px] font-bold text-white inline-flex items-center justify-center gap-1.5"
-                    style={{ background: "#1e3a5f", border: "none" }}
+                    style={{ background: "#1d4ed8", border: "none" }}
                   >
                     <CheckIcon className="w-4 h-4" />
                     Received

@@ -78,7 +78,7 @@ const HEALTH_BANDS: Record<
   { label: string; ring: string; pillBg: string; pillColor: string }
 > = {
   excellent: { label: "Excellent",       ring: "#16a34a", pillBg: "#dcfce7", pillColor: "#15803d" },
-  good:      { label: "Good",            ring: "#1e3a5f", pillBg: "#eef3fa", pillColor: "#1e3a5f" },
+  good:      { label: "Good",            ring: "#1d4ed8", pillBg: "#eef3fa", pillColor: "#1d4ed8" },
   needs:     { label: "Needs Attention", ring: "#ea580c", pillBg: "#fef3c7", pillColor: "#b45309" },
   critical:  { label: "Critical",        ring: "#dc2626", pillBg: "#fee2e2", pillColor: "#b91c1c" },
 };
@@ -108,7 +108,7 @@ const STATUS_PILL: Record<string, { dot: string; bg: string; color: string }> = 
 
 const ACTIVITY_STYLE: Record<string, { color: string; bg: string }> = {
   CREATE: { color: "#15803d", bg: "#f0fdf4" },
-  UPDATE: { color: "#1e3a5f", bg: "#eef3fa" },
+  UPDATE: { color: "#1d4ed8", bg: "#eef3fa" },
   DELETE: { color: "#b91c1c", bg: "#fef2f2" },
 };
 const DEFAULT_ACT_STYLE = { color: "#7c3aed", bg: "#f5f3ff" };
@@ -299,7 +299,7 @@ export default function MobileDashboard({
                 width: 44,
                 height: 44,
                 borderRadius: 12,
-                background: "#1e3a5f",
+                background: "#1d4ed8",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -335,7 +335,7 @@ export default function MobileDashboard({
             justifyContent: "center",
             gap: 7,
             borderRadius: 13,
-            background: "#1e3a5f",
+            background: "#1d4ed8",
             border: "none",
             cursor: "pointer",
             fontFamily: "inherit",
@@ -365,10 +365,10 @@ export default function MobileDashboard({
             fontFamily: "inherit",
             fontSize: 14,
             fontWeight: 700,
-            color: "#1e3a5f",
+            color: "#1d4ed8",
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
             <rect x="9" y="3" width="6" height="4" rx="1" />
             <path d="m9 12 2 2 4-4" />
@@ -734,7 +734,7 @@ export default function MobileDashboard({
                     cursor: "pointer",
                     fontSize: 13,
                     fontWeight: 600,
-                    color: "#1e3a5f",
+                    color: "#1d4ed8",
                     fontFamily: "inherit",
                   }}
                 >
@@ -869,7 +869,7 @@ export default function MobileDashboard({
                     cursor: "pointer",
                     fontSize: 13,
                     fontWeight: 600,
-                    color: "#1e3a5f",
+                    color: "#1d4ed8",
                     fontFamily: "inherit",
                   }}
                 >

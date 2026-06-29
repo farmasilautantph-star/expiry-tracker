@@ -520,7 +520,7 @@ export default function MobileItemReviewModal({
                 <p style={{ fontSize: 12.5, color: "#64748b", marginTop: 5, fontWeight: 500 }}>
                   <span style={{ color: "#2563eb", fontWeight: 600 }}>{item.category}</span>
                   <span style={{ color: "#cbd5e1", margin: "0 6px" }}>·</span>
-                  <span>PIC: <span style={{ color: "#1e3a5f", fontWeight: 700 }}>{item.pic_name}</span></span>
+                  <span>PIC: <span style={{ color: "#1d4ed8", fontWeight: 700 }}>{item.pic_name}</span></span>
                 </p>
               </div>
 
@@ -1094,7 +1094,7 @@ function ActionButton({
   disabled?: boolean;
 }) {
   const styles: Record<string, React.CSSProperties> = {
-    primary: { background: "#1e3a5f", color: "#fff", border: "1.5px solid #1e3a5f" },
+    primary: { background: "#1d4ed8", color: "#fff", border: "1.5px solid #1d4ed8" },
     outline: { background: "#fff", color: "#0f172a", border: "1.5px solid #e2e8f0" },
     danger: { background: "#fef2f2", color: "#dc2626", border: "1.5px solid #fecaca" },
     success: { background: "#f0fdf4", color: "#16a34a", border: "1.5px solid #bbf7d0" },
@@ -1176,7 +1176,7 @@ function PanelButtons({
   confirmLabel,
   disabled,
   submitting,
-  confirmColor = "#1e3a5f",
+  confirmColor = "#1d4ed8",
 }: {
   onCancel: () => void;
   onConfirm: () => void;
@@ -1340,7 +1340,7 @@ function SmallBtn({
   children: React.ReactNode;
 }) {
   const styles: Record<string, React.CSSProperties> = {
-    primary: { background: "#1e3a5f", color: "#fff" },
+    primary: { background: "#1d4ed8", color: "#fff" },
     slate:   { background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0" },
     danger:  { background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" },
   };

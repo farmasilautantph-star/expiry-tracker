@@ -29,7 +29,7 @@ const URGENCY_ROWS: Array<{
 
 function getHealthGradient(score: number): string {
   if (score >= 80) return "linear-gradient(135deg,#15803d,#166534)";
-  if (score >= 60) return "linear-gradient(135deg,#1e3a5f,#2d5490)";
+  if (score >= 60) return "linear-gradient(135deg,#1d4ed8,#2d5490)";
   if (score >= 40) return "linear-gradient(135deg,#92400e,#b45309)";
   return "linear-gradient(135deg,#991b1b,#b91c1c)";
 }

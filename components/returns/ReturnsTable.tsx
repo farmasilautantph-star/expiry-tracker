@@ -288,7 +288,7 @@ export default function ReturnsTable({
                   <button
                     onClick={() => { setConfirmEntry(entry); setActionNotes(""); }}
                     className="flex-1 h-11 rounded-xl text-[13px] font-bold text-white"
-                    style={{ background: "#1e3a5f", border: "none" }}
+                    style={{ background: "#1d4ed8", border: "none" }}
                   >
                     Mark Returned
                   </button>
@@ -307,7 +307,7 @@ export default function ReturnsTable({
                 <button
                   onClick={() => router.push(`/dashboard/shortlist?review=${entry.id}`)}
                   className="text-xs font-bold mt-1"
-                  style={{ color: "#1e3a5f" }}
+                  style={{ color: "#1d4ed8" }}
                 >
                   View Details →
                 </button>

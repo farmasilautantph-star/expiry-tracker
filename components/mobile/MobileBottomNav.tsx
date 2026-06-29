@@ -108,7 +108,7 @@ export default function MobileBottomNav() {
     >
       {TABS.map((tab) => {
         const isActive = pathname === tab.href;
-        const color = isActive ? "#1e3a5f" : "#94a3b8";
+        const color = isActive ? "#1d4ed8" : "#94a3b8";
         const weight = isActive ? 700 : 400;
         return (
           <Link

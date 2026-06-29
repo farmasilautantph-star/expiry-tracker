@@ -29,7 +29,7 @@ const CHIPS: Array<{ value: string; label: string; key: keyof ShortListCounts }>
 ];
 
 const ACTIVE_CHIP_STYLE: Record<string, { bg: string; color: string }> = {
-  "":         { bg: "#1e3a5f", color: "#ffffff" },
+  "":         { bg: "#1d4ed8", color: "#ffffff" },
   expired:    { bg: "#dc2626", color: "#ffffff" },
   critical:   { bg: "#ea580c", color: "#ffffff" },
   warning:    { bg: "#ca8a04", color: "#ffffff" },
@@ -186,7 +186,7 @@ export default function MobileShortList({
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: moreOpen ? "#1e3a5f" : "#f1f5f9",
+              background: moreOpen ? "#1d4ed8" : "#f1f5f9",
               color: moreOpen ? "#fff" : "#475569",
               display: "flex",
               alignItems: "center",
@@ -551,7 +551,7 @@ export default function MobileShortList({
                         width: 20,
                         height: 20,
                         borderRadius: "50%",
-                        background: "#1e3a5f",
+                        background: "#1d4ed8",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -565,7 +565,7 @@ export default function MobileShortList({
                       style={{
                         fontSize: 10,
                         fontWeight: 700,
-                        color: "#1e3a5f",
+                        color: "#1d4ed8",
                         background: "#eef3fa",
                         padding: "2px 7px",
                         borderRadius: 5,

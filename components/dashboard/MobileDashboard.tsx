@@ -311,7 +311,7 @@ export default function MobileDashboard({
               <button
                 onClick={() => router.push("/dashboard/history-log")}
                 className="text-[11.5px] font-semibold"
-                style={{ color: "#1e3a5f" }}
+                style={{ color: "#1d4ed8" }}
               >
                 View all →
               </button>
@@ -434,7 +434,7 @@ export default function MobileDashboard({
           width: 56,
           height: 56,
           borderRadius: "50%",
-          background: "#1e3a5f",
+          background: "#1d4ed8",
           border: "none",
           cursor: "pointer",
           boxShadow: "0 4px 18px rgba(30,58,95,0.42)",

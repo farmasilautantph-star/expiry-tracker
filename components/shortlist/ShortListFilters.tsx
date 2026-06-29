@@ -79,7 +79,7 @@ export default function ShortListFilters({
               aria-pressed={mobileMoreOpen}
               className="w-[46px] h-[46px] flex-shrink-0 rounded-xl flex items-center justify-center transition-colors"
               style={{
-                background: mobileMoreOpen ? "#1e3a5f" : "#f1f5f9",
+                background: mobileMoreOpen ? "#1d4ed8" : "#f1f5f9",
                 color: mobileMoreOpen ? "#fff" : "#475569",
               }}
             >
@@ -106,7 +106,7 @@ export default function ShortListFilters({
                 className="flex-shrink-0 px-3.5 h-9 rounded-full text-xs font-semibold whitespace-nowrap transition-colors"
                 style={
                   active
-                    ? { background: "#1e3a5f", color: "#fff", border: "1.5px solid #1e3a5f" }
+                    ? { background: "#1d4ed8", color: "#fff", border: "1.5px solid #1d4ed8" }
                     : { background: "#fff", color: "#475569", border: "1.5px solid #e2e8f0" }
                 }
               >

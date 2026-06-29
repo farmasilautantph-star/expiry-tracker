@@ -1,0 +1,605 @@
+
+<x-dc>
+<!-- helmet -->
+
+<!-- Canvas -->
+<div style="min-height:100vh; background:#d4dbe6; display:flex; align-items:center; justify-content:center; padding:48px 24px; font-family:'Inter',system-ui,sans-serif; -webkit-font-smoothing:antialiased;">
+
+  <!-- Phone shell -->
+  <div style="width:375px; height:812px; background:#f4f7fb; border-radius:44px; overflow:hidden; box-shadow:0 60px 120px rgba(10,20,40,0.28),0 8px 24px rgba(10,20,40,0.12),0 0 0 1px rgba(255,255,255,0.5); position:relative; display:flex; flex-direction:column; flex-shrink:0;">
+
+    <!-- STATUS BAR -->
+    <div style="height:44px; background:#1e3a5f; flex-shrink:0; display:flex; align-items:flex-end; justify-content:space-between; padding:0 24px 10px;">
+      <span style="font-size:13.5px; font-weight:700; color:#fff; letter-spacing:0.2px;">9:41</span>
+      <div style="display:flex; align-items:center; gap:5px;">
+        <svg width="16" height="10" viewBox="0 0 16 10"><rect x="0" y="4" width="3" height="6" rx="1" fill="white" opacity="0.4"></rect><rect x="4.5" y="2.5" width="3" height="7.5" rx="1" fill="white" opacity="0.6"></rect><rect x="9" y="1" width="3" height="9" rx="1" fill="white" opacity="0.8"></rect><rect x="13.5" y="0" width="2.5" height="10" rx="1" fill="white"></rect></svg>
+        <svg width="16" height="11" viewBox="0 0 24 17" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round"><path d="M1 5.5C5.5 1.5 10.5 0 12 0s6.5 1.5 11 5.5"></path><path d="M4 9.5C7 6.5 9.5 5.5 12 5.5s5 1 8 4"></path><path d="M7.5 13.5C9.5 11.5 10.5 11 12 11s2.5.5 4.5 2.5"></path><circle cx="12" cy="16" r="1" fill="white" stroke="none"></circle></svg>
+        <div style="display:flex; align-items:center; gap:1px;">
+          <div style="width:23px; height:11px; border:1.5px solid rgba(255,255,255,0.7); border-radius:3px; padding:1.5px 2px; display:flex; align-items:center;">
+            <div style="width:85%; height:100%; background:#fff; border-radius:1.5px;"></div>
+          </div>
+          <div style="width:2px; height:5px; background:rgba(255,255,255,0.5); border-radius:0 1px 1px 0;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN AREA -->
+    <div style="flex:1; overflow:hidden; position:relative;">
+
+      <!-- ═══════════════ DASHBOARD ═══════════════ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="position:absolute; inset:0; overflow-y:auto; background:#f4f7fb; -webkit-overflow-scrolling:touch;">
+
+          <!-- Header -->
+          <div style="background:#fff; padding:20px 20px 18px; border-bottom:1px solid #f0f4f8;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:11px; font-weight:700; letter-spacing:1.2px; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Thursday · 26 Jun 2026</div>
+                <div style="font-size:21px; font-weight:800; color:#0f172a; letter-spacing:-0.5px; line-height:1.2;">Good morning,<br>Nadiah 👋</div>
+              </div>
+              <div style="width:44px; height:44px; border-radius:50%; background:#1e3a5f; display:flex; align-items:center; justify-content:center; position:relative; cursor:pointer; flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span style="position:absolute; top:2px; right:2px; width:9px; height:9px; border-radius:50%; background:#dc2626; border:1.5px solid #fff;"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Health Score Card -->
+          <div style="padding:16px 16px 0; background:#fff;">
+            <div style="border-radius:20px; padding:22px 22px 18px; position:relative; overflow:hidden; background:{{ hsGrad }};">
+              <div style="position:absolute; right:-20px; top:-20px; width:130px; height:130px; border-radius:50%; background:rgba(255,255,255,0.07);"></div>
+              <div style="position:absolute; right:70px; bottom:-36px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.04);"></div>
+              <div style="font-size:10px; font-weight:700; letter-spacing:1.6px; color:rgba(255,255,255,0.55); text-transform:uppercase; margin-bottom:4px;">Inventory Health Score</div>
+              <div style="display:flex; align-items:flex-end; gap:4px; margin-bottom:6px;">
+                <span style="font-size:64px; font-weight:900; color:#fff; line-height:1; letter-spacing:-3px;">{{ healthScore }}</span>
+                <span style="font-size:18px; font-weight:400; color:rgba(255,255,255,0.5); margin-bottom:9px; padding-left:2px;">/100</span>
+              </div>
+              <div style="font-size:12.5px; font-weight:600; color:rgba(255,255,255,0.8); margin-bottom:14px;">{{ hsLabel }} · {{ urgentCount }} items need action</div>
+              <div style="height:5px; background:rgba(255,255,255,0.15); border-radius:3px; overflow:hidden;">
+                <div style="height:100%; background:rgba(255,255,255,0.85); border-radius:3px; width:{{ hsBarWidth }};"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards -->
+          <div style="padding:12px 16px 0; background:#fff;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <!-- Expired -->
+              <div onclick="{{ goToExpiry }}" style="background:#fef2f2; border-radius:16px; padding:14px 15px; cursor:pointer; min-height:100px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                  <div style="width:34px; height:34px; border-radius:10px; background:#fee2e2; display:flex; align-items:center; justify-content:center;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M15 9l-6 6M9 9l6 6"></path></svg>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"></path></svg>
+                </div>
+                <div style="font-size:32px; font-weight:900; color:#b91c1c; letter-spacing:-1.5px; line-height:1;">{{ counts.expired }}</div>
+                <div style="font-size:12px; font-weight:600; color:#dc2626; margin-top:3px;">Expired</div>
+              </div>
+              <!-- Critical -->
+              <div onclick="{{ goToExpiry }}" style="background:#fff7ed; border-radius:16px; padding:14px 15px; cursor:pointer; min-height:100px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                  <div style="width:34px; height:34px; border-radius:10px; background:#ffedd5; display:flex; align-items:center; justify-content:center;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"></path></svg>
+                </div>
+                <div style="font-size:32px; font-weight:900; color:#c2410c; letter-spacing:-1.5px; line-height:1;">{{ counts.critical }}</div>
+                <div style="font-size:12px; font-weight:600; color:#ea580c; margin-top:3px;">Critical</div>
+              </div>
+              <!-- Warning -->
+              <div onclick="{{ goToExpiry }}" style="background:#fffbeb; border-radius:16px; padding:14px 15px; cursor:pointer; min-height:100px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                  <div style="width:34px; height:34px; border-radius:10px; background:#fef3c7; display:flex; align-items:center; justify-content:center;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"></path></svg>
+                </div>
+                <div style="font-size:32px; font-weight:900; color:#b45309; letter-spacing:-1.5px; line-height:1;">{{ counts.warning }}</div>
+                <div style="font-size:12px; font-weight:600; color:#ca8a04; margin-top:3px;">Warning</div>
+              </div>
+              <!-- Safe -->
+              <div onclick="{{ goToExpiry }}" style="background:#f0fdf4; border-radius:16px; padding:14px 15px; cursor:pointer; min-height:100px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                  <div style="width:34px; height:34px; border-radius:10px; background:#dcfce7; display:flex; align-items:center; justify-content:center;">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+                  </div>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round"><path d="M9 18l6-6-6-6"></path></svg>
+                </div>
+                <div style="font-size:32px; font-weight:900; color:#15803d; letter-spacing:-1.5px; line-height:1;">{{ counts.safe }}</div>
+                <div style="font-size:12px; font-weight:600; color:#16a34a; margin-top:3px;">Safe</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- divider -->
+          <div style="height:12px; background:#fff;"></div>
+
+          <!-- Weekly Review -->
+          <div style="background:#fff; padding:16px 16px 18px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+              <div style="font-size:14.5px; font-weight:700; color:#0f172a;">Items to Review This Week</div>
+              <span onclick="{{ goToExpiry }}" style="font-size:12px; font-weight:700; color:#1e3a5f; cursor:pointer;">See all</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+              <div style="flex:1; height:7px; background:#f1f5f9; border-radius:4px; overflow:hidden;">
+                <div style="width:62%; height:100%; background:linear-gradient(90deg,#1e3a5f,#3d6fa3); border-radius:4px;"></div>
+              </div>
+              <span style="font-size:14px; font-weight:800; color:#1e3a5f; white-space:nowrap;">62%</span>
+            </div>
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18M8 2v4M16 2v4"></path></svg>
+                <span style="font-size:12.5px; color:#64748b; font-weight:500;">8 items due this week</span>
+              </div>
+              <span style="font-size:12px; color:#b91c1c; font-weight:700;">3 overdue</span>
+            </div>
+          </div>
+
+          <!-- divider -->
+          <div style="height:8px; background:#f4f7fb;"></div>
+
+          <!-- Recent Activity -->
+          <div style="background:#fff; padding-bottom:28px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 16px 10px;">
+              <div style="font-size:14.5px; font-weight:700; color:#0f172a;">Recent Activity</div>
+              <span style="font-size:12px; font-weight:600; color:#1e3a5f; cursor:pointer;">View all</span>
+            </div>
+            <sc-for list="{{ activities }}" as="act" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:12px; padding:12px 16px; border-top:1px solid #f8fafc;">
+                <div style="width:38px; height:38px; flex-shrink:0; border-radius:12px; display:flex; align-items:center; justify-content:center; background:{{ act.bg }};">
+                  <div style="width:10px; height:10px; border-radius:50%; background:{{ act.color }};"></div>
+                </div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:13px; font-weight:600; color:#0f172a; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ act.text }}</div>
+                </div>
+                <div style="font-size:11px; color:#94a3b8; white-space:nowrap; flex-shrink:0;">{{ act.time }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <!-- ═══════════════ EXPIRY MONITOR ═══════════════ -->
+      <sc-if value="{{ isExpiry }}">
+        <div style="position:absolute; inset:0; overflow-y:auto; background:#f4f7fb; -webkit-overflow-scrolling:touch;">
+
+          <!-- Header -->
+          <div style="background:#fff; padding:18px 16px 14px; border-bottom:1px solid #f0f4f8;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-size:11px; font-weight:700; letter-spacing:1.2px; color:#94a3b8; text-transform:uppercase; margin-bottom:3px;">Outlet Inventory</div>
+                <div style="font-size:20px; font-weight:800; color:#0f172a; letter-spacing:-0.4px;">Expiry Monitor</div>
+              </div>
+              <div style="width:44px; height:44px; border-radius:12px; background:#f1f5f9; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M7 12h10M11 18h2"></path></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div style="background:#fff; padding:12px 16px 0;">
+            <div style="display:flex; align-items:center; gap:10px; background:#f4f7fb; border-radius:14px; padding:0 14px; height:46px; border:1.5px solid #eef1f6;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3-3"></path></svg>
+              <input type="text" placeholder="Search items, category, PIC…" value="{{ searchQuery }}" onchange="{{ setSearch }}" style="flex:1; border:none; background:none; font-family:inherit; font-size:14px; color:#0f172a; outline:none; min-width:0;">
+            </div>
+          </div>
+
+          <!-- Filter chips -->
+          <div style="background:#fff; padding:10px 16px 14px; display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch;">
+            <button onclick="{{ setFilterAll }}" style="{{ chipAll }}">All · {{ allCount }}</button>
+            <button onclick="{{ setFilterExpired }}" style="{{ chipExpired }}">Expired · {{ expiredCount }}</button>
+            <button onclick="{{ setFilterCritical }}" style="{{ chipCritical }}">Critical · {{ criticalCount }}</button>
+            <button onclick="{{ setFilterWarning }}" style="{{ chipWarning }}">Warning · {{ warningCount }}</button>
+            <button onclick="{{ setFilterSafe }}" style="{{ chipSafe }}">Safe · {{ safeCount }}</button>
+          </div>
+
+          <!-- Item cards -->
+          <div style="padding:8px 16px 28px; display:flex; flex-direction:column; gap:10px;">
+            <sc-for list="{{ filteredItems }}" as="item" hint-placeholder-count="5">
+              <div onclick="{{ item.openHandler }}" style="background:#fff; border-radius:18px; padding:14px 15px; cursor:pointer; box-shadow:0 1px 4px rgba(15,23,42,0.06); border:1px solid #eef1f6;">
+                <!-- Top row -->
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:9px;">
+                  <span style="font-size:10.5px; font-weight:600; color:#64748b; background:#f1f5f9; padding:3px 8px; border-radius:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px;">{{ item.category }}</span>
+                  <div style="margin-left:auto; display:flex; align-items:center; gap:5px; flex-shrink:0;">
+                    <div style="width:20px; height:20px; border-radius:50%; background:#1e3a5f; display:flex; align-items:center; justify-content:center;">
+                      <span style="font-size:8px; font-weight:800; color:#fff;">{{ item.picInitial }}</span>
+                    </div>
+                    <span style="font-size:10px; font-weight:700; color:#1e3a5f; background:#eef3fa; padding:2px 7px; border-radius:5px; white-space:nowrap;">{{ item.pic }}</span>
+                  </div>
+                </div>
+                <!-- Name -->
+                <div style="font-size:14px; font-weight:700; color:#0f172a; line-height:1.35; margin-bottom:10px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">{{ item.name }}</div>
+                <!-- Bottom row -->
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M3 10h18M8 2v4M16 2v4"></path></svg>
+                  <span style="font-size:12px; color:#64748b; font-weight:500; flex:1;">{{ item.expiry }}</span>
+                  <span style="font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; background:{{ item.statusBg }}; color:{{ item.statusColor }}; border:1.5px solid {{ item.statusBorder }}; white-space:nowrap;">{{ item.daysText }}</span>
+                  <span style="font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; background:{{ item.rsBg }}; color:{{ item.rsColor }}; white-space:nowrap;">{{ item.returnStatus }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <!-- ═══════════════ RETURNS ═══════════════ -->
+      <sc-if value="{{ isReturns }}">
+        <div style="position:absolute; inset:0; overflow-y:auto; background:#f4f7fb; -webkit-overflow-scrolling:touch;">
+          <div style="background:#fff; padding:18px 16px 14px; border-bottom:1px solid #f0f4f8;">
+            <div style="font-size:11px; font-weight:700; letter-spacing:1.2px; color:#94a3b8; text-transform:uppercase; margin-bottom:3px;">Inventory Management</div>
+            <div style="font-size:20px; font-weight:800; color:#0f172a; letter-spacing:-0.4px;">Returns</div>
+          </div>
+          <div style="padding:14px 16px 28px; display:flex; flex-direction:column; gap:10px;">
+            <!-- pending 1 -->
+            <div style="background:#fff; border-radius:18px; padding:16px; box-shadow:0 1px 4px rgba(15,23,42,0.06); border:1px solid #eef1f6;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <span style="font-size:11.5px; font-weight:700; color:#b45309; background:#fffbeb; border:1.5px solid #fde68a; padding:3px 10px; border-radius:999px;">Pending</span>
+                <span style="font-size:11px; color:#94a3b8; font-weight:500;">Due: 01 Jul 2026</span>
+              </div>
+              <div style="font-size:13.5px; font-weight:700; color:#0f172a; margin-bottom:5px; line-height:1.3;">Bio-Life Maxx Fish Oil 1000mg 30 Vcaps</div>
+              <div style="font-size:12px; color:#64748b; margin-bottom:12px;">Qty: 3 BOT · Exp: 01 Jul 2026 · PIC: NAJIHAH</div>
+              <div style="display:flex; gap:8px;">
+                <button style="flex:1; height:44px; border-radius:12px; background:#1e3a5f; color:#fff; border:none; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">Submit Return</button>
+                <button style="width:44px; height:44px; border-radius:12px; background:#f1f5f9; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+              </div>
+            </div>
+            <!-- pending 2 -->
+            <div style="background:#fff; border-radius:18px; padding:16px; box-shadow:0 1px 4px rgba(15,23,42,0.06); border:1px solid #eef1f6;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <span style="font-size:11.5px; font-weight:700; color:#b45309; background:#fffbeb; border:1.5px solid #fde68a; padding:3px 10px; border-radius:999px;">Pending</span>
+                <span style="font-size:11px; color:#94a3b8; font-weight:500;">Due: 28 Jun 2026</span>
+              </div>
+              <div style="font-size:13.5px; font-weight:700; color:#0f172a; margin-bottom:5px; line-height:1.3;">Zinc Lozenges 10mg 20s</div>
+              <div style="font-size:12px; color:#64748b; margin-bottom:12px;">Qty: 8 BOX · Exp: 28 Jun 2026 · PIC: NADIAH</div>
+              <div style="display:flex; gap:8px;">
+                <button style="flex:1; height:44px; border-radius:12px; background:#1e3a5f; color:#fff; border:none; font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;">Submit Return</button>
+                <button style="width:44px; height:44px; border-radius:12px; background:#f1f5f9; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+              </div>
+            </div>
+            <!-- submitted -->
+            <div style="background:#fff; border-radius:18px; padding:16px; box-shadow:0 1px 4px rgba(15,23,42,0.06); border:1px solid #eef1f6; opacity:0.7;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <span style="font-size:11.5px; font-weight:700; color:#1d4ed8; background:#eff6ff; border:1.5px solid #bfdbfe; padding:3px 10px; border-radius:999px;">Submitted</span>
+                <span style="font-size:11px; color:#94a3b8; font-weight:500;">26 Jun 2026</span>
+              </div>
+              <div style="font-size:13.5px; font-weight:700; color:#0f172a; margin-bottom:5px; line-height:1.3;">Vitamin C 1000mg Effervescent 15s</div>
+              <div style="font-size:12px; color:#64748b;">Qty: 12 BOX · Exp: 20 Jun 2026 · PIC: NADIAH</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════════ OFFERS ═══════════════ -->
+      <sc-if value="{{ isOffers }}">
+        <div style="position:absolute; inset:0; overflow-y:auto; background:#f4f7fb; -webkit-overflow-scrolling:touch;">
+          <div style="background:#fff; padding:18px 16px 14px; border-bottom:1px solid #f0f4f8;">
+            <div style="font-size:11px; font-weight:700; letter-spacing:1.2px; color:#94a3b8; text-transform:uppercase; margin-bottom:3px;">Outlet Promotions</div>
+            <div style="font-size:20px; font-weight:800; color:#0f172a; letter-spacing:-0.4px;">Outlet Offers</div>
+          </div>
+          <div style="padding:48px 24px; display:flex; flex-direction:column; align-items:center; gap:12px; background:#fff;">
+            <div style="width:72px; height:72px; border-radius:20px; background:#eef3fa; display:flex; align-items:center; justify-content:center; margin-bottom:4px;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#3d6fa3" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><circle cx="7" cy="7" r="1.5" fill="#3d6fa3" stroke="none"></circle></svg>
+            </div>
+            <div style="font-size:17px; font-weight:700; color:#0f172a; text-align:center;">No Active Offers</div>
+            <div style="font-size:13px; color:#94a3b8; text-align:center; line-height:1.6; max-width:240px;">Create outlet offers for near-expiry items to reduce waste and recover value.</div>
+            <button style="margin-top:10px; height:48px; padding:0 28px; background:#1e3a5f; color:#fff; border:none; border-radius:13px; font-family:inherit; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>
+              Create Offer
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ═══════════════ ITEM REVIEW OVERLAY ═══════════════ -->
+      <sc-if value="{{ hasReviewItem }}">
+        <div style="position:absolute; inset:0; z-index:100; background:rgba(15,23,42,0.55); animation:fadeIn 0.2s ease;" onclick="{{ closeReview }}">
+          <div style="position:absolute; bottom:0; left:0; right:0; background:#fff; border-radius:24px 24px 0 0; animation:slideUp 0.28s cubic-bezier(0.32,0.72,0,1); max-height:90%; overflow-y:auto; padding-bottom:28px;" onclick="{{ stopProp }}">
+
+            <!-- Drag handle -->
+            <div style="display:flex; justify-content:center; padding:12px 0 6px;">
+              <div style="width:36px; height:4px; background:#e2e8f0; border-radius:2px;"></div>
+            </div>
+
+            <!-- Status banner -->
+            <div style="margin:4px 16px 0; padding:10px 14px; border-radius:12px; background:{{ reviewItem.statusBg }}; border:1.5px solid {{ reviewItem.statusBorder }}; display:flex; align-items:center; gap:8px;">
+              <div style="width:8px; height:8px; border-radius:50%; background:{{ reviewItem.statusColor }}; flex-shrink:0;"></div>
+              <span style="font-size:11.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:{{ reviewItem.statusColor }};">{{ reviewItem.statusLabel }}</span>
+              <span style="font-size:11.5px; font-weight:500; color:{{ reviewItem.statusColor }}; margin-left:2px;">· {{ reviewItem.daysText }}</span>
+              <div style="margin-left:auto; cursor:pointer; padding:2px;" onclick="{{ closeReview }}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+              </div>
+            </div>
+
+            <!-- Name & category -->
+            <div style="padding:14px 18px 0;">
+              <div style="font-size:17px; font-weight:800; color:#0f172a; line-height:1.3; letter-spacing:-0.3px;">{{ reviewItem.name }}</div>
+              <div style="font-size:12.5px; color:#64748b; margin-top:5px; font-weight:500; display:flex; align-items:center; gap:6px;">
+                <span>{{ reviewItem.category }}</span>
+                <span style="color:#e2e8f0;">·</span>
+                <span>PIC: {{ reviewItem.pic }}</span>
+              </div>
+            </div>
+
+            <!-- Key details grid -->
+            <div style="padding:14px 16px 0; display:grid; grid-template-columns:1fr 1fr; gap:9px;">
+              <div style="background:#f8fafc; border-radius:13px; padding:12px 14px;">
+                <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Quantity</div>
+                <div style="font-size:24px; font-weight:800; color:#0f172a; line-height:1; letter-spacing:-1px;">{{ reviewItem.qty }}</div>
+                <div style="font-size:11px; font-weight:600; color:#64748b; margin-top:3px;">{{ reviewItem.unit }}</div>
+              </div>
+              <div style="background:#f8fafc; border-radius:13px; padding:12px 14px;">
+                <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Expiry Date</div>
+                <div style="font-size:15px; font-weight:800; color:#0f172a; line-height:1.3;">{{ reviewItem.expiry }}</div>
+              </div>
+              <div style="border-radius:13px; padding:12px 14px; background:{{ reviewItem.statusBg }}; border:1.5px solid {{ reviewItem.statusBorder }};">
+                <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:{{ reviewItem.statusColor }}; text-transform:uppercase; margin-bottom:5px;">{{ reviewItem.daysLabel }}</div>
+                <div style="font-size:24px; font-weight:800; color:{{ reviewItem.statusColor }}; line-height:1; letter-spacing:-1px;">{{ reviewItem.daysAbs }}</div>
+                <div style="font-size:11px; font-weight:600; color:{{ reviewItem.statusColor }}; margin-top:3px;">days</div>
+              </div>
+              <div style="background:#f8fafc; border-radius:13px; padding:12px 14px;">
+                <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:#94a3b8; text-transform:uppercase; margin-bottom:5px;">Logged by</div>
+                <div style="font-size:15px; font-weight:800; color:#0f172a; line-height:1.3;">{{ reviewItem.loggedBy }}</div>
+                <div style="font-size:11px; font-weight:500; color:#94a3b8; margin-top:3px;">{{ reviewItem.loggedOn }}</div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div style="padding:14px 16px 0;">
+              <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:#94a3b8; text-transform:uppercase; margin-bottom:10px;">Actions</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <button onclick="{{ doMarkReviewed }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:48px; border-radius:13px; background:#1e3a5f; border:none; cursor:pointer; font-family:inherit;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"></path></svg>
+                  <span style="font-size:13px; font-weight:700; color:#fff;">Mark Reviewed</span>
+                </button>
+                <button onclick="{{ doMarkSold }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:48px; border-radius:13px; background:#f8fafc; border:1.5px solid #e2e8f0; cursor:pointer; font-family:inherit;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                  <span style="font-size:13px; font-weight:700; color:#475569;">Mark Sold</span>
+                </button>
+                <button onclick="{{ doTransfer }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:48px; border-radius:13px; background:#f8fafc; border:1.5px solid #e2e8f0; cursor:pointer; font-family:inherit;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"></path></svg>
+                  <span style="font-size:13px; font-weight:700; color:#475569;">Outlet Transfer</span>
+                </button>
+                <button onclick="{{ doReturn }}" style="display:flex; align-items:center; justify-content:center; gap:8px; height:48px; border-radius:13px; background:#fef2f2; border:1.5px solid #fecaca; cursor:pointer; font-family:inherit;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                  <span style="font-size:13px; font-weight:700; color:#b91c1c;">Return</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Return status -->
+            <div style="padding:14px 16px 0;">
+              <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Return Status</div>
+              <div style="padding:12px 14px; background:{{ reviewItem.rsBg }}; border-radius:12px; display:flex; align-items:center; gap:8px;">
+                <div style="width:8px; height:8px; border-radius:50%; background:{{ reviewItem.rsColor }}; flex-shrink:0;"></div>
+                <span style="font-size:13.5px; font-weight:700; color:{{ reviewItem.rsColor }};">{{ reviewItem.returnStatus }}</span>
+              </div>
+            </div>
+
+            <!-- Remarks -->
+            <div style="padding:14px 16px 0;">
+              <div style="font-size:9.5px; font-weight:700; letter-spacing:1.3px; color:#94a3b8; text-transform:uppercase; margin-bottom:8px;">Remarks</div>
+              <textarea rows="3" placeholder="Add a remark or note…" style="width:100%; border:1.5px solid #e2e8f0; border-radius:13px; padding:12px 14px; font-family:inherit; font-size:13px; color:#0f172a; outline:none; resize:none; background:#f8fafc; box-sizing:border-box; line-height:1.5;"></textarea>
+            </div>
+
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div style="height:74px; background:#fff; border-top:1.5px solid #f0f4f8; flex-shrink:0; display:flex; align-items:flex-start; padding-top:6px;">
+
+      <!-- Dashboard -->
+      <button onclick="{{ goToDashboard }}" style="{{ navDashBtn }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ ndColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span style="font-size:10px; font-weight:{{ ndWeight }}; color:{{ ndColor }};">Dashboard</span>
+      </button>
+
+      <!-- Expiry -->
+      <button onclick="{{ goToExpiry }}" style="{{ navExpiryBtn }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ neColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        <span style="font-size:10px; font-weight:{{ neWeight }}; color:{{ neColor }};">Expiry</span>
+      </button>
+
+      <!-- Returns -->
+      <button onclick="{{ goToReturns }}" style="{{ navReturnsBtn }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ nrColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+        <span style="font-size:10px; font-weight:{{ nrWeight }}; color:{{ nrColor }};">Returns</span>
+      </button>
+
+      <!-- Offers -->
+      <button onclick="{{ goToOffers }}" style="{{ navOffersBtn }}">
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="{{ noColor }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><circle cx="7" cy="7" r="1.5" fill="{{ noColor }}" stroke="none"></circle></svg>
+        <span style="font-size:10px; font-weight:{{ noWeight }}; color:{{ noColor }};">Offers</span>
+      </button>
+
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="">
+class Component extends DCLogic {
+  state = {
+    screen: 'dashboard',
+    reviewItem: null,
+    filter: 'all',
+    searchQuery: '',
+  };
+
+  statusConfig = {
+    expired:  { label:'Expired',  color:'#b91c1c', bg:'#fef2f2', border:'#fecaca' },
+    critical: { label:'Critical', color:'#c2410c', bg:'#fff7ed', border:'#fed7aa' },
+    warning:  { label:'Warning',  color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
+    safe:     { label:'Safe',     color:'#15803d', bg:'#f0fdf4', border:'#bbf7d0' },
+  };
+
+  items = [
+    { id:1,  name:'Bio-Life Maxx Fish Oil 1000mg 30 Vcaps',   category:'Health Supplement', pic:'NAJIHAH', expiry:'01 Jul 2026', daysLeft:5,   status:'critical', qty:3,  unit:'BOT', loggedBy:'NAJIHAH', loggedOn:'20 Jun 2026', returnStatus:'Pending'       },
+    { id:2,  name:'Vitamin C 1000mg Effervescent 15s',         category:'Vitamins',          pic:'NADIAH',  expiry:'20 Jun 2026', daysLeft:-6,  status:'expired',  qty:12, unit:'BOX', loggedBy:'NADIAH',  loggedOn:'10 Jun 2026', returnStatus:'Submitted'     },
+    { id:3,  name:'Omega-3 Deep Sea Fish Oil 1000mg',          category:'Health Supplement', pic:'SITI',    expiry:'15 Aug 2026', daysLeft:50,  status:'warning',  qty:6,  unit:'BTL', loggedBy:'SITI',    loggedOn:'15 Jun 2026', returnStatus:'None'          },
+    { id:4,  name:'Panadol Extend 665mg 24s',                  category:'OTC Medicine',      pic:'NAJIHAH', expiry:'12 Dec 2026', daysLeft:169, status:'safe',     qty:24, unit:'BOX', loggedBy:'NAJIHAH', loggedOn:'18 Jun 2026', returnStatus:'None'          },
+    { id:5,  name:'Zinc Lozenges 10mg 20s',                    category:'Vitamins',          pic:'NADIAH',  expiry:'28 Jun 2026', daysLeft:2,   status:'critical', qty:8,  unit:'BOX', loggedBy:'NADIAH',  loggedOn:'22 Jun 2026', returnStatus:'Pending'       },
+    { id:6,  name:'Glucosamine 1500mg 60 Tabs',                category:'Health Supplement', pic:'SITI',    expiry:'03 Oct 2026', daysLeft:99,  status:'warning',  qty:2,  unit:'BTL', loggedBy:'SITI',    loggedOn:'19 Jun 2026', returnStatus:'None'          },
+    { id:7,  name:'Vitamin D3 5000 IU 60 Softgels',           category:'Vitamins',          pic:'NAJIHAH', expiry:'22 Jun 2026', daysLeft:-4,  status:'expired',  qty:5,  unit:'BTL', loggedBy:'NAJIHAH', loggedOn:'12 Jun 2026', returnStatus:'Not Approved'  },
+    { id:8,  name:'Nurofen Plus 200mg 24s',                    category:'OTC Medicine',      pic:'SITI',    expiry:'27 Jun 2026', daysLeft:1,   status:'critical', qty:4,  unit:'BOX', loggedBy:'SITI',    loggedOn:'21 Jun 2026', returnStatus:'Pending'       },
+    { id:9,  name:'Blackmores Fish Oil 1000mg 60s',            category:'Health Supplement', pic:'NADIAH',  expiry:'30 Aug 2026', daysLeft:65,  status:'warning',  qty:3,  unit:'BTL', loggedBy:'NADIAH',  loggedOn:'18 Jun 2026', returnStatus:'None'          },
+    { id:10, name:'Vitamin B Complex 100s',                    category:'Vitamins',          pic:'NAJIHAH', expiry:'05 Sep 2026', daysLeft:71,  status:'warning',  qty:8,  unit:'BTL', loggedBy:'NAJIHAH', loggedOn:'20 Jun 2026', returnStatus:'None'          },
+    { id:11, name:'Mecobalamin 500mcg 100s',                   category:'Prescription',      pic:'SITI',    expiry:'15 Sep 2026', daysLeft:81,  status:'warning',  qty:2,  unit:'BTL', loggedBy:'SITI',    loggedOn:'19 Jun 2026', returnStatus:'None'          },
+  ];
+
+  activities = [
+    { id:1, text:'Vitamin D3 5000 IU marked expired',       time:'2h ago',     color:'#b91c1c', bg:'#fef2f2' },
+    { id:2, text:'Zinc Lozenges submitted for return',      time:'4h ago',     color:'#1e3a5f', bg:'#eef3fa' },
+    { id:3, text:'Bio-Life Fish Oil reviewed by NAJIHAH',   time:'Yesterday',  color:'#15803d', bg:'#f0fdf4' },
+    { id:4, text:'6 new entries logged by NADIAH',          time:'2 days ago', color:'#7c3aed', bg:'#f5f3ff' },
+  ];
+
+  renderVals() {
+    const { screen, reviewItem, filter, searchQuery } = this.state;
+    const { items, activities, statusConfig } = this;
+
+    // Counts
+    const counts = {
+      expired:  items.filter(i => i.status === 'expired').length,
+      critical: items.filter(i => i.status === 'critical').length,
+      warning:  items.filter(i => i.status === 'warning').length,
+      safe:     items.filter(i => i.status === 'safe').length,
+      total:    items.length,
+    };
+
+    // Health score (weighted average)
+    const w = { safe:100, warning:75, critical:40, expired:5 };
+    const healthScore = Math.round(items.reduce((s, i) => s + w[i.status], 0) / items.length);
+    const hsGrad = healthScore >= 80 ? 'linear-gradient(135deg,#15803d,#166534)'
+                 : healthScore >= 60 ? 'linear-gradient(135deg,#1e3a5f,#2d5490)'
+                 : healthScore >= 40 ? 'linear-gradient(135deg,#92400e,#b45309)'
+                 : 'linear-gradient(135deg,#991b1b,#b91c1c)';
+    const hsLabel = healthScore >= 80 ? 'Excellent'
+                  : healthScore >= 60 ? 'Good Standing'
+                  : healthScore >= 40 ? 'Needs Attention'
+                  : 'Critical Risk';
+    const urgentCount = counts.expired + counts.critical + counts.warning;
+
+    // Augment item with display props
+    const aug = (item) => {
+      const cfg = statusConfig[item.status];
+      const daysText = item.daysLeft < 0 ? (Math.abs(item.daysLeft) + 'd overdue')
+                     : item.daysLeft === 0 ? 'Today!'
+                     : (item.daysLeft + 'd left');
+      const rsCfg = ({
+        'None':         { c:'#64748b', bg:'#f1f5f9' },
+        'Pending':      { c:'#b45309', bg:'#fffbeb' },
+        'Submitted':    { c:'#1d4ed8', bg:'#eff6ff' },
+        'Not Approved': { c:'#b91c1c', bg:'#fef2f2' },
+      })[item.returnStatus] || { c:'#64748b', bg:'#f1f5f9' };
+      return {
+        ...item,
+        statusLabel:  cfg.label,
+        statusColor:  cfg.color,
+        statusBg:     cfg.bg,
+        statusBorder: cfg.border,
+        daysText,
+        daysLabel:    item.daysLeft < 0 ? 'Days Overdue' : 'Days Left',
+        daysAbs:      Math.abs(item.daysLeft),
+        rsColor:      rsCfg.c,
+        rsBg:         rsCfg.bg,
+        picInitial:   item.pic.charAt(0),
+        openHandler:  () => this.setState({ reviewItem: item }),
+      };
+    };
+
+    // Filter
+    const q = searchQuery.toLowerCase();
+    const filteredItems = items
+      .filter(i => (filter === 'all' || i.status === filter) &&
+                   (!q || i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q)))
+      .map(aug);
+
+    const ri = reviewItem ? aug(reviewItem) : null;
+
+    // Chip styles
+    const chip = (f, ac) => ({
+      display:'inline-flex', alignItems:'center', gap:'5px',
+      height:'36px', padding:'0 14px', borderRadius:'999px',
+      border: '1.5px solid ' + (filter === f ? ac : '#e2e8f0'),
+      background: filter === f ? ac : '#fff',
+      color:      filter === f ? '#fff' : '#64748b',
+      fontSize:'13px', fontWeight: filter === f ? 700 : 500,
+      cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap', flexShrink:0,
+    });
+
+    // Nav button base style
+    const nb = () => ({
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      gap:'3px', flex:1, cursor:'pointer',
+      background:'none', border:'none', fontFamily:'inherit', padding:'5px 4px 0',
+      WebkitTapHighlightColor:'transparent',
+    });
+    const nc = (s) => screen === s ? '#1e3a5f' : '#94a3b8';
+    const nw = (s) => screen === s ? '700' : '400';
+
+    return {
+      // Screen visibility
+      isDashboard:    screen === 'dashboard',
+      isExpiry:       screen === 'expiry',
+      isReturns:      screen === 'returns',
+      isOffers:       screen === 'offers',
+      hasReviewItem:  !!reviewItem,
+
+      // Nav
+      goToDashboard:  () => this.setState({ screen:'dashboard', reviewItem:null }),
+      goToExpiry:     () => this.setState({ screen:'expiry',    reviewItem:null }),
+      goToReturns:    () => this.setState({ screen:'returns',   reviewItem:null }),
+      goToOffers:     () => this.setState({ screen:'offers',    reviewItem:null }),
+      navDashBtn:     nb(), navExpiryBtn: nb(), navReturnsBtn: nb(), navOffersBtn: nb(),
+      ndColor: nc('dashboard'), neColor: nc('expiry'), nrColor: nc('returns'), noColor: nc('offers'),
+      ndWeight: nw('dashboard'), neWeight: nw('expiry'), nrWeight: nw('returns'), noWeight: nw('offers'),
+
+      // Dashboard data
+      healthScore, hsGrad, hsLabel, urgentCount,
+      hsBarWidth: healthScore + '%',
+      counts,
+      activities,
+
+      // Expiry monitor
+      filteredItems,
+      filter, searchQuery,
+      setSearch:         (e) => this.setState({ searchQuery: e.target.value }),
+      setFilterAll:      () => this.setState({ filter:'all' }),
+      setFilterExpired:  () => this.setState({ filter:'expired' }),
+      setFilterCritical: () => this.setState({ filter:'critical' }),
+      setFilterWarning:  () => this.setState({ filter:'warning' }),
+      setFilterSafe:     () => this.setState({ filter:'safe' }),
+      chipAll:      chip('all',      '#1e3a5f'),
+      chipExpired:  chip('expired',  '#b91c1c'),
+      chipCritical: chip('critical', '#c2410c'),
+      chipWarning:  chip('warning',  '#b45309'),
+      chipSafe:     chip('safe',     '#15803d'),
+      allCount:      counts.total,
+      expiredCount:  counts.expired,
+      criticalCount: counts.critical,
+      warningCount:  counts.warning,
+      safeCount:     counts.safe,
+
+      // Item review
+      reviewItem:      ri || {},
+      closeReview:     () => this.setState({ reviewItem: null }),
+      stopProp:        (e) => e.stopPropagation(),
+      doMarkReviewed:  () => this.setState({ reviewItem: null }),
+      doMarkSold:      () => this.setState({ reviewItem: null }),
+      doTransfer:      () => this.setState({ reviewItem: null }),
+      doReturn:        () => this.setState({ reviewItem: null }),
+    };
+  }
+}
+</script>
+
+

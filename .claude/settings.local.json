@@ -48,7 +48,15 @@
       "Bash(npx ts-node -e ' *)",
       "Bash(node -e \"const XLSX = require\\('xlsx'\\); const wb = XLSX.readFile\\('migrate/csv/EXPIRY_TRACKER_1.xlsx'\\); console.log\\('Sheets:', wb.SheetNames\\); const ws = wb.Sheets['EXPIRY_TRACKER']; const rows = XLSX.utils.sheet_to_json\\(ws\\); console.log\\('Row count:', rows.length\\); console.log\\('First row keys:', Object.keys\\(rows[0] || {}\\)\\); console.log\\('First row:', JSON.stringify\\(rows[0], null, 2\\)\\); console.log\\('Second row:', JSON.stringify\\(rows[1], null, 2\\)\\);\")",
       "Bash(node --experimental-sqlite -e ' *)",
-      "Bash(node -e \"try { require.resolve\\('dotenv'\\); console.log\\('dotenv: installed'\\); } catch\\(e\\) { console.log\\('dotenv: NOT installed'\\); }\")"
+      "Bash(node -e \"try { require.resolve\\('dotenv'\\); console.log\\('dotenv: installed'\\); } catch\\(e\\) { console.log\\('dotenv: NOT installed'\\); }\")",
+      "Bash(git push *)",
+      "Bash(node -e \"const {createCanvas} = require\\('canvas'\\); console.log\\('canvas ok'\\)\")",
+      "Bash(node -e \"require\\('sharp'\\); console.log\\('sharp ok'\\)\")",
+      "Bash(git commit *)",
+      "Bash(node *)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"EXIT: $?\")",
+      "Read(//tmp/**)"
     ]
   }
 }
