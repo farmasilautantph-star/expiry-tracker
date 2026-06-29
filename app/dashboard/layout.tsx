@@ -194,34 +194,30 @@ function SidebarContent({
         })}
       </nav>
 
-      {/* Sign Out */}
-      <div className="px-0 pb-1 flex-shrink-0">
-        <button
-          onClick={onLogout}
-          className="flex items-center gap-3 mx-3 px-3 py-2.5 rounded-xl text-sm font-medium w-full transition-all text-[#64748b] hover:bg-[#f8fafc] hover:text-[#334155]"
-        >
-          <span className="flex-shrink-0" style={{ color: "#94a3b8" }}>
-            <ArrowRightOnRectangleIcon style={{ width: 18, height: 18 }} />
-          </span>
-          Sign Out
-        </button>
-      </div>
-
       {/* User section */}
       <div className="px-3 py-4 flex-shrink-0" style={{ borderTop: "1px solid #f1f5f9" }}>
-        <div className="flex items-center gap-3 px-2">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm text-white"
-            style={{ background: "#2563eb" }}
+        <div className="flex items-center justify-between gap-3 px-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm text-white"
+              style={{ background: "#2563eb" }}
+            >
+              {userInitial}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[#0f172a] text-sm font-semibold truncate leading-none">
+                {picName || username}
+              </p>
+              <p className="text-[#94a3b8] text-xs font-medium capitalize mt-0.5">{role}</p>
+            </div>
+          </div>
+          <button
+            onClick={onLogout}
+            title="Sign Out"
+            className="flex-shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
           >
-            {userInitial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[#0f172a] text-sm font-semibold truncate leading-none">
-              {picName || username}
-            </p>
-            <p className="text-[#94a3b8] text-xs font-medium capitalize mt-0.5">{role}</p>
-          </div>
+            <ArrowRightOnRectangleIcon className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </div>
