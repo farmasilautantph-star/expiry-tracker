@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -16,9 +16,35 @@ import {
   ArrowRightOnRectangleIcon,
   BellIcon,
   Bars3Icon,
-  MagnifyingGlassIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
+
+interface NotifEntry {
+  id: number;
+  action: string;
+  description: string | null;
+  timestamp: string;
+  pic_name: string | null;
+  time_ago: string;
+}
+
+const NOTIF_STYLE: Record<string, { color: string; bg: string }> = {
+  CREATE: { color: "#15803d", bg: "#f0fdf4" },
+  UPDATE: { color: "#1d4ed8", bg: "#eef3fa" },
+  DELETE: { color: "#b91c1c", bg: "#fef2f2" },
+};
+const DEFAULT_NOTIF_STYLE = { color: "#7c3aed", bg: "#f5f3ff" };
+
+function notifTimeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days === 1 ? "Yesterday" : `${days}d ago`;
+}
 
 interface NavSection {
   label: string;
@@ -233,6 +259,11 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotifEntry[]>([]);
+  const [notifLoading, setNotifLoading] = useState(true);
+  const [lastReadTime, setLastReadTime] = useState<number>(0);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -243,6 +274,37 @@ export default function DashboardLayout({
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("last_read_notification_time");
+    if (stored) setLastReadTime(Number(stored));
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/activity/recent?limit=10")
+      .then((r) => r.json())
+      .then((d) => { if (d?.success) setNotifications(d.data as NotifEntry[]); })
+      .catch(() => {})
+      .finally(() => setNotifLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    const timer = setTimeout(() => document.addEventListener("mousedown", handler), 0);
+    return () => { clearTimeout(timer); document.removeEventListener("mousedown", handler); };
+  }, [notifOpen]);
+
+  function markAllRead() {
+    const now = Date.now();
+    setLastReadTime(now);
+    localStorage.setItem("last_read_notification_time", String(now));
+  }
 
   if (isLoading) {
     return (
@@ -309,7 +371,7 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar — desktop only */}
         <header
-          className="hidden md:flex items-center px-6 flex-shrink-0 bg-white"
+          className="hidden md:flex items-center justify-between px-6 flex-shrink-0 bg-white"
           style={{
             height: "72px",
             borderBottom: "1px solid #f1f5f9",
@@ -317,7 +379,7 @@ export default function DashboardLayout({
           }}
         >
           {/* Left: hamburger + title */}
-          <div className="flex items-center gap-3 flex-shrink-0" style={{ minWidth: 180 }}>
+          <div className="flex items-center gap-3">
             <button
               className="lg:hidden p-2 rounded-lg text-[#64748b] hover:bg-[#f1f5f9] transition-colors"
               onClick={() => setMobileSidebarOpen(true)}
@@ -330,36 +392,88 @@ export default function DashboardLayout({
             </div>
           </div>
 
-          {/* Center: search */}
-          <div className="flex-1 flex justify-center">
-            <div className="relative hidden sm:block">
-              <MagnifyingGlassIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#94a3b8]" />
-              <input
-                type="text"
-                placeholder="Search items, barcodes..."
-                className="pl-10 pr-4 py-2 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#2563eb]/30 w-80"
-                style={{
-                  background: "#f8fafc",
-                  border: "1.5px solid #e2e8f0",
-                  color: "#0f172a",
-                }}
-              />
-            </div>
-          </div>
-
           {/* Right: bell + user */}
-          <div className="flex items-center gap-3 flex-shrink-0" style={{ minWidth: 180, justifyContent: "flex-end" }}>
-            {/* Bell with notification dot */}
-            <div className="relative">
+          <div className="flex items-center gap-3">
+            {/* Bell with notification dropdown */}
+            <div className="relative" ref={notifRef}>
               <button
-                className="flex items-center justify-center w-9 h-9 rounded-full transition-colors text-[#64748b] hover:bg-[#f1f5f9]"
+                type="button"
+                onClick={() => setNotifOpen((o) => !o)}
+                className="relative flex items-center justify-center w-9 h-9 rounded-full transition-colors text-[#64748b] hover:bg-[#f1f5f9]"
               >
                 <BellIcon className="w-5 h-5" />
+                {notifications.some((n) => new Date(n.timestamp).getTime() > lastReadTime) && (
+                  <span
+                    className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                    style={{ background: "#ef4444", border: "1.5px solid white" }}
+                  />
+                )}
               </button>
-              <span
-                className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-                style={{ background: "#ef4444", border: "1.5px solid white" }}
-              />
+
+              {notifOpen && (
+                <div className="absolute top-full right-0 mt-2 w-80 z-50 bg-white rounded-xl border border-slate-100 shadow-lg overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                    <span className="text-sm font-semibold text-[#0f172a]">Notifications</span>
+                    <button
+                      type="button"
+                      onClick={markAllRead}
+                      className="text-xs font-medium text-[#2563eb] hover:text-[#1d4ed8] transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+                  {/* List */}
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifLoading ? (
+                      [0, 1, 2].map((i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-slate-50 animate-pulse">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex-shrink-0" />
+                          <div className="flex-1">
+                            <div className="h-3 bg-slate-100 rounded w-3/4 mb-2" />
+                            <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                          </div>
+                        </div>
+                      ))
+                    ) : notifications.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-10 text-[#94a3b8]">
+                        <BellIcon className="w-8 h-8 mb-2 opacity-40" />
+                        <p className="text-sm">No new notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((n, idx) => {
+                        const s = NOTIF_STYLE[n.action] ?? DEFAULT_NOTIF_STYLE;
+                        const isUnread = new Date(n.timestamp).getTime() > lastReadTime;
+                        return (
+                          <div
+                            key={n.id}
+                            className="flex items-start gap-3 px-4 py-3 border-b border-slate-50 last:border-0"
+                            style={{ background: isUnread ? "#fafbff" : "#fff" }}
+                          >
+                            <div
+                              className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5"
+                              style={{ background: s.bg }}
+                            >
+                              <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="text-xs leading-snug text-[#0f172a] line-clamp-2"
+                                style={{ fontWeight: isUnread ? 600 : 500 }}
+                              >
+                                {n.description ?? "—"}
+                              </p>
+                              <p className="text-[11px] text-[#94a3b8] mt-1">
+                                {n.pic_name ? `${n.pic_name} · ` : ""}{notifTimeAgo(n.timestamp)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* User */}
