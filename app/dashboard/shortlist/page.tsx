@@ -6,6 +6,7 @@ import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
 import SalesRecord from "@/components/shortlist/SalesRecord";
 import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
+import MobileShortList from "@/components/mobile/MobileShortList";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
@@ -85,12 +86,38 @@ export default function ShortListPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
-      {/* Deep-link modal */}
+      {/* ── Mobile V2 (below md) ── */}
+      {activeTab === "active" && (
+        <MobileShortList
+          entries={entries}
+          counts={counts}
+          isLoading={isLoading}
+          isManager={isManager}
+          picName={user.picName}
+          filters={filters}
+          setFilter={setFilter}
+          clearFilters={clearFilters}
+          activeFilterCount={activeFilterCount}
+          onRefresh={refresh}
+          onPatchEntry={patchEntry}
+          onRemoveEntry={removeEntry}
+          onSwitchToSales={() => setActiveTab("sales")}
+          onToast={showSuccess}
+          deepLinkReviewId={deepLinkReviewId}
+          deepLinkModalOpen={deepLinkModalOpen}
+          onCloseDeepLink={() => setDeepLinkModalOpen(false)}
+        />
+      )}
+
+      {/* ── Desktop / Sales-tab content (md and up, or mobile when on sales) ── */}
+      <div className={activeTab === "active" ? "hidden md:block space-y-5" : "space-y-5"}>
+
+      {/* Deep-link modal (desktop) */}
       <ItemReviewModal
-        isOpen={deepLinkModalOpen}
+        isOpen={deepLinkModalOpen && activeTab !== "active"}
         onClose={() => setDeepLinkModalOpen(false)}
         entryId={deepLinkReviewId}
         onUpdated={refresh}
@@ -203,6 +230,7 @@ export default function ShortListPage() {
           onCountChange={setSalesCount}
         />
       )}
-    </div>
+      </div>{/* end desktop wrapper */}
+    </>
   );
 }
