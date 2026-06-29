@@ -305,9 +305,9 @@ export default function DashboardLayout({
 
       {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
+        {/* Topbar — desktop only */}
         <header
-          className="flex items-center px-6 flex-shrink-0 bg-white"
+          className="hidden md:flex items-center px-6 flex-shrink-0 bg-white"
           style={{
             height: "72px",
             borderBottom: "1px solid #f1f5f9",

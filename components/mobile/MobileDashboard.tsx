@@ -202,7 +202,7 @@ export default function MobileDashboard({
   return (
     <div
       className="md:hidden"
-      style={{ background: "#f4f7fb", minHeight: "100vh" }}
+      style={{ background: "#f4f7fb", minHeight: "100vh", overflowX: "hidden", width: "100%" }}
     >
       {/* Header */}
       <div style={{ background: "#fff", padding: "20px 20px 16px" }}>
@@ -227,10 +227,10 @@ export default function MobileDashboard({
             </div>
             <div
               style={{
-                fontSize: 28,
+                fontSize: 21,
                 fontWeight: 800,
                 color: "#0f172a",
-                lineHeight: 1.1,
+                lineHeight: 1.2,
                 marginBottom: 6,
                 letterSpacing: -0.5,
               }}
@@ -310,12 +310,13 @@ export default function MobileDashboard({
       </div>
 
       {/* Search bar */}
-      <div style={{ background: "#fff", padding: "0 16px 18px" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <div style={{ background: "#fff", padding: "0 16px 18px", width: "100%", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
           <button
             onClick={() => router.push("/dashboard/shortlist")}
             style={{
               flex: 1,
+              minWidth: 0,
               height: 44,
               display: "flex",
               alignItems: "center",
