@@ -275,7 +275,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: "#eef2f7" }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: "#f4f7fb" }}>
       {/* Desktop Sidebar */}
       <aside
         className="hidden lg:flex flex-col w-56 flex-shrink-0"
