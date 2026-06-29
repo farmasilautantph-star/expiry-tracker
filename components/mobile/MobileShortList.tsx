@@ -6,7 +6,7 @@ import type {
   ShortListFilters as Filters,
   ShortListCounts,
 } from "@/hooks/useShortList";
-import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
+import MobileItemReviewModal from "@/components/mobile/MobileItemReviewModal";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
@@ -664,7 +664,7 @@ export default function MobileShortList({
       </div>
 
       {/* Item Review modal — tap-to-open */}
-      <ItemReviewModal
+      <MobileItemReviewModal
         isOpen={reviewOpen}
         onClose={closeReview}
         entryId={reviewingId}
@@ -687,7 +687,7 @@ export default function MobileShortList({
       />
 
       {/* Deep-link Review modal (from ?review=<id> URL param) */}
-      <ItemReviewModal
+      <MobileItemReviewModal
         isOpen={!!deepLinkModalOpen}
         onClose={() => onCloseDeepLink?.()}
         entryId={deepLinkReviewId ?? null}
