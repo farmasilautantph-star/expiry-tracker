@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import { sendPushNotification } from "@/lib/sendPushNotification";
 
 export interface OfferRow {
   id: number;
@@ -180,10 +181,10 @@ export async function POST(req: NextRequest) {
 
   const logRow = (
     await pool.query(
-      "SELECT quantity, expiry_date FROM expiry_logs WHERE id = $1",
+      "SELECT quantity, expiry_date, pic_id FROM expiry_logs WHERE id = $1",
       [linkedId],
     )
-  ).rows[0] as { quantity: number; expiry_date: string } | undefined;
+  ).rows[0] as { quantity: number; expiry_date: string; pic_id: number } | undefined;
 
   if (!logRow) {
     return NextResponse.json(
@@ -253,6 +254,55 @@ export async function POST(req: NextRequest) {
     const entry = (
       await pool.query("SELECT * FROM offers WHERE id = $1", [newId])
     ).rows[0];
+
+    // Fire push notifications (best-effort, non-blocking on errors).
+    try {
+      const picId = logRow.pic_id;
+      const itemLabel = description.trim();
+      const outletLabel = outlet_name.trim();
+
+      const tasks: Promise<void>[] = [];
+
+      if (picId && picId !== user.userId) {
+        tasks.push(
+          sendPushNotification({
+            userId: picId,
+            title: "Outlet Offer — Action Required",
+            body: `${itemLabel} offered to ${outletLabel}. Please review.`,
+            url: "/dashboard/offers",
+            type: "offer_pic",
+            tag: `offer-${newId}`,
+            requireInteraction: true,
+          }),
+        );
+      }
+
+      const otherStaff = (
+        await pool.query(
+          `SELECT id FROM users
+           WHERE role = 'staff' AND id <> $1 AND id <> $2`,
+          [picId ?? 0, user.userId],
+        )
+      ).rows as { id: number }[];
+
+      for (const staff of otherStaff) {
+        tasks.push(
+          sendPushNotification({
+            userId: staff.id,
+            title: "Review Reminder",
+            body: `New outlet offer logged: ${itemLabel} → ${outletLabel}.`,
+            url: "/dashboard",
+            type: "offer_review",
+            tag: `offer-review-${newId}`,
+          }),
+        );
+      }
+
+      await Promise.allSettled(tasks);
+    } catch (notifyErr) {
+      console.warn("[offers] notification dispatch failed:", notifyErr);
+    }
+
     return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (err) {
     console.error("Offer insert error:", err);

@@ -114,6 +114,23 @@ const ACTIVITY_STYLE: Record<string, { color: string; bg: string }> = {
 };
 const DEFAULT_ACT_STYLE = { color: "#7c3aed", bg: "#f5f3ff" };
 
+interface NotifEntry {
+  id: number;
+  title: string;
+  body: string;
+  url: string | null;
+  type: string | null;
+  is_read: boolean;
+  created_at: string;
+  time_ago: string;
+}
+
+const NOTIF_STYLE: Record<string, { color: string; bg: string }> = {
+  offer_pic: { color: "#b45309", bg: "#fef3c7" },
+  offer_review: { color: "#1d4ed8", bg: "#eef3fa" },
+};
+const DEFAULT_NOTIF_STYLE = { color: "#7c3aed", bg: "#f5f3ff" };
+
 function HealthRing({ score, color }: { score: number; color: string }) {
   const r = 42;
   const c = 2 * Math.PI * r;
@@ -164,13 +181,10 @@ export default function MobileDashboard({
   const [visibleAttention, setVisibleAttention] = useState(5);
   const [visibleActivity, setVisibleActivity] = useState(4);
   const [openDropdown, setOpenDropdown] = useState<"notifications" | "profile" | null>(null);
-  const [lastReadTime, setLastReadTime] = useState<number>(0);
+  const [notifications, setNotifications] = useState<NotifEntry[]>([]);
+  const [notifLoading, setNotifLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const { entries: shortlistEntries, isLoading: shortlistLoading } = useShortList();
-
-  useEffect(() => {
-    const stored = localStorage.getItem("last_read_notification_time");
-    if (stored) setLastReadTime(Number(stored));
-  }, []);
 
   useEffect(() => {
     setActivityLoading(true);
@@ -181,6 +195,30 @@ export default function MobileDashboard({
       })
       .catch(() => {})
       .finally(() => setActivityLoading(false));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=20");
+        const d = await res.json();
+        if (!cancelled && d?.success) {
+          setNotifications(d.data as NotifEntry[]);
+          setUnreadCount(Number(d.unread ?? 0));
+        }
+      } catch {
+        /* silent */
+      } finally {
+        if (!cancelled) setNotifLoading(false);
+      }
+    };
+    load();
+    const interval = setInterval(load, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   useEffect(() => {
@@ -195,10 +233,14 @@ export default function MobileDashboard({
     };
   }, [openDropdown]);
 
-  function markAllRead() {
-    const now = Date.now();
-    setLastReadTime(now);
-    localStorage.setItem("last_read_notification_time", String(now));
+  async function markAllRead() {
+    setNotifications((list) => list.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch {
+      /* silent */
+    }
   }
 
   if (!user) return null;
@@ -218,9 +260,6 @@ export default function MobileDashboard({
     : stats ?? { expired: 0, critical: 0, warning: 0, safe: 0 };
   const urgent = counts.expired + counts.critical + counts.warning;
   const total = urgent + counts.safe;
-  const unreadCount = activity.filter(
-    (e) => new Date(e.timestamp).getTime() > lastReadTime
-  ).length;
 
   const band = healthBand(score);
   const bandCfg = HEALTH_BANDS[band];
@@ -285,7 +324,11 @@ export default function MobileDashboard({
               aria-label="Notifications"
               onClick={(e) => {
                 e.stopPropagation();
-                setOpenDropdown((p) => p === "notifications" ? null : "notifications");
+                setOpenDropdown((p) => {
+                  const next = p === "notifications" ? null : "notifications";
+                  if (next === "notifications" && unreadCount > 0) markAllRead();
+                  return next;
+                });
               }}
               style={{
                 position: "relative",
@@ -422,7 +465,7 @@ export default function MobileDashboard({
               </button>
             </div>
             {/* Rows */}
-            {activityLoading ? (
+            {notifLoading ? (
               [0, 1, 2].map((i) => (
                 <div
                   key={i}
@@ -442,24 +485,30 @@ export default function MobileDashboard({
                   </div>
                 </div>
               ))
-            ) : activity.length === 0 ? (
+            ) : notifications.length === 0 ? (
               <div style={{ padding: "20px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
-                No recent activity
+                No notifications
               </div>
             ) : (
-              activity.map((entry, idx) => {
-                const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
-                const isUnread = new Date(entry.timestamp).getTime() > lastReadTime;
+              notifications.map((n, idx) => {
+                const s = NOTIF_STYLE[n.type ?? ""] ?? DEFAULT_NOTIF_STYLE;
+                const isUnread = !n.is_read;
+                const handleClick = () => {
+                  setOpenDropdown(null);
+                  if (n.url) router.push(n.url);
+                };
                 return (
                   <div
-                    key={entry.id}
+                    key={n.id}
+                    onClick={handleClick}
                     style={{
                       display: "flex",
                       alignItems: "flex-start",
                       gap: 10,
                       padding: "12px 16px",
-                      borderBottom: idx < activity.length - 1 ? "1px solid #f8fafc" : "none",
+                      borderBottom: idx < notifications.length - 1 ? "1px solid #f8fafc" : "none",
                       background: isUnread ? "#fafbff" : "#fff",
+                      cursor: n.url ? "pointer" : "default",
                     }}
                   >
                     <div
@@ -469,27 +518,36 @@ export default function MobileDashboard({
                         borderRadius: "50%",
                         background: s.color,
                         flexShrink: 0,
-                        marginTop: 4,
+                        marginTop: 5,
                       }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
                           fontSize: 13,
-                          fontWeight: isUnread ? 700 : 500,
+                          fontWeight: isUnread ? 700 : 600,
                           color: "#0f172a",
                           lineHeight: 1.4,
+                        }}
+                      >
+                        {n.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#475569",
+                          lineHeight: 1.4,
+                          marginTop: 2,
                           display: "-webkit-box",
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: "vertical",
                           overflow: "hidden",
                         }}
                       >
-                        {entry.description ?? "—"}
+                        {n.body}
                       </div>
                       <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>
-                        {entry.pic_name && <span>{entry.pic_name} · </span>}
-                        {timeAgo(entry.timestamp)}
+                        {n.time_ago}
                       </div>
                     </div>
                   </div>

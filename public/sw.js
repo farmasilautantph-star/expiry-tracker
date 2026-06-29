@@ -1,4 +1,4 @@
-const CACHE = "expiry-v4";
+const CACHE = "expiry-v5";
 const PRECACHE = ["/", "/login"];
 
 self.addEventListener("install", (e) => {
@@ -12,6 +12,44 @@ self.addEventListener("activate", (e) => {
     caches.keys().then((keys) =>
       Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch (_) {
+    payload = { title: "Expiry Tracker", body: event.data ? event.data.text() : "" };
+  }
+  const title = payload.title || "Expiry Tracker";
+  const options = {
+    body: payload.body || "",
+    icon: payload.icon || "/icon-192.png",
+    badge: payload.badge || "/icon-192.png",
+    data: { url: payload.url || "/dashboard" },
+    tag: payload.tag,
+    requireInteraction: !!payload.requireInteraction,
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/dashboard";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsArr) => {
+      for (const client of clientsArr) {
+        try {
+          const url = new URL(client.url);
+          if (url.origin === self.location.origin && "focus" in client) {
+            client.navigate(target);
+            return client.focus();
+          }
+        } catch (_) {}
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(target);
+    }),
   );
 });
 

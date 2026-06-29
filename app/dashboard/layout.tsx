@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 import MobileBottomNav from "@/components/mobile/MobileBottomNav";
 import {
   HomeIcon,
@@ -21,30 +22,20 @@ import {
 
 interface NotifEntry {
   id: number;
-  action: string;
-  description: string | null;
-  timestamp: string;
-  pic_name: string | null;
+  title: string;
+  body: string;
+  url: string | null;
+  type: string | null;
+  is_read: boolean;
+  created_at: string;
   time_ago: string;
 }
 
 const NOTIF_STYLE: Record<string, { color: string; bg: string }> = {
-  CREATE: { color: "#15803d", bg: "#f0fdf4" },
-  UPDATE: { color: "#1d4ed8", bg: "#eef3fa" },
-  DELETE: { color: "#b91c1c", bg: "#fef2f2" },
+  offer_pic: { color: "#b45309", bg: "#fef3c7" },
+  offer_review: { color: "#1d4ed8", bg: "#eef3fa" },
 };
 const DEFAULT_NOTIF_STYLE = { color: "#7c3aed", bg: "#f5f3ff" };
-
-function notifTimeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return days === 1 ? "Yesterday" : `${days}d ago`;
-}
 
 interface NavSection {
   label: string;
@@ -262,8 +253,10 @@ export default function DashboardLayout({
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotifEntry[]>([]);
   const [notifLoading, setNotifLoading] = useState(true);
-  const [lastReadTime, setLastReadTime] = useState<number>(0);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const notifRef = useRef<HTMLDivElement>(null);
+
+  usePushNotifications();
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -275,18 +268,27 @@ export default function DashboardLayout({
     setMobileSidebarOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
-    const stored = localStorage.getItem("last_read_notification_time");
-    if (stored) setLastReadTime(Number(stored));
-  }, []);
+  const fetchNotifications = async () => {
+    try {
+      const res = await fetch("/api/notifications?limit=20");
+      const d = await res.json();
+      if (d?.success) {
+        setNotifications(d.data as NotifEntry[]);
+        setUnreadCount(Number(d.unread ?? 0));
+      }
+    } catch {
+      /* silent */
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
-    fetch("/api/activity/recent?limit=10")
-      .then((r) => r.json())
-      .then((d) => { if (d?.success) setNotifications(d.data as NotifEntry[]); })
-      .catch(() => {})
-      .finally(() => setNotifLoading(false));
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60_000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
@@ -300,10 +302,14 @@ export default function DashboardLayout({
     return () => { clearTimeout(timer); document.removeEventListener("mousedown", handler); };
   }, [notifOpen]);
 
-  function markAllRead() {
-    const now = Date.now();
-    setLastReadTime(now);
-    localStorage.setItem("last_read_notification_time", String(now));
+  async function markAllRead() {
+    setNotifications((list) => list.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+    try {
+      await fetch("/api/notifications", { method: "PATCH" });
+    } catch {
+      /* silent */
+    }
   }
 
   if (isLoading) {
@@ -398,15 +404,21 @@ export default function DashboardLayout({
             <div className="relative" ref={notifRef}>
               <button
                 type="button"
-                onClick={() => setNotifOpen((o) => !o)}
+                onClick={() => {
+                  const next = !notifOpen;
+                  setNotifOpen(next);
+                  if (next && unreadCount > 0) markAllRead();
+                }}
                 className="relative flex items-center justify-center w-9 h-9 rounded-full transition-colors text-[#64748b] hover:bg-[#f1f5f9]"
               >
                 <BellIcon className="w-5 h-5" />
-                {notifications.some((n) => new Date(n.timestamp).getTime() > lastReadTime) && (
+                {unreadCount > 0 && (
                   <span
-                    className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
+                    className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
                     style={{ background: "#ef4444", border: "1.5px solid white" }}
-                  />
+                  >
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
                 )}
               </button>
 
@@ -441,13 +453,12 @@ export default function DashboardLayout({
                         <p className="text-sm">No new notifications</p>
                       </div>
                     ) : (
-                      notifications.map((n, idx) => {
-                        const s = NOTIF_STYLE[n.action] ?? DEFAULT_NOTIF_STYLE;
-                        const isUnread = new Date(n.timestamp).getTime() > lastReadTime;
-                        return (
+                      notifications.map((n) => {
+                        const s = NOTIF_STYLE[n.type ?? ""] ?? DEFAULT_NOTIF_STYLE;
+                        const isUnread = !n.is_read;
+                        const content = (
                           <div
-                            key={n.id}
-                            className="flex items-start gap-3 px-4 py-3 border-b border-slate-50 last:border-0"
+                            className="flex items-start gap-3 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors"
                             style={{ background: isUnread ? "#fafbff" : "#fff" }}
                           >
                             <div
@@ -458,16 +469,24 @@ export default function DashboardLayout({
                             </div>
                             <div className="flex-1 min-w-0">
                               <p
-                                className="text-xs leading-snug text-[#0f172a] line-clamp-2"
-                                style={{ fontWeight: isUnread ? 600 : 500 }}
+                                className="text-xs leading-snug text-[#0f172a]"
+                                style={{ fontWeight: isUnread ? 700 : 600 }}
                               >
-                                {n.description ?? "—"}
+                                {n.title}
                               </p>
-                              <p className="text-[11px] text-[#94a3b8] mt-1">
-                                {n.pic_name ? `${n.pic_name} · ` : ""}{notifTimeAgo(n.timestamp)}
+                              <p className="text-xs leading-snug text-[#475569] line-clamp-2 mt-0.5">
+                                {n.body}
                               </p>
+                              <p className="text-[11px] text-[#94a3b8] mt-1">{n.time_ago}</p>
                             </div>
                           </div>
+                        );
+                        return n.url ? (
+                          <Link key={n.id} href={n.url} onClick={() => setNotifOpen(false)}>
+                            {content}
+                          </Link>
+                        ) : (
+                          <div key={n.id}>{content}</div>
                         );
                       })
                     )}
