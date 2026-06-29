@@ -163,8 +163,7 @@ export default function MobileDashboard({
   const [activityLoading, setActivityLoading] = useState(true);
   const [visibleAttention, setVisibleAttention] = useState(5);
   const [visibleActivity, setVisibleActivity] = useState(4);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<"notifications" | "profile" | null>(null);
   const [lastReadTime, setLastReadTime] = useState<number>(0);
   const { entries: shortlistEntries, isLoading: shortlistLoading } = useShortList();
 
@@ -184,14 +183,16 @@ export default function MobileDashboard({
       .finally(() => setActivityLoading(false));
   }, []);
 
+  useEffect(() => {
+    const handler = () => setOpenDropdown(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
   function markAllRead() {
     const now = Date.now();
     setLastReadTime(now);
     localStorage.setItem("last_read_notification_time", String(now));
-  }
-
-  function openNotif() {
-    setNotifOpen(true);
   }
 
   if (!user) return null;
@@ -234,7 +235,7 @@ export default function MobileDashboard({
       style={{ background: "#f4f7fb", minHeight: "100vh", overflowX: "hidden", width: "100%" }}
     >
       {/* Header */}
-      <div style={{ background: "#fff", padding: "20px 16px 16px", borderBottom: "1px solid #f0f4f8" }}>
+      <div style={{ position: "relative", background: "#fff", padding: "20px 16px 16px", borderBottom: "1px solid #f0f4f8" }}>
         <div
           style={{
             display: "flex",
@@ -275,13 +276,16 @@ export default function MobileDashboard({
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
             <button
               aria-label="Notifications"
-              onClick={openNotif}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenDropdown((p) => p === "notifications" ? null : "notifications");
+              }}
               style={{
                 position: "relative",
                 width: 44,
                 height: 44,
                 borderRadius: 12,
-                background: "#fff",
+                background: openDropdown === "notifications" ? "#eef3fa" : "#fff",
                 border: "1px solid #eef1f6",
                 display: "flex",
                 alignItems: "center",
@@ -295,7 +299,7 @@ export default function MobileDashboard({
                 height="20"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#0f172a"
+                stroke={openDropdown === "notifications" ? "#1d4ed8" : "#0f172a"}
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -320,7 +324,10 @@ export default function MobileDashboard({
             </button>
             <button
               aria-label="Profile"
-              onClick={() => setProfileOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenDropdown((p) => p === "profile" ? null : "profile");
+              }}
               style={{
                 width: 44,
                 height: 44,
@@ -342,6 +349,293 @@ export default function MobileDashboard({
             </button>
           </div>
         </div>
+
+        {/* ── Notification Dropdown ── */}
+        {openDropdown === "notifications" && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: 60,
+              right: 16,
+              width: 300,
+              maxHeight: 400,
+              overflowY: "auto",
+              zIndex: 1000,
+              background: "#ffffff",
+              borderRadius: 16,
+              boxShadow: "0 8px 32px rgba(15,23,42,0.16), 0 2px 8px rgba(15,23,42,0.08)",
+              border: "1px solid #eef1f6",
+            }}
+          >
+            {/* Arrow pointer */}
+            <div
+              style={{
+                position: "absolute",
+                top: -6,
+                right: 56,
+                width: 0,
+                height: 0,
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderBottom: "6px solid #ffffff",
+                filter: "drop-shadow(0 -1px 0 #eef1f6)",
+              }}
+            />
+            {/* Sticky header */}
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 1,
+                background: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 16px 10px",
+                borderBottom: "1px solid #f0f4f8",
+              }}
+            >
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>Notifications</div>
+              <button
+                onClick={markAllRead}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#1d4ed8",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  padding: 0,
+                }}
+              >
+                Mark all as read
+              </button>
+            </div>
+            {/* Rows */}
+            {activityLoading ? (
+              [0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="animate-pulse"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "12px 16px",
+                    borderBottom: "1px solid #f8fafc",
+                  }}
+                >
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#f1f5f9", flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ height: 11, background: "#f1f5f9", borderRadius: 5, marginBottom: 5, width: "75%" }} />
+                    <div style={{ height: 9, background: "#f1f5f9", borderRadius: 5, width: "45%" }} />
+                  </div>
+                </div>
+              ))
+            ) : activity.length === 0 ? (
+              <div style={{ padding: "20px 16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                No recent activity
+              </div>
+            ) : (
+              activity.map((entry, idx) => {
+                const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
+                const isUnread = new Date(entry.timestamp).getTime() > lastReadTime;
+                return (
+                  <div
+                    key={entry.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      padding: "12px 16px",
+                      borderBottom: idx < activity.length - 1 ? "1px solid #f8fafc" : "none",
+                      background: isUnread ? "#fafbff" : "#fff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: s.color,
+                        flexShrink: 0,
+                        marginTop: 4,
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: isUnread ? 700 : 500,
+                          color: "#0f172a",
+                          lineHeight: 1.4,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {entry.description ?? "—"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 3 }}>
+                        {entry.pic_name && <span>{entry.pic_name} · </span>}
+                        {timeAgo(entry.timestamp)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* ── Profile Dropdown ── */}
+        {openDropdown === "profile" && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: "absolute",
+              top: 60,
+              right: 16,
+              width: 220,
+              zIndex: 1000,
+              background: "#ffffff",
+              borderRadius: 16,
+              boxShadow: "0 8px 32px rgba(15,23,42,0.16), 0 2px 8px rgba(15,23,42,0.08)",
+              border: "1px solid #eef1f6",
+              overflow: "hidden",
+            }}
+          >
+            {/* Arrow pointer */}
+            <div
+              style={{
+                position: "absolute",
+                top: -6,
+                right: 24,
+                width: 0,
+                height: 0,
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderBottom: "6px solid #ffffff",
+                filter: "drop-shadow(0 -1px 0 #eef1f6)",
+              }}
+            />
+            {/* Profile section */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "14px 16px",
+                borderBottom: "1px solid #f0f4f8",
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
+                  background: "#1d4ed8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: 15,
+                  flexShrink: 0,
+                }}
+              >
+                {initial}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#0f172a",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {user.picName || user.username}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#64748b",
+                    fontWeight: 500,
+                    textTransform: "capitalize",
+                    marginTop: 1,
+                  }}
+                >
+                  {user.role}
+                </div>
+              </div>
+            </div>
+            {/* Menu items */}
+            <button
+              onClick={() => { setOpenDropdown(null); router.push("/dashboard/shortlist"); }}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: "none",
+                border: "none",
+                borderBottom: "1px solid #f0f4f8",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#0f172a",
+                fontFamily: "inherit",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                <rect x="9" y="3" width="6" height="4" rx="1" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+              <span style={{ flex: 1 }}>My Items</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+            <button
+              onClick={async () => { setOpenDropdown(null); await logout(); }}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#b91c1c",
+                fontFamily: "inherit",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Sign Out
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
@@ -912,308 +1206,6 @@ export default function MobileDashboard({
 
       {/* Spacer for bottom nav */}
       <div style={{ height: 90 }} />
-
-      {/* ── Notification Bottom Sheet ── */}
-      {notifOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9000,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-          }}
-        >
-          {/* Backdrop */}
-          <div
-            onClick={() => setNotifOpen(false)}
-            style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.4)" }}
-          />
-          {/* Sheet */}
-          <div
-            className="animate-slide-up"
-            style={{
-              position: "relative",
-              zIndex: 1,
-              background: "#fff",
-              borderRadius: "24px 24px 0 0",
-              maxHeight: "80vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {/* Handle */}
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12 }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: "#e2e8f0" }} />
-            </div>
-            {/* Header */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "14px 20px 10px",
-              }}
-            >
-              <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Notifications</div>
-              <button
-                onClick={markAllRead}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "#1d4ed8",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  padding: "4px 0",
-                }}
-              >
-                Mark all as read
-              </button>
-            </div>
-            {/* List */}
-            <div style={{ overflowY: "auto", flex: 1, paddingBottom: 24 }}>
-              {activityLoading ? (
-                [0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="animate-pulse"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "12px 20px",
-                      borderTop: i > 0 ? "1px solid #f8fafc" : "none",
-                    }}
-                  >
-                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f1f5f9", flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, marginBottom: 6, width: "70%" }} />
-                      <div style={{ height: 10, background: "#f1f5f9", borderRadius: 6, width: "40%" }} />
-                    </div>
-                  </div>
-                ))
-              ) : activity.length === 0 ? (
-                <div style={{ padding: "24px 20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
-                  No recent activity
-                </div>
-              ) : (
-                activity.map((entry, idx) => {
-                  const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
-                  const isUnread = new Date(entry.timestamp).getTime() > lastReadTime;
-                  return (
-                    <div
-                      key={entry.id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        padding: "12px 20px",
-                        borderTop: idx > 0 ? "1px solid #f8fafc" : "none",
-                        background: isUnread ? "#fafbff" : "#fff",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          flexShrink: 0,
-                          borderRadius: 10,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          background: s.bg,
-                        }}
-                      >
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: 12.5,
-                            fontWeight: isUnread ? 700 : 600,
-                            color: "#0f172a",
-                            lineHeight: 1.4,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                          title={entry.description ?? ""}
-                        >
-                          {entry.description ?? "—"}
-                        </div>
-                        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                          {entry.pic_name && <span>{entry.pic_name} · </span>}
-                          {timeAgo(entry.timestamp)}
-                        </div>
-                      </div>
-                      {isUnread && (
-                        <div
-                          style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: "50%",
-                            background: "#1d4ed8",
-                            flexShrink: 0,
-                          }}
-                        />
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Profile Bottom Sheet ── */}
-      {profileOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9000,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-          }}
-        >
-          {/* Backdrop */}
-          <div
-            onClick={() => setProfileOpen(false)}
-            style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.4)" }}
-          />
-          {/* Sheet */}
-          <div
-            className="animate-slide-up"
-            style={{
-              position: "relative",
-              zIndex: 1,
-              background: "#fff",
-              borderRadius: "24px 24px 0 0",
-              maxHeight: 280,
-              paddingBottom: 20,
-            }}
-          >
-            {/* Handle */}
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, marginBottom: 6 }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: "#e2e8f0" }} />
-            </div>
-            {/* Avatar + info */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                padding: "10px 20px 16px",
-                borderBottom: "1px solid #f1f5f9",
-              }}
-            >
-              <div
-                style={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 14,
-                  background: "#1d4ed8",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontWeight: 800,
-                  fontSize: 20,
-                  flexShrink: 0,
-                }}
-              >
-                {initial}
-              </div>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
-                  {user.picName || user.username}
-                </div>
-                <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, textTransform: "capitalize" }}>
-                  {user.role}
-                </div>
-              </div>
-            </div>
-            {/* Actions */}
-            <div style={{ padding: "8px 14px 0" }}>
-              <button
-                onClick={() => { setProfileOpen(false); router.push("/dashboard/shortlist"); }}
-                style={{
-                  width: "100%",
-                  padding: "13px 16px",
-                  borderRadius: 12,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  fontFamily: "inherit",
-                  textAlign: "left",
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-                  <rect x="9" y="3" width="6" height="4" rx="1" />
-                  <path d="m9 12 2 2 4-4" />
-                </svg>
-                My Items
-              </button>
-              <button
-                onClick={async () => { setProfileOpen(false); await logout(); }}
-                style={{
-                  width: "100%",
-                  padding: "13px 16px",
-                  borderRadius: 12,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#b91c1c",
-                  fontFamily: "inherit",
-                  textAlign: "left",
-                }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
-                Sign Out
-              </button>
-              <button
-                onClick={() => setProfileOpen(false)}
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  borderRadius: 12,
-                  background: "#f1f5f9",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#64748b",
-                  fontFamily: "inherit",
-                  marginTop: 4,
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
