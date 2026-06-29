@@ -237,7 +237,7 @@ export default function MobileDashboard({
 
   return (
     <div
-      className="md:hidden"
+      className="mobile-page-enter md:hidden"
       style={{ background: "#f4f7fb", minHeight: "100vh", overflowX: "hidden", width: "100%" }}
     >
       {/* Header */}

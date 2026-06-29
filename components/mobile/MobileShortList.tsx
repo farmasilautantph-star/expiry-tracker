@@ -143,7 +143,7 @@ export default function MobileShortList({
   }
 
   return (
-    <div className="md:hidden" style={{ background: "#f4f7fb", minHeight: "100%" }}>
+    <div className="mobile-page-enter md:hidden" style={{ background: "#f4f7fb", minHeight: "100%" }}>
       {/* ─── Header card (Outlet Inventory + Expiry Monitor + filter button) ─── */}
       <div
         style={{

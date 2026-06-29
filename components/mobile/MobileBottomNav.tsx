@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 
 interface NavTab {
@@ -92,6 +93,7 @@ const TABS: NavTab[] = [
 
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const [pressedTab, setPressedTab] = useState<string | null>(null);
 
   return (
     <nav
@@ -108,12 +110,16 @@ export default function MobileBottomNav() {
     >
       {TABS.map((tab) => {
         const isActive = pathname === tab.href;
+        const isPressed = pressedTab === tab.href;
         const color = isActive ? "#1d4ed8" : "#94a3b8";
         const weight = isActive ? 700 : 400;
         return (
           <Link
             key={tab.href}
             href={tab.href}
+            onTouchStart={() => setPressedTab(tab.href)}
+            onTouchEnd={() => setPressedTab(null)}
+            onTouchCancel={() => setPressedTab(null)}
             style={{
               flex: 1,
               display: "flex",
@@ -124,6 +130,9 @@ export default function MobileBottomNav() {
               padding: "5px 4px 0",
               WebkitTapHighlightColor: "transparent",
               textDecoration: "none",
+              transition: "transform 0.1s ease, opacity 0.1s ease",
+              transform: isPressed ? "scale(0.92)" : "scale(1)",
+              opacity: isPressed ? 0.7 : 1,
             }}
           >
             {tab.icon(color)}

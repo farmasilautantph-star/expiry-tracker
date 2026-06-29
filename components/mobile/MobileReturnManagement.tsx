@@ -126,7 +126,7 @@ export default function MobileReturnManagement({
   }
 
   return (
-    <div className="md:hidden" style={{ background: "#f4f7fb", minHeight: "100%" }}>
+    <div className="mobile-page-enter md:hidden" style={{ background: "#f4f7fb", minHeight: "100%" }}>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {/* ─── HEADER ─── */}

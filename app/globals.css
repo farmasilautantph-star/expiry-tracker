@@ -61,8 +61,13 @@ body {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-slide-up { animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
-.animate-fade-in  { animation: fadeIn 0.2s ease; }
+@keyframes mobileFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up   { animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1); }
+.animate-fade-in    { animation: fadeIn 0.2s ease; }
+.mobile-page-enter  { animation: mobileFadeIn 0.2s ease-out forwards; }
 
 @media (max-width: 767px) {
   main { background: #f4f7fb !important; }
