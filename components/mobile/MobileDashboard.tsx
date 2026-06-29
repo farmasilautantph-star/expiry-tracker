@@ -209,7 +209,7 @@ export default function MobileDashboard({
       style={{ background: "#f4f7fb", minHeight: "100vh", overflowX: "hidden", width: "100%" }}
     >
       {/* Header */}
-      <div style={{ background: "#fff", padding: "20px 20px 16px" }}>
+      <div style={{ background: "#fff", padding: "20px 16px 16px", borderBottom: "1px solid #f0f4f8" }}>
         <div
           style={{
             display: "flex",
@@ -314,7 +314,7 @@ export default function MobileDashboard({
       </div>
 
       {/* Search bar */}
-      <div style={{ background: "#fff", padding: "0 16px 18px", width: "100%", boxSizing: "border-box" }}>
+      <div style={{ background: "#fff", padding: "12px 16px", borderBottom: "1px solid #f0f4f8", width: "100%", boxSizing: "border-box" }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
           <button
             onClick={() => router.push("/dashboard/shortlist")}
@@ -382,7 +382,7 @@ export default function MobileDashboard({
       </div>
 
       {/* Health Card */}
-      <div style={{ padding: "16px 16px 12px" }}>
+      <div style={{ padding: "12px 16px 12px" }}>
         {healthLoading ? (
           <div
             className="animate-pulse"
