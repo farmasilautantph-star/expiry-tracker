@@ -20,7 +20,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
-import MobileDashboard from "@/components/dashboard/MobileDashboard";
+import MobileDashboard from "@/components/mobile/MobileDashboard";
 
 interface Stats {
   expired: number;
@@ -175,7 +175,6 @@ export default function DashboardPage() {
         stats={stats}
         healthData={healthData}
         healthLoading={healthLoading}
-        onOpenForm={() => setFormOpen(true)}
       />
 
       {/* Desktop dashboard — md and up */}

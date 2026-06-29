@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import MobileBottomNav from "@/components/layout/MobileBottomNav";
+import MobileBottomNav from "@/components/mobile/MobileBottomNav";
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
