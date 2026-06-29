@@ -377,7 +377,7 @@ export default function DashboardLayout({
 
         {/* Page content */}
         <main
-          className="flex-1 overflow-y-auto p-6 pb-[calc(74px+env(safe-area-inset-bottom)+24px)] md:pb-6"
+          className="flex-1 overflow-y-auto p-0 md:p-6 pb-[calc(74px+env(safe-area-inset-bottom)+24px)] md:pb-6"
           style={{ background: "#eef2f7" }}
         >
           {children}

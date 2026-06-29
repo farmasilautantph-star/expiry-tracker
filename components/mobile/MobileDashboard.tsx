@@ -159,10 +159,10 @@ export default function MobileDashboard({
   const { entries: shortlistEntries } = useShortList();
 
   useEffect(() => {
-    fetch("/api/history?limit=3&page=1")
+    fetch("/api/activity/recent")
       .then((r) => r.json())
       .then((d) => {
-        if (d?.success) setActivity((d.data as HistoryEntry[]).slice(0, 3));
+        if (d?.success) setActivity(d.data as HistoryEntry[]);
       })
       .catch(() => {});
   }, []);
