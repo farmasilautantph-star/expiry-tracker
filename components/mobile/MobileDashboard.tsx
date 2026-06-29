@@ -157,6 +157,8 @@ export default function MobileDashboard({
   const router = useRouter();
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
+  const [visibleAttention, setVisibleAttention] = useState(5);
+  const [visibleActivity, setVisibleActivity] = useState(4);
   const { entries: shortlistEntries, isLoading: shortlistLoading } = useShortList();
 
   useEffect(() => {
@@ -593,21 +595,26 @@ export default function MobileDashboard({
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div
-              style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}
-            >
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
               Needs Attention
             </div>
-            {urgent > 0 && (
+            {needsAttention.length > 0 && (
               <span
-                style={{ fontSize: 12, color: "#b91c1c", fontWeight: 800 }}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: "#fff",
+                  background: "#b91c1c",
+                  borderRadius: 999,
+                  padding: "1px 7px",
+                }}
               >
-                {urgent}
+                {needsAttention.length}
               </span>
             )}
           </div>
           <button
-            onClick={() => router.push("/dashboard/shortlist?urgency=expired")}
+            onClick={() => router.push("/dashboard/shortlist")}
             style={{
               fontSize: 12,
               color: "#94a3b8",
@@ -617,7 +624,7 @@ export default function MobileDashboard({
               cursor: "pointer",
             }}
           >
-            See all {needsAttention.length > 0 ? `${needsAttention.length} →` : "→"}
+            See all →
           </button>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -626,12 +633,7 @@ export default function MobileDashboard({
               <div
                 key={i}
                 className="animate-pulse"
-                style={{
-                  background: "#fff",
-                  borderRadius: 14,
-                  height: 60,
-                  border: "1px solid #f1f5f9",
-                }}
+                style={{ background: "#fff", borderRadius: 14, height: 60, border: "1px solid #f1f5f9" }}
               />
             ))
           ) : needsAttention.length === 0 ? (
@@ -649,82 +651,101 @@ export default function MobileDashboard({
               All clear — no items need attention
             </div>
           ) : (
-            needsAttention.map((item) => {
-              const pill =
-                STATUS_PILL[item.urgency] ?? STATUS_PILL.warning;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() =>
-                    router.push(`/dashboard/shortlist?review=${item.id}`)
-                  }
-                  style={{
-                    background: "#fff",
-                    borderRadius: 14,
-                    padding: "12px 14px",
-                    border: "1px solid #f1f5f9",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    textAlign: "left",
-                    boxShadow: "0 1px 3px rgba(15,23,42,0.03)",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <div
+            <>
+              {needsAttention.slice(0, visibleAttention).map((item) => {
+                const pill = STATUS_PILL[item.urgency] ?? STATUS_PILL.warning;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => router.push(`/dashboard/shortlist?review=${item.id}`)}
                     style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: pill.dot,
-                      flexShrink: 0,
+                      background: "#fff",
+                      borderRadius: 14,
+                      padding: "12px 14px",
+                      border: "1px solid #f1f5f9",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      textAlign: "left",
+                      boxShadow: "0 1px 3px rgba(15,23,42,0.03)",
+                      fontFamily: "inherit",
+                      width: "100%",
                     }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  >
                     <div
                       style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        color: "#0f172a",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: pill.dot,
+                        flexShrink: 0,
                       }}
-                    >
-                      {item.description}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "#0f172a",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.description}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "#94a3b8",
+                          fontWeight: 500,
+                          marginTop: 2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {item.category} · {item.pic_name}
+                      </div>
                     </div>
                     <div
                       style={{
                         fontSize: 11,
-                        color: "#94a3b8",
-                        fontWeight: 500,
-                        marginTop: 2,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
+                        fontWeight: 700,
+                        padding: "3px 9px",
+                        borderRadius: 999,
+                        background: pill.bg,
+                        color: pill.color,
                         whiteSpace: "nowrap",
+                        flexShrink: 0,
                       }}
                     >
-                      {item.category} · {item.pic_name}
+                      {daysText(item.days_left)}
                     </div>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      padding: "3px 9px",
-                      borderRadius: 999,
-                      background: pill.bg,
-                      color: pill.color,
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {daysText(item.days_left)}
-                  </div>
+                  </button>
+                );
+              })}
+              {visibleAttention < needsAttention.length && (
+                <button
+                  onClick={() => setVisibleAttention((n) => n + 5)}
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px",
+                    borderRadius: 14,
+                    background: "#f4f7fb",
+                    border: "1px solid #eef1f6",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#1e3a5f",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Show more ({needsAttention.length - visibleAttention} remaining)
                 </button>
-              );
-            })
+              )}
+            </>
           )}
         </div>
       </div>
@@ -786,80 +807,80 @@ export default function MobileDashboard({
               </div>
             ))
           ) : activity.length === 0 ? (
-            <div
-              style={{
-                padding: "16px",
-                textAlign: "center",
-                color: "#94a3b8",
-                fontSize: 13,
-              }}
-            >
+            <div style={{ padding: "16px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
               No recent activity
             </div>
           ) : (
-            activity.map((entry, idx) => {
-              const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
-              return (
-                <div
-                  key={entry.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "12px 14px",
-                    borderTop: idx > 0 ? "1px solid #f8fafc" : "none",
-                  }}
-                >
+            <>
+              {activity.slice(0, visibleActivity).map((entry, idx) => {
+                const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
+                return (
                   <div
+                    key={entry.id}
                     style={{
-                      width: 34,
-                      height: 34,
-                      flexShrink: 0,
-                      borderRadius: 10,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      background: s.bg,
+                      gap: 12,
+                      padding: "12px 14px",
+                      borderTop: idx > 0 ? "1px solid #f8fafc" : "none",
                     }}
                   >
                     <div
                       style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: s.color,
+                        width: 34,
+                        height: 34,
+                        flexShrink: 0,
+                        borderRadius: 10,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: s.bg,
                       }}
-                    />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        color: "#0f172a",
-                        lineHeight: 1.4,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                      title={entry.description ?? ""}
                     >
-                      {entry.description ?? "—"}
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 12.5,
+                          fontWeight: 600,
+                          color: "#0f172a",
+                          lineHeight: 1.4,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                        title={entry.description ?? ""}
+                      >
+                        {entry.description ?? "—"}
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#94a3b8", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      {timeAgo(entry.timestamp)}
                     </div>
                   </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "#94a3b8",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {timeAgo(entry.timestamp)}
-                  </div>
-                </div>
-              );
-            })
+                );
+              })}
+              {visibleActivity < activity.length && (
+                <button
+                  onClick={() => setVisibleActivity((n) => n + 4)}
+                  style={{
+                    width: "100%",
+                    padding: "11px 14px",
+                    background: "#f4f7fb",
+                    border: "none",
+                    borderTop: "1px solid #f1f5f9",
+                    cursor: "pointer",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#1e3a5f",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Show more ({activity.length - visibleActivity} remaining)
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
