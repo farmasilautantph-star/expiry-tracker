@@ -156,15 +156,18 @@ export default function MobileDashboard({
 }: Props) {
   const router = useRouter();
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
-  const { entries: shortlistEntries } = useShortList();
+  const [activityLoading, setActivityLoading] = useState(true);
+  const { entries: shortlistEntries, isLoading: shortlistLoading } = useShortList();
 
   useEffect(() => {
+    setActivityLoading(true);
     fetch("/api/activity/recent")
       .then((r) => r.json())
       .then((d) => {
         if (d?.success) setActivity(d.data as HistoryEntry[]);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setActivityLoading(false));
   }, []);
 
   if (!user) return null;
@@ -196,8 +199,7 @@ export default function MobileDashboard({
         e.urgency === "critical" ||
         e.urgency === "warning",
     )
-    .sort((a, b) => a.days_left - b.days_left)
-    .slice(0, 3);
+    .sort((a, b) => a.days_left - b.days_left);
 
   return (
     <div
@@ -605,7 +607,7 @@ export default function MobileDashboard({
             )}
           </div>
           <button
-            onClick={() => router.push("/dashboard/shortlist")}
+            onClick={() => router.push("/dashboard/shortlist?urgency=expired")}
             style={{
               fontSize: 12,
               color: "#94a3b8",
@@ -615,11 +617,24 @@ export default function MobileDashboard({
               cursor: "pointer",
             }}
           >
-            See all
+            See all {needsAttention.length > 0 ? `${needsAttention.length} →` : "→"}
           </button>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {needsAttention.length === 0 ? (
+          {shortlistLoading ? (
+            [0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse"
+                style={{
+                  background: "#fff",
+                  borderRadius: 14,
+                  height: 60,
+                  border: "1px solid #f1f5f9",
+                }}
+              />
+            ))
+          ) : needsAttention.length === 0 ? (
             <div
               style={{
                 background: "#fff",
@@ -738,7 +753,7 @@ export default function MobileDashboard({
               cursor: "pointer",
             }}
           >
-            View all
+            View all →
           </button>
         </div>
         <div
@@ -750,7 +765,27 @@ export default function MobileDashboard({
             boxShadow: "0 1px 3px rgba(15,23,42,0.03)",
           }}
         >
-          {activity.length === 0 ? (
+          {activityLoading ? (
+            [0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="animate-pulse"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  padding: "12px 14px",
+                  borderTop: i > 0 ? "1px solid #f8fafc" : "none",
+                }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f1f5f9", flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, marginBottom: 6, width: "70%" }} />
+                  <div style={{ height: 10, background: "#f1f5f9", borderRadius: 6, width: "40%" }} />
+                </div>
+              </div>
+            ))
+          ) : activity.length === 0 ? (
             <div
               style={{
                 padding: "16px",
