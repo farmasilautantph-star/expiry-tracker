@@ -175,6 +175,7 @@ export default function DashboardPage() {
         stats={stats}
         healthData={healthData}
         healthLoading={healthLoading}
+        onOpenForm={() => setFormOpen(true)}
       />
 
       {/* Desktop dashboard — md and up */}

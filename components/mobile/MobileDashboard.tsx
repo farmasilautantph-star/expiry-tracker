@@ -26,6 +26,7 @@ interface Props {
   stats: Stats | null;
   healthData: HealthData | null;
   healthLoading: boolean;
+  onOpenForm: () => void;
 }
 
 function getGreeting(): string {
@@ -153,6 +154,7 @@ export default function MobileDashboard({
   stats,
   healthData,
   healthLoading,
+  onOpenForm,
 }: Props) {
   const router = useRouter();
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
@@ -313,72 +315,66 @@ export default function MobileDashboard({
         </div>
       </div>
 
-      {/* Search bar */}
-      <div style={{ background: "#fff", padding: "12px 16px", borderBottom: "1px solid #f0f4f8", width: "100%", boxSizing: "border-box" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", width: "100%" }}>
-          <button
-            onClick={() => router.push("/dashboard/shortlist")}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              height: 44,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "0 16px",
-              borderRadius: 999,
-              background: "#f4f7fb",
-              border: "1px solid #eef1f6",
-              cursor: "pointer",
-              textAlign: "left",
-              fontFamily: "inherit",
-            }}
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#94a3b8"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3-3" />
-            </svg>
-            <span style={{ color: "#94a3b8", fontSize: 13.5, fontWeight: 500 }}>
-              Search items, category or PIC...
-            </span>
-          </button>
-          <button
-            aria-label="Filter"
-            onClick={() => router.push("/dashboard/shortlist")}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: "#1e3a5f",
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#fff"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 6h18M7 12h10M11 18h2" />
-            </svg>
-          </button>
-        </div>
+      {/* Quick Actions */}
+      <div
+        style={{
+          background: "#fff",
+          padding: "12px 16px",
+          borderBottom: "1px solid #f0f4f8",
+          display: "flex",
+          gap: 10,
+        }}
+      >
+        <button
+          onClick={onOpenForm}
+          style={{
+            flex: 1,
+            height: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            borderRadius: 13,
+            background: "#1e3a5f",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#fff",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          Log Entry
+        </button>
+        <button
+          onClick={() => router.push("/dashboard/shortlist")}
+          style={{
+            flex: 1,
+            height: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            borderRadius: 13,
+            background: "#eef3fa",
+            border: "none",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#1e3a5f",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+          Review Items
+        </button>
       </div>
 
       {/* Health Card */}
