@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { HealthData } from "@/hooks/useDashboardHealth";
 import type { HistoryEntry } from "@/hooks/useHistory";
+import { useShortList } from "@/hooks/useShortList";
 import { getMalaysiaTime } from "@/lib/sunday-deadline-client";
 
 interface MobileUser {
@@ -34,15 +35,21 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function formatTopDate(): string {
-  return getMalaysiaTime()
-    .toLocaleDateString("en-GB", {
-      weekday: "long",
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    })
-    .replace(",", " ·");
+function formatDateLong(): string {
+  return getMalaysiaTime().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function shortDayMonth(longDate: string | undefined): string {
+  if (!longDate) return "—";
+  const after = longDate.includes(",")
+    ? longDate.split(",")[1]?.trim() ?? longDate
+    : longDate;
+  return after.split(" ").slice(0, 2).join(" ");
 }
 
 function timeAgo(iso: string): string {
@@ -57,6 +64,47 @@ function timeAgo(iso: string): string {
   return `${days} days ago`;
 }
 
+type HealthBand = "excellent" | "good" | "needs" | "critical";
+function healthBand(score: number): HealthBand {
+  if (score >= 80) return "excellent";
+  if (score >= 60) return "good";
+  if (score >= 40) return "needs";
+  return "critical";
+}
+
+const HEALTH_BANDS: Record<
+  HealthBand,
+  { label: string; ring: string; pillBg: string; pillColor: string }
+> = {
+  excellent: { label: "Excellent",       ring: "#16a34a", pillBg: "#dcfce7", pillColor: "#15803d" },
+  good:      { label: "Good",            ring: "#1e3a5f", pillBg: "#eef3fa", pillColor: "#1e3a5f" },
+  needs:     { label: "Needs Attention", ring: "#ea580c", pillBg: "#fef3c7", pillColor: "#b45309" },
+  critical:  { label: "Critical",        ring: "#dc2626", pillBg: "#fee2e2", pillColor: "#b91c1c" },
+};
+
+interface StatPillCfg {
+  key: keyof Stats;
+  label: string;
+  bg: string;
+  numColor: string;
+  labelColor: string;
+  urgency: string;
+}
+
+const STAT_PILLS: StatPillCfg[] = [
+  { key: "expired",  label: "Expired",  bg: "#fef2f2", numColor: "#b91c1c", labelColor: "#dc2626", urgency: "expired"  },
+  { key: "critical", label: "Critical", bg: "#fff7ed", numColor: "#c2410c", labelColor: "#ea580c", urgency: "critical" },
+  { key: "warning",  label: "Warning",  bg: "#fffbeb", numColor: "#b45309", labelColor: "#ca8a04", urgency: "warning"  },
+  { key: "safe",     label: "Safe",     bg: "#f0fdf4", numColor: "#15803d", labelColor: "#16a34a", urgency: "safe"     },
+];
+
+const STATUS_PILL: Record<string, { dot: string; bg: string; color: string }> = {
+  expired:  { dot: "#dc2626", bg: "#fee2e2", color: "#b91c1c" },
+  critical: { dot: "#ea580c", bg: "#ffedd5", color: "#c2410c" },
+  warning:  { dot: "#ca8a04", bg: "#fef3c7", color: "#b45309" },
+  safe:     { dot: "#16a34a", bg: "#dcfce7", color: "#15803d" },
+};
+
 const ACTIVITY_STYLE: Record<string, { color: string; bg: string }> = {
   CREATE: { color: "#15803d", bg: "#f0fdf4" },
   UPDATE: { color: "#1e3a5f", bg: "#eef3fa" },
@@ -64,100 +112,40 @@ const ACTIVITY_STYLE: Record<string, { color: string; bg: string }> = {
 };
 const DEFAULT_ACT_STYLE = { color: "#7c3aed", bg: "#f5f3ff" };
 
-function healthGradient(score: number): string {
-  if (score >= 80) return "linear-gradient(135deg,#15803d,#166534)";
-  if (score >= 60) return "linear-gradient(135deg,#1e3a5f,#2d5490)";
-  if (score >= 40) return "linear-gradient(135deg,#92400e,#b45309)";
-  return "linear-gradient(135deg,#991b1b,#b91c1c)";
+function HealthRing({ score, color }: { score: number; color: string }) {
+  const r = 42;
+  const c = 2 * Math.PI * r;
+  const pct = Math.max(0, Math.min(100, score)) / 100;
+  const offset = c * (1 - pct);
+  return (
+    <svg
+      width="104"
+      height="104"
+      viewBox="0 0 100 100"
+      style={{ display: "block" }}
+    >
+      <circle cx="50" cy="50" r={r} fill="none" stroke="#f1f5f9" strokeWidth="8" />
+      <circle
+        cx="50"
+        cy="50"
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth="8"
+        strokeLinecap="round"
+        strokeDasharray={c}
+        strokeDashoffset={offset}
+        transform="rotate(-90 50 50)"
+      />
+    </svg>
+  );
 }
 
-function healthLabel(score: number): string {
-  if (score >= 80) return "Excellent";
-  if (score >= 60) return "Good Standing";
-  if (score >= 40) return "Needs Attention";
-  return "Critical Risk";
+function daysText(daysLeft: number): string {
+  if (daysLeft < 0) return `${Math.abs(daysLeft)}d overdue`;
+  if (daysLeft === 0) return "Today!";
+  return `${daysLeft}d left`;
 }
-
-interface StatCardCfg {
-  key: keyof Stats;
-  label: string;
-  bg: string;
-  iconBg: string;
-  iconColor: string;
-  numColor: string;
-  labelColor: string;
-  urgency: string;
-  iconPath: React.ReactNode;
-}
-
-const STAT_CARDS: StatCardCfg[] = [
-  {
-    key: "expired",
-    label: "Expired",
-    bg: "#fef2f2",
-    iconBg: "#fee2e2",
-    iconColor: "#b91c1c",
-    numColor: "#b91c1c",
-    labelColor: "#dc2626",
-    urgency: "expired",
-    iconPath: (
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M15 9l-6 6M9 9l6 6" />
-      </>
-    ),
-  },
-  {
-    key: "critical",
-    label: "Critical",
-    bg: "#fff7ed",
-    iconBg: "#ffedd5",
-    iconColor: "#c2410c",
-    numColor: "#c2410c",
-    labelColor: "#ea580c",
-    urgency: "critical",
-    iconPath: (
-      <>
-        <path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-        <path d="M12 9v4" />
-        <path d="M12 17h.01" />
-      </>
-    ),
-  },
-  {
-    key: "warning",
-    label: "Warning",
-    bg: "#fffbeb",
-    iconBg: "#fef3c7",
-    iconColor: "#b45309",
-    numColor: "#b45309",
-    labelColor: "#ca8a04",
-    urgency: "warning",
-    iconPath: (
-      <>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 8v4" />
-        <path d="M12 16h.01" />
-      </>
-    ),
-  },
-  {
-    key: "safe",
-    label: "Safe",
-    bg: "#f0fdf4",
-    iconBg: "#dcfce7",
-    iconColor: "#15803d",
-    numColor: "#15803d",
-    labelColor: "#16a34a",
-    urgency: "safe",
-    iconPath: (
-      <>
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-        <path d="m9 12 2 2 4-4" />
-      </>
-    ),
-  },
-];
 
 export default function MobileDashboard({
   user,
@@ -168,12 +156,13 @@ export default function MobileDashboard({
 }: Props) {
   const router = useRouter();
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
+  const { entries: shortlistEntries } = useShortList();
 
   useEffect(() => {
-    fetch("/api/history?limit=4&page=1")
+    fetch("/api/history?limit=3&page=1")
       .then((r) => r.json())
       .then((d) => {
-        if (d?.success) setActivity((d.data as HistoryEntry[]).slice(0, 4));
+        if (d?.success) setActivity((d.data as HistoryEntry[]).slice(0, 3));
       })
       .catch(() => {});
   }, []);
@@ -181,6 +170,8 @@ export default function MobileDashboard({
   if (!user) return null;
 
   const firstName = (user.picName || user.username).split(" ")[0];
+  const initial = firstName.charAt(0).toUpperCase();
+
   const sh = healthData?.systemHealth;
   const score = sh?.score ?? 0;
   const counts: Stats = sh
@@ -192,216 +183,361 @@ export default function MobileDashboard({
       }
     : stats ?? { expired: 0, critical: 0, warning: 0, safe: 0 };
   const urgent = counts.expired + counts.critical + counts.warning;
+  const total = urgent + counts.safe;
 
-  const myRate = healthData?.completionRates?.[0];
-  const stale = healthData?.staleItems ?? [];
-  const itemsDue = stale.length;
-  const overdue = stale.filter(
-    (s) => s.urgency === "missed" || s.urgency === "critical",
-  ).length;
-  const completionPct = myRate?.completion_rate ?? 0;
+  const band = healthBand(score);
+  const bandCfg = HEALTH_BANDS[band];
+  const nextDeadline = shortDayMonth(healthData?.reviewDeadline?.nextSunday);
+
+  const needsAttention = shortlistEntries
+    .filter(
+      (e) =>
+        e.urgency === "expired" ||
+        e.urgency === "critical" ||
+        e.urgency === "warning",
+    )
+    .sort((a, b) => a.days_left - b.days_left)
+    .slice(0, 3);
 
   return (
-    <div className="md:hidden" style={{ background: "#f4f7fb", minHeight: "100vh" }}>
+    <div
+      className="md:hidden"
+      style={{ background: "#f4f7fb", minHeight: "100vh" }}
+    >
       {/* Header */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "20px 20px 18px",
-          borderBottom: "1px solid #f0f4f8",
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
+      <div style={{ background: "#fff", padding: "20px 20px 16px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: 1.2,
+                fontSize: 13,
                 color: "#94a3b8",
-                textTransform: "uppercase",
+                fontWeight: 500,
                 marginBottom: 4,
               }}
             >
-              {formatTopDate()}
+              {getGreeting()},
             </div>
             <div
               style={{
-                fontSize: 21,
+                fontSize: 28,
                 fontWeight: 800,
                 color: "#0f172a",
+                lineHeight: 1.1,
+                marginBottom: 6,
                 letterSpacing: -0.5,
-                lineHeight: 1.2,
               }}
             >
-              {getGreeting()},
-              <br />
-              {firstName} 👋
+              {firstName}
+            </div>
+            <div
+              style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}
+            >
+              {formatDateLong()}
             </div>
           </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+            <button
+              aria-label="Notifications"
+              style={{
+                position: "relative",
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "#fff",
+                border: "1px solid #eef1f6",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                boxShadow: "0 1px 2px rgba(15,23,42,0.04)",
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#0f172a"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {urgent > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 9,
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: "#dc2626",
+                    border: "1.5px solid #fff",
+                  }}
+                />
+              )}
+            </button>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "#1e3a5f",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontWeight: 800,
+                fontSize: 16,
+                letterSpacing: 0.2,
+              }}
+            >
+              {initial}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search bar */}
+      <div style={{ background: "#fff", padding: "0 16px 18px" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button
-            aria-label="Notifications"
-            className="relative flex-shrink-0"
+            onClick={() => router.push("/dashboard/shortlist")}
+            style={{
+              flex: 1,
+              height: 44,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "0 16px",
+              borderRadius: 999,
+              background: "#f4f7fb",
+              border: "1px solid #eef1f6",
+              cursor: "pointer",
+              textAlign: "left",
+              fontFamily: "inherit",
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#94a3b8"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3-3" />
+            </svg>
+            <span style={{ color: "#94a3b8", fontSize: 13.5, fontWeight: 500 }}>
+              Search items, category or PIC...
+            </span>
+          </button>
+          <button
+            aria-label="Filter"
+            onClick={() => router.push("/dashboard/shortlist")}
             style={{
               width: 44,
               height: 44,
-              borderRadius: "50%",
+              borderRadius: 12,
               background: "#1e3a5f",
+              border: "none",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              border: "none",
               cursor: "pointer",
             }}
           >
             <svg
-              width="20"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="white"
-              strokeWidth="1.8"
+              stroke="#fff"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              <path d="M3 6h18M7 12h10M11 18h2" />
             </svg>
-            {urgent > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: 2,
-                  right: 2,
-                  width: 9,
-                  height: 9,
-                  borderRadius: "50%",
-                  background: "#dc2626",
-                  border: "1.5px solid #fff",
-                }}
-              />
-            )}
           </button>
         </div>
       </div>
 
-      {/* Health Score Card */}
-      <div style={{ padding: "16px 16px 0", background: "#fff" }}>
+      {/* Health Card */}
+      <div style={{ padding: "16px 16px 12px" }}>
         {healthLoading ? (
           <div
             className="animate-pulse"
-            style={{ borderRadius: 20, height: 138, background: "#f1f5f9" }}
+            style={{
+              borderRadius: 18,
+              height: 132,
+              background: "#fff",
+              border: "1px solid #f1f5f9",
+            }}
           />
         ) : (
           <div
             style={{
-              borderRadius: 20,
-              padding: "22px 22px 18px",
-              position: "relative",
-              overflow: "hidden",
-              background: healthGradient(score),
+              background: "#fff",
+              borderRadius: 18,
+              padding: "16px 18px",
+              border: "1px solid #f1f5f9",
+              boxShadow: "0 1px 3px rgba(15,23,42,0.04)",
+              display: "flex",
+              gap: 14,
+              alignItems: "center",
             }}
           >
             <div
               style={{
-                position: "absolute",
-                right: -20,
-                top: -20,
-                width: 130,
-                height: 130,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.07)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                right: 70,
-                bottom: -36,
-                width: 80,
-                height: 80,
-                borderRadius: "50%",
-                background: "rgba(255,255,255,0.04)",
-              }}
-            />
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: 1.6,
-                color: "rgba(255,255,255,0.55)",
-                textTransform: "uppercase",
-                marginBottom: 4,
+                position: "relative",
+                width: 104,
+                height: 104,
+                flexShrink: 0,
               }}
             >
-              Inventory Health Score
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 4,
-                marginBottom: 6,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 64,
-                  fontWeight: 900,
-                  color: "#fff",
-                  lineHeight: 1,
-                  letterSpacing: -3,
-                }}
-              >
-                {score}
-              </span>
-              <span
-                style={{
-                  fontSize: 18,
-                  fontWeight: 400,
-                  color: "rgba(255,255,255,0.5)",
-                  marginBottom: 9,
-                  paddingLeft: 2,
-                }}
-              >
-                /100
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: 12.5,
-                fontWeight: 600,
-                color: "rgba(255,255,255,0.8)",
-                marginBottom: 14,
-              }}
-            >
-              {healthLabel(score)} · {urgent} items need action
-            </div>
-            <div
-              style={{
-                height: 5,
-                background: "rgba(255,255,255,0.15)",
-                borderRadius: 3,
-                overflow: "hidden",
-              }}
-            >
+              <HealthRing score={score} color={bandCfg.ring} />
               <div
                 style={{
-                  height: "100%",
-                  background: "rgba(255,255,255,0.85)",
-                  borderRadius: 3,
-                  width: `${score}%`,
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
-              />
+              >
+                <div
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 900,
+                    color: "#0f172a",
+                    lineHeight: 1,
+                    letterSpacing: -1,
+                  }}
+                >
+                  {score}
+                </div>
+                <div
+                  style={{
+                    fontSize: 10,
+                    color: "#94a3b8",
+                    fontWeight: 600,
+                    marginTop: 3,
+                  }}
+                >
+                  / 100
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginBottom: 8,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    lineHeight: 1.15,
+                  }}
+                >
+                  Inventory
+                  <br />
+                  Health
+                </div>
+                <div
+                  style={{
+                    fontSize: 10.5,
+                    color: bandCfg.pillColor,
+                    background: bandCfg.pillBg,
+                    padding: "3px 9px",
+                    borderRadius: 999,
+                    fontWeight: 700,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {bandCfg.label}
+                </div>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}
+                >
+                  {urgent} item{urgent === 1 ? "" : "s"} need action now
+                </div>
+                <div
+                  style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700 }}
+                >
+                  {urgent}/{total}
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#94a3b8"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M3 10h18M8 2v4M16 2v4" />
+                </svg>
+                <span
+                  style={{ fontSize: 11.5, color: "#64748b", fontWeight: 500 }}
+                >
+                  Next deadline{" "}
+                  <strong style={{ color: "#0f172a", fontWeight: 700 }}>
+                    {nextDeadline}
+                  </strong>
+                </span>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* 2x2 stat cards */}
-      <div style={{ padding: "12px 16px 0", background: "#fff" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {STAT_CARDS.map((c) => (
+      {/* Stat pills (4 in a row) */}
+      <div style={{ padding: "0 16px 18px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(4, 1fr)",
+            gap: 8,
+          }}
+        >
+          {STAT_PILLS.map((c) => (
             <button
               key={c.key}
               onClick={() =>
@@ -409,75 +545,31 @@ export default function MobileDashboard({
               }
               style={{
                 background: c.bg,
-                borderRadius: 16,
-                padding: "14px 15px",
+                borderRadius: 12,
+                padding: "10px 6px 11px",
                 border: "none",
-                minHeight: 100,
-                textAlign: "left",
                 cursor: "pointer",
+                textAlign: "center",
+                fontFamily: "inherit",
               }}
             >
               <div
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: 10,
-                }}
-              >
-                <div
-                  style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 10,
-                    background: c.iconBg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <svg
-                    width="17"
-                    height="17"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke={c.iconColor}
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    {c.iconPath}
-                  </svg>
-                </div>
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={c.iconColor}
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                >
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </div>
-              <div
-                style={{
-                  fontSize: 32,
+                  fontSize: 22,
                   fontWeight: 900,
                   color: c.numColor,
-                  letterSpacing: -1.5,
                   lineHeight: 1,
+                  marginBottom: 5,
+                  letterSpacing: -0.5,
                 }}
               >
                 {counts[c.key]}
               </div>
               <div
                 style={{
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: 600,
                   color: c.labelColor,
-                  marginTop: 3,
                 }}
               >
                 {c.label}
@@ -487,27 +579,36 @@ export default function MobileDashboard({
         </div>
       </div>
 
-      <div style={{ height: 12, background: "#fff" }} />
-
-      {/* Weekly review */}
-      <div style={{ background: "#fff", padding: "16px 16px 18px" }}>
+      {/* Needs Attention */}
+      <div style={{ padding: "0 16px 18px" }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 14,
+            marginBottom: 10,
           }}
         >
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: "#0f172a" }}>
-            Items to Review This Week
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div
+              style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}
+            >
+              Needs Attention
+            </div>
+            {urgent > 0 && (
+              <span
+                style={{ fontSize: 12, color: "#b91c1c", fontWeight: 800 }}
+              >
+                {urgent}
+              </span>
+            )}
           </div>
           <button
             onClick={() => router.push("/dashboard/shortlist")}
             style={{
               fontSize: 12,
-              fontWeight: 700,
-              color: "#1e3a5f",
+              color: "#94a3b8",
+              fontWeight: 600,
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -516,98 +617,121 @@ export default function MobileDashboard({
             See all
           </button>
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 10,
-          }}
-        >
-          <div
-            style={{
-              flex: 1,
-              height: 7,
-              background: "#f1f5f9",
-              borderRadius: 4,
-              overflow: "hidden",
-            }}
-          >
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {needsAttention.length === 0 ? (
             <div
               style={{
-                width: `${completionPct}%`,
-                height: "100%",
-                background: "linear-gradient(90deg,#1e3a5f,#3d6fa3)",
-                borderRadius: 4,
+                background: "#fff",
+                borderRadius: 14,
+                padding: "20px 16px",
+                border: "1px solid #f1f5f9",
+                textAlign: "center",
+                color: "#94a3b8",
+                fontSize: 13,
               }}
-            />
-          </div>
-          <span
-            style={{
-              fontSize: 14,
-              fontWeight: 800,
-              color: "#1e3a5f",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {completionPct}%
-          </span>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#94a3b8"
-              strokeWidth="2"
-              strokeLinecap="round"
             >
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M3 10h18M8 2v4M16 2v4" />
-            </svg>
-            <span
-              style={{ fontSize: 12.5, color: "#64748b", fontWeight: 500 }}
-            >
-              {itemsDue} item{itemsDue !== 1 ? "s" : ""} due this week
-            </span>
-          </div>
-          {overdue > 0 && (
-            <span style={{ fontSize: 12, color: "#b91c1c", fontWeight: 700 }}>
-              {overdue} overdue
-            </span>
+              All clear — no items need attention
+            </div>
+          ) : (
+            needsAttention.map((item) => {
+              const pill =
+                STATUS_PILL[item.urgency] ?? STATUS_PILL.warning;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() =>
+                    router.push(`/dashboard/shortlist?review=${item.id}`)
+                  }
+                  style={{
+                    background: "#fff",
+                    borderRadius: 14,
+                    padding: "12px 14px",
+                    border: "1px solid #f1f5f9",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    textAlign: "left",
+                    boxShadow: "0 1px 3px rgba(15,23,42,0.03)",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: pill.dot,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "#0f172a",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.description}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#94a3b8",
+                        fontWeight: 500,
+                        marginTop: 2,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {item.category} · {item.pic_name}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: "3px 9px",
+                      borderRadius: 999,
+                      background: pill.bg,
+                      color: pill.color,
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {daysText(item.days_left)}
+                  </div>
+                </button>
+              );
+            })
           )}
         </div>
       </div>
 
-      <div style={{ height: 8, background: "#f4f7fb" }} />
-
-      {/* Recent activity */}
-      <div style={{ background: "#fff", paddingBottom: 28 }}>
+      {/* Recent Activity */}
+      <div style={{ padding: "0 16px 24px" }}>
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "16px 16px 10px",
+            marginBottom: 10,
           }}
         >
-          <div style={{ fontSize: 14.5, fontWeight: 700, color: "#0f172a" }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
             Recent Activity
           </div>
           <button
             onClick={() => router.push("/dashboard/history-log")}
             style={{
               fontSize: 12,
+              color: "#94a3b8",
               fontWeight: 600,
-              color: "#1e3a5f",
               background: "none",
               border: "none",
               cursor: "pointer",
@@ -616,82 +740,92 @@ export default function MobileDashboard({
             View all
           </button>
         </div>
-        {activity.length === 0 ? (
-          <div
-            style={{
-              padding: "8px 16px 20px",
-              fontSize: 12.5,
-              color: "#94a3b8",
-              textAlign: "center",
-            }}
-          >
-            No recent activity
-          </div>
-        ) : (
-          activity.map((entry) => {
-            const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
-            return (
-              <div
-                key={entry.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "12px 16px",
-                  borderTop: "1px solid #f8fafc",
-                }}
-              >
+        <div
+          style={{
+            background: "#fff",
+            borderRadius: 14,
+            border: "1px solid #f1f5f9",
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(15,23,42,0.03)",
+          }}
+        >
+          {activity.length === 0 ? (
+            <div
+              style={{
+                padding: "16px",
+                textAlign: "center",
+                color: "#94a3b8",
+                fontSize: 13,
+              }}
+            >
+              No recent activity
+            </div>
+          ) : (
+            activity.map((entry, idx) => {
+              const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
+              return (
                 <div
+                  key={entry.id}
                   style={{
-                    width: 38,
-                    height: 38,
-                    flexShrink: 0,
-                    borderRadius: 12,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    background: s.bg,
+                    gap: 12,
+                    padding: "12px 14px",
+                    borderTop: idx > 0 ? "1px solid #f8fafc" : "none",
                   }}
                 >
                   <div
                     style={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      background: s.color,
+                      width: 34,
+                      height: 34,
+                      flexShrink: 0,
+                      borderRadius: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: s.bg,
                     }}
-                  />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                  >
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: s.color,
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: "#0f172a",
+                        lineHeight: 1.4,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                      title={entry.description ?? ""}
+                    >
+                      {entry.description ?? "—"}
+                    </div>
+                  </div>
                   <div
                     style={{
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "#0f172a",
-                      lineHeight: 1.4,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
+                      fontSize: 11,
+                      color: "#94a3b8",
                       whiteSpace: "nowrap",
+                      flexShrink: 0,
                     }}
-                    title={entry.description ?? ""}
                   >
-                    {entry.description ?? "—"}
+                    {timeAgo(entry.timestamp)}
                   </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "#94a3b8",
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                  }}
-                >
-                  {timeAgo(entry.timestamp)}
-                </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
 
       {/* Spacer for bottom nav */}
