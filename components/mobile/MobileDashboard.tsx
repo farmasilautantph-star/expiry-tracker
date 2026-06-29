@@ -6,6 +6,7 @@ import type { HealthData } from "@/hooks/useDashboardHealth";
 import type { HistoryEntry } from "@/hooks/useHistory";
 import { useShortList } from "@/hooks/useShortList";
 import { getMalaysiaTime } from "@/lib/sunday-deadline-client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface MobileUser {
   username: string;
@@ -157,15 +158,24 @@ export default function MobileDashboard({
   onOpenForm,
 }: Props) {
   const router = useRouter();
+  const { logout } = useAuth();
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [visibleAttention, setVisibleAttention] = useState(5);
   const [visibleActivity, setVisibleActivity] = useState(4);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [lastReadTime, setLastReadTime] = useState<number>(0);
   const { entries: shortlistEntries, isLoading: shortlistLoading } = useShortList();
 
   useEffect(() => {
+    const stored = localStorage.getItem("last_read_notification_time");
+    if (stored) setLastReadTime(Number(stored));
+  }, []);
+
+  useEffect(() => {
     setActivityLoading(true);
-    fetch("/api/activity/recent")
+    fetch("/api/activity/recent?limit=10")
       .then((r) => r.json())
       .then((d) => {
         if (d?.success) setActivity(d.data as HistoryEntry[]);
@@ -173,6 +183,16 @@ export default function MobileDashboard({
       .catch(() => {})
       .finally(() => setActivityLoading(false));
   }, []);
+
+  function markAllRead() {
+    const now = Date.now();
+    setLastReadTime(now);
+    localStorage.setItem("last_read_notification_time", String(now));
+  }
+
+  function openNotif() {
+    setNotifOpen(true);
+  }
 
   if (!user) return null;
 
@@ -191,6 +211,9 @@ export default function MobileDashboard({
     : stats ?? { expired: 0, critical: 0, warning: 0, safe: 0 };
   const urgent = counts.expired + counts.critical + counts.warning;
   const total = urgent + counts.safe;
+  const unreadCount = activity.filter(
+    (e) => new Date(e.timestamp).getTime() > lastReadTime
+  ).length;
 
   const band = healthBand(score);
   const bandCfg = HEALTH_BANDS[band];
@@ -252,6 +275,7 @@ export default function MobileDashboard({
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
             <button
               aria-label="Notifications"
+              onClick={openNotif}
               style={{
                 position: "relative",
                 width: 44,
@@ -279,7 +303,7 @@ export default function MobileDashboard({
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
-              {urgent > 0 && (
+              {unreadCount > 0 && (
                 <span
                   style={{
                     position: "absolute",
@@ -294,12 +318,15 @@ export default function MobileDashboard({
                 />
               )}
             </button>
-            <div
+            <button
+              aria-label="Profile"
+              onClick={() => setProfileOpen(true)}
               style={{
                 width: 44,
                 height: 44,
                 borderRadius: 12,
                 background: "#1d4ed8",
+                border: "none",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -307,10 +334,12 @@ export default function MobileDashboard({
                 fontWeight: 800,
                 fontSize: 16,
                 letterSpacing: 0.2,
+                cursor: "pointer",
+                fontFamily: "inherit",
               }}
             >
               {initial}
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -883,6 +912,308 @@ export default function MobileDashboard({
 
       {/* Spacer for bottom nav */}
       <div style={{ height: 90 }} />
+
+      {/* ── Notification Bottom Sheet ── */}
+      {notifOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9000,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
+          {/* Backdrop */}
+          <div
+            onClick={() => setNotifOpen(false)}
+            style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.4)" }}
+          />
+          {/* Sheet */}
+          <div
+            className="animate-slide-up"
+            style={{
+              position: "relative",
+              zIndex: 1,
+              background: "#fff",
+              borderRadius: "24px 24px 0 0",
+              maxHeight: "80vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            {/* Handle */}
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "#e2e8f0" }} />
+            </div>
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 20px 10px",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#0f172a" }}>Notifications</div>
+              <button
+                onClick={markAllRead}
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#1d4ed8",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  padding: "4px 0",
+                }}
+              >
+                Mark all as read
+              </button>
+            </div>
+            {/* List */}
+            <div style={{ overflowY: "auto", flex: 1, paddingBottom: 24 }}>
+              {activityLoading ? (
+                [0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="animate-pulse"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 20px",
+                      borderTop: i > 0 ? "1px solid #f8fafc" : "none",
+                    }}
+                  >
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: "#f1f5f9", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ height: 12, background: "#f1f5f9", borderRadius: 6, marginBottom: 6, width: "70%" }} />
+                      <div style={{ height: 10, background: "#f1f5f9", borderRadius: 6, width: "40%" }} />
+                    </div>
+                  </div>
+                ))
+              ) : activity.length === 0 ? (
+                <div style={{ padding: "24px 20px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                  No recent activity
+                </div>
+              ) : (
+                activity.map((entry, idx) => {
+                  const s = ACTIVITY_STYLE[entry.action] ?? DEFAULT_ACT_STYLE;
+                  const isUnread = new Date(entry.timestamp).getTime() > lastReadTime;
+                  return (
+                    <div
+                      key={entry.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 20px",
+                        borderTop: idx > 0 ? "1px solid #f8fafc" : "none",
+                        background: isUnread ? "#fafbff" : "#fff",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 34,
+                          height: 34,
+                          flexShrink: 0,
+                          borderRadius: 10,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: s.bg,
+                        }}
+                      >
+                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: s.color }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          style={{
+                            fontSize: 12.5,
+                            fontWeight: isUnread ? 700 : 600,
+                            color: "#0f172a",
+                            lineHeight: 1.4,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                          title={entry.description ?? ""}
+                        >
+                          {entry.description ?? "—"}
+                        </div>
+                        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+                          {entry.pic_name && <span>{entry.pic_name} · </span>}
+                          {timeAgo(entry.timestamp)}
+                        </div>
+                      </div>
+                      {isUnread && (
+                        <div
+                          style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: "50%",
+                            background: "#1d4ed8",
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Profile Bottom Sheet ── */}
+      {profileOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9000,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
+          {/* Backdrop */}
+          <div
+            onClick={() => setProfileOpen(false)}
+            style={{ position: "absolute", inset: 0, background: "rgba(15,23,42,0.4)" }}
+          />
+          {/* Sheet */}
+          <div
+            className="animate-slide-up"
+            style={{
+              position: "relative",
+              zIndex: 1,
+              background: "#fff",
+              borderRadius: "24px 24px 0 0",
+              maxHeight: 280,
+              paddingBottom: 20,
+            }}
+          >
+            {/* Handle */}
+            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, marginBottom: 6 }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: "#e2e8f0" }} />
+            </div>
+            {/* Avatar + info */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+                padding: "10px 20px 16px",
+                borderBottom: "1px solid #f1f5f9",
+              }}
+            >
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 14,
+                  background: "#1d4ed8",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  fontWeight: 800,
+                  fontSize: 20,
+                  flexShrink: 0,
+                }}
+              >
+                {initial}
+              </div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>
+                  {user.picName || user.username}
+                </div>
+                <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, textTransform: "capitalize" }}>
+                  {user.role}
+                </div>
+              </div>
+            </div>
+            {/* Actions */}
+            <div style={{ padding: "8px 14px 0" }}>
+              <button
+                onClick={() => { setProfileOpen(false); router.push("/dashboard/shortlist"); }}
+                style={{
+                  width: "100%",
+                  padding: "13px 16px",
+                  borderRadius: 12,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#0f172a",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                  <rect x="9" y="3" width="6" height="4" rx="1" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                My Items
+              </button>
+              <button
+                onClick={async () => { setProfileOpen(false); await logout(); }}
+                style={{
+                  width: "100%",
+                  padding: "13px 16px",
+                  borderRadius: 12,
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#b91c1c",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+                Sign Out
+              </button>
+              <button
+                onClick={() => setProfileOpen(false)}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: 12,
+                  background: "#f1f5f9",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#64748b",
+                  fontFamily: "inherit",
+                  marginTop: 4,
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

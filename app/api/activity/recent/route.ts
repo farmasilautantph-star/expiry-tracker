@@ -26,6 +26,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
+  const limitParam = req.nextUrl.searchParams.get("limit");
+  const limit = Math.min(Math.max(1, parseInt(limitParam ?? "10", 10) || 10), 20);
+
   const client = await pool.connect();
   try {
     let rows;
@@ -34,7 +37,8 @@ export async function GET(req: NextRequest) {
         `SELECT id, action, description, timestamp, pic_name
          FROM history_log
          ORDER BY timestamp DESC
-         LIMIT 4`,
+         LIMIT $1`,
+        [limit],
       );
       rows = result.rows;
     } else {
@@ -43,8 +47,8 @@ export async function GET(req: NextRequest) {
          FROM history_log
          WHERE pic_name = $1
          ORDER BY timestamp DESC
-         LIMIT 4`,
-        [user.picName || user.username],
+         LIMIT $2`,
+        [user.picName || user.username, limit],
       );
       rows = result.rows;
     }
