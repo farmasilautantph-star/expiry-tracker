@@ -184,10 +184,16 @@ export default function MobileDashboard({
   }, []);
 
   useEffect(() => {
-    const handler = () => setOpenDropdown(null);
-    document.addEventListener("click", handler);
-    return () => document.removeEventListener("click", handler);
-  }, []);
+    if (!openDropdown) return;
+    const handler = (e: MouseEvent) => { setOpenDropdown(null); };
+    const timer = setTimeout(() => {
+      document.addEventListener("click", handler);
+    }, 0);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("click", handler);
+    };
+  }, [openDropdown]);
 
   function markAllRead() {
     const now = Date.now();
@@ -235,7 +241,7 @@ export default function MobileDashboard({
       style={{ background: "#f4f7fb", minHeight: "100vh", overflowX: "hidden", width: "100%" }}
     >
       {/* Header */}
-      <div style={{ position: "relative", background: "#fff", padding: "20px 16px 16px", borderBottom: "1px solid #f0f4f8" }}>
+      <div style={{ position: "relative", zIndex: 50, background: "#fff", padding: "20px 16px 16px", borderBottom: "1px solid #f0f4f8" }}>
         <div
           style={{
             display: "flex",
@@ -275,6 +281,7 @@ export default function MobileDashboard({
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
             <button
+              type="button"
               aria-label="Notifications"
               onClick={(e) => {
                 e.stopPropagation();
@@ -323,6 +330,7 @@ export default function MobileDashboard({
               )}
             </button>
             <button
+              type="button"
               aria-label="Profile"
               onClick={(e) => {
                 e.stopPropagation();
