@@ -194,6 +194,19 @@ function SidebarContent({
         })}
       </nav>
 
+      {/* Sign Out */}
+      <div className="px-0 pb-1 flex-shrink-0">
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 mx-3 px-3 py-2.5 rounded-xl text-sm font-medium w-full transition-all text-[#64748b] hover:bg-[#f8fafc] hover:text-[#334155]"
+        >
+          <span className="flex-shrink-0" style={{ color: "#94a3b8" }}>
+            <ArrowRightOnRectangleIcon style={{ width: 18, height: 18 }} />
+          </span>
+          Sign Out
+        </button>
+      </div>
+
       {/* User section */}
       <div className="px-3 py-4 flex-shrink-0" style={{ borderTop: "1px solid #f1f5f9" }}>
         <div className="flex items-center gap-3 px-2">
@@ -209,13 +222,6 @@ function SidebarContent({
             </p>
             <p className="text-[#94a3b8] text-xs font-medium capitalize mt-0.5">{role}</p>
           </div>
-          <button
-            onClick={onLogout}
-            title="Sign out"
-            className="p-1.5 rounded-lg transition-colors text-[#94a3b8] hover:text-[#ef4444] hover:bg-[#fff5f5]"
-          >
-            <ArrowRightOnRectangleIcon style={{ width: 18, height: 18 }} />
-          </button>
         </div>
       </div>
     </div>
@@ -385,7 +391,9 @@ export default function DashboardLayout({
       </div>
 
       {/* Mobile bottom nav — below md only */}
-      <MobileBottomNav />
+      <div className="md:hidden">
+        <MobileBottomNav />
+      </div>
     </div>
   );
 }
