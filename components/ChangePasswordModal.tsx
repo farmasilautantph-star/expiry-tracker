@@ -73,16 +73,22 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: Prop
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-      const json = await res.json();
+      let json: { success?: boolean; error?: string } = {};
+      try {
+        json = await res.json();
+      } catch {
+        // Response was not JSON (e.g. 500 HTML error page)
+      }
       if (!res.ok || !json.success) {
-        const msg: string = json.error ?? "Failed to update password";
+        const msg = json.error ?? "Something went wrong. Please try again.";
         if (msg.toLowerCase().includes("current")) setCurrentError(msg);
         else setNewError(msg);
         return;
       }
       onSuccess("Password updated successfully");
       handleClose();
-    } catch {
+    } catch (err) {
+      console.error("Change password error:", err);
       setCurrentError("Network error. Please try again.");
     } finally {
       setSubmitting(false);
