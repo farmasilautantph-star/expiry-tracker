@@ -174,7 +174,7 @@ function daysText(daysLeft: number): string {
 
 export default function MobileDashboard({
   user,
-  isManager: _isManager,
+  isManager,
   stats,
   healthData,
   healthLoading,
@@ -188,6 +188,7 @@ export default function MobileDashboard({
   const [visibleActivity, setVisibleActivity] = useState(4);
   const [openDropdown, setOpenDropdown] = useState<"notifications" | "profile" | null>(null);
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const [pendingOffersCount, setPendingOffersCount] = useState<number | null>(null);
   const { toasts, showSuccess, dismiss } = useToast();
   const [notifications, setNotifications] = useState<NotifEntry[]>([]);
   const [notifLoading, setNotifLoading] = useState(true);
@@ -233,6 +234,21 @@ export default function MobileDashboard({
       clearInterval(interval);
     };
   }, []);
+
+  useEffect(() => {
+    if (!isManager) return;
+    fetch("/api/offers")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d?.data)) {
+          const count = (d.data as Array<{ offer_status: string }>).filter(
+            (o) => o.offer_status === "offered",
+          ).length;
+          setPendingOffersCount(count);
+        }
+      })
+      .catch(() => {});
+  }, [isManager]);
 
   useEffect(() => {
     if (!openDropdown) return;
@@ -895,56 +911,165 @@ export default function MobileDashboard({
           gap: 10,
         }}
       >
-        <button
-          onClick={onOpenForm}
-          style={{
-            flex: 1,
-            height: 44,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            borderRadius: 13,
-            background: "#1d4ed8",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#fff",
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Log Entry
-        </button>
-        <button
-          onClick={() => router.push("/dashboard/shortlist")}
-          style={{
-            flex: 1,
-            height: 44,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 7,
-            borderRadius: 13,
-            background: "#eef3fa",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "inherit",
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#1d4ed8",
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-            <rect x="9" y="3" width="6" height="4" rx="1" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
-          Review Items
-        </button>
+        {isManager ? (
+          <>
+            {/* Push Items */}
+            <button
+              onClick={() => router.push("/dashboard/shortlist?tab=push")}
+              style={{
+                flex: 1,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                borderRadius: 13,
+                background: "#6d28d9",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#fff",
+                position: "relative",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              Push Items
+              {(stats?.push ?? 0) > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 8,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    background: "#fff",
+                    color: "#6d28d9",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {stats!.push}
+                </span>
+              )}
+            </button>
+            {/* Pending Offers */}
+            <button
+              onClick={() => router.push("/dashboard/offers")}
+              style={{
+                flex: 1,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                borderRadius: 13,
+                background: "#eef3fa",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#1d4ed8",
+                position: "relative",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 12V22H4V12" />
+                <path d="M22 7H2v5h20V7z" />
+                <path d="M12 22V7" />
+                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+              </svg>
+              Pending Offers
+              {(pendingOffersCount ?? 0) > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 8,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
+                    background: "#1d4ed8",
+                    color: "#fff",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                    lineHeight: 1,
+                  }}
+                >
+                  {pendingOffersCount}
+                </span>
+              )}
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={onOpenForm}
+              style={{
+                flex: 1,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                borderRadius: 13,
+                background: "#1d4ed8",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#fff",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Log Entry
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/shortlist")}
+              style={{
+                flex: 1,
+                height: 44,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 7,
+                borderRadius: 13,
+                background: "#eef3fa",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#1d4ed8",
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                <rect x="9" y="3" width="6" height="4" rx="1" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+              Review Items
+            </button>
+          </>
+        )}
       </div>
 
       {/* Health Card */}

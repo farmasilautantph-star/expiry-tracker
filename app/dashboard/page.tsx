@@ -131,6 +131,7 @@ export default function DashboardPage() {
   const [weeklyTrend, setWeeklyTrend] = useState<Trend | null>(null);
   const [weeklyLoading, setWeeklyLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [pendingOffersCount, setPendingOffersCount] = useState<number | null>(null);
   const [desktopNotifPermission, setDesktopNotifPermission] = useState<NotificationPermission | null>(null);
   const [desktopBannerDismissed, setDesktopBannerDismissed] = useState(false);
 
@@ -170,6 +171,21 @@ export default function DashboardPage() {
     fetchStats();
     fetchWeekly();
   }, [fetchStats, fetchWeekly]);
+
+  useEffect(() => {
+    if (!isManager) return;
+    fetch("/api/offers")
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d?.data)) {
+          const count = (d.data as Array<{ offer_status: string }>).filter(
+            (o) => o.offer_status === "offered",
+          ).length;
+          setPendingOffersCount(count);
+        }
+      })
+      .catch(() => {});
+  }, [isManager]);
 
   async function handleAddEntry(data: ExpiryFormData) {
     await addEntry(data);
@@ -222,6 +238,56 @@ export default function DashboardPage() {
             className="flex-shrink-0 text-sm font-semibold text-[#1d4ed8] px-3 py-1.5 rounded-lg border border-[#bfdbfe]"
           >
             Later
+          </button>
+        </div>
+      )}
+
+      {/* Manager quick actions — Push Items + Pending Offers */}
+      {isManager && (
+        <div className="flex gap-3">
+          <button
+            onClick={() => window.location.href = "/dashboard/shortlist?tab=push"}
+            className="flex-1 flex items-center gap-3 rounded-2xl px-5 py-4 text-left transition-shadow hover:shadow-md"
+            style={{ background: "linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)", boxShadow: "0 4px 16px rgba(109,40,217,0.25)" }}
+          >
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.18)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white">Push Items</p>
+              <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.75)" }}>Items flagged for outlet push</p>
+            </div>
+            {(stats?.push ?? 0) > 0 && (
+              <span className="flex-shrink-0 min-w-[28px] h-7 rounded-full bg-white text-[#6d28d9] text-xs font-black flex items-center justify-center px-2">
+                {stats!.push}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => window.location.href = "/dashboard/offers"}
+            className="flex-1 flex items-center gap-3 rounded-2xl px-5 py-4 text-left transition-shadow hover:shadow-md"
+            style={{ background: "#fff", border: "1px solid #e2e8f0", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}
+          >
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#eef3fa" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 12V22H4V12" />
+                <path d="M22 7H2v5h20V7z" />
+                <path d="M12 22V7" />
+                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-[#0f172a]">Pending Offers</p>
+              <p className="text-xs text-[#94a3b8] mt-0.5">Offers awaiting outlet response</p>
+            </div>
+            {(pendingOffersCount ?? 0) > 0 && (
+              <span className="flex-shrink-0 min-w-[28px] h-7 rounded-full text-xs font-black flex items-center justify-center px-2" style={{ background: "#1d4ed8", color: "#fff" }}>
+                {pendingOffersCount}
+              </span>
+            )}
           </button>
         </div>
       )}
