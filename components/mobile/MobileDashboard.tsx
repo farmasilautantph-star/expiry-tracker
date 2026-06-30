@@ -7,6 +7,7 @@ import type { HistoryEntry } from "@/hooks/useHistory";
 import { useShortList } from "@/hooks/useShortList";
 import { getMalaysiaTime } from "@/lib/sunday-deadline-client";
 import { useAuth } from "@/hooks/useAuth";
+import { triggerPushSubscription } from "@/lib/usePushNotifications";
 
 interface MobileUser {
   username: string;
@@ -186,6 +187,11 @@ export default function MobileDashboard({
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const { entries: shortlistEntries, isLoading: shortlistLoading } = useShortList();
 
+  // Push notification banner state
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null);
+  const [isPWA, setIsPWA] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   useEffect(() => {
     setActivityLoading(true);
     fetch("/api/activity/recent?limit=10")
@@ -232,6 +238,18 @@ export default function MobileDashboard({
       document.removeEventListener("click", handler);
     };
   }, [openDropdown]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("Notification" in window) setNotifPermission(Notification.permission);
+    setIsPWA(window.matchMedia("(display-mode: standalone)").matches);
+    setBannerDismissed(sessionStorage.getItem("push_banner_dismissed") === "1");
+  }, []);
+
+  async function handleEnableNotifications() {
+    const granted = await triggerPushSubscription();
+    if (granted) setNotifPermission("granted");
+  }
 
   async function markAllRead() {
     setNotifications((list) => list.map((n) => ({ ...n, is_read: true })));
@@ -642,6 +660,59 @@ export default function MobileDashboard({
               </div>
             </div>
             {/* Menu items */}
+            {notifPermission !== "granted" ? (
+              <button
+                onClick={async () => {
+                  setOpenDropdown(null);
+                  const granted = await triggerPushSubscription();
+                  if (granted) setNotifPermission("granted");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: "none",
+                  border: "none",
+                  borderBottom: "1px solid #f0f4f8",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#1d4ed8",
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                <span style={{ flex: 1 }}>Enable Notifications</span>
+              </button>
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  borderBottom: "1px solid #f0f4f8",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#94a3b8",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+                Notifications On ✓
+              </div>
+            )}
             <button
               onClick={() => { setOpenDropdown(null); router.push("/dashboard/shortlist"); }}
               style={{
@@ -703,6 +774,71 @@ export default function MobileDashboard({
           </div>
         )}
       </div>
+
+      {/* Enable Notifications banner — PWA only, not yet asked */}
+      {!bannerDismissed && notifPermission === "default" && isPWA && (
+        <div
+          style={{
+            margin: "12px 16px 0",
+            background: "#eef3fa",
+            border: "1px solid #bfdbfe",
+            borderRadius: 16,
+            padding: "12px 14px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            <span style={{ fontSize: 13.5, fontWeight: 800, color: "#1d4ed8" }}>Enable Notifications</span>
+          </div>
+          <p style={{ fontSize: 12.5, color: "#3b82f6", fontWeight: 500, marginBottom: 10 }}>
+            Get alerted when items need action
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={handleEnableNotifications}
+              style={{
+                height: 36,
+                padding: "0 16px",
+                borderRadius: 10,
+                background: "#1d4ed8",
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 700,
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Enable
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.setItem("push_banner_dismissed", "1");
+                setBannerDismissed(true);
+              }}
+              style={{
+                height: 36,
+                padding: "0 14px",
+                borderRadius: 10,
+                background: "transparent",
+                color: "#1d4ed8",
+                fontSize: 13,
+                fontWeight: 600,
+                border: "1px solid #bfdbfe",
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              Later
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div

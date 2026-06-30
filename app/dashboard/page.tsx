@@ -21,6 +21,7 @@ import {
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import MobileDashboard from "@/components/mobile/MobileDashboard";
+import { triggerPushSubscription } from "@/lib/usePushNotifications";
 
 interface Stats {
   expired: number;
@@ -127,6 +128,14 @@ export default function DashboardPage() {
   const [weeklyTrend, setWeeklyTrend] = useState<Trend | null>(null);
   const [weeklyLoading, setWeeklyLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
+  const [desktopNotifPermission, setDesktopNotifPermission] = useState<NotificationPermission | null>(null);
+  const [desktopBannerDismissed, setDesktopBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("Notification" in window) setDesktopNotifPermission(Notification.permission);
+    setDesktopBannerDismissed(sessionStorage.getItem("push_banner_dismissed") === "1");
+  }, []);
 
   const fetchStats = useCallback(() => {
     fetch("/api/expiry/stats")
@@ -180,6 +189,40 @@ export default function DashboardPage() {
 
       {/* Desktop dashboard — md and up */}
       <div className="hidden md:block space-y-4">
+
+      {/* Enable Notifications banner — desktop Chrome, not yet asked */}
+      {!desktopBannerDismissed && desktopNotifPermission === "default" && (
+        <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ background: "#eef3fa", border: "1px solid #bfdbfe" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-bold text-[#1d4ed8]">Enable Notifications</span>
+            <span className="text-sm text-[#3b82f6] font-medium ml-2">Get alerted when items need action</span>
+          </div>
+          <button
+            onClick={async () => {
+              const granted = await triggerPushSubscription();
+              if (granted) setDesktopNotifPermission("granted");
+            }}
+            className="flex-shrink-0 text-sm font-bold text-white px-4 py-1.5 rounded-lg"
+            style={{ background: "#1d4ed8" }}
+          >
+            Enable
+          </button>
+          <button
+            onClick={() => {
+              sessionStorage.setItem("push_banner_dismissed", "1");
+              setDesktopBannerDismissed(true);
+            }}
+            className="flex-shrink-0 text-sm font-semibold text-[#1d4ed8] px-3 py-1.5 rounded-lg border border-[#bfdbfe]"
+          >
+            Later
+          </button>
+        </div>
+      )}
+
       {/* Quick Log banner — staff only */}
       {!isManager && (
         <div
