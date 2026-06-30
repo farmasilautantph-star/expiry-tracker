@@ -12,6 +12,9 @@ interface DigestRow {
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
+  console.log('Received header:', authHeader)
+  console.log('Expected:', `Bearer ${process.env.CRON_SECRET}`)
+  console.log('CRON_SECRET exists:', !!process.env.CRON_SECRET)
   const expected = `Bearer ${process.env.CRON_SECRET}`;
   if (!process.env.CRON_SECRET || authHeader !== expected) {
     return new NextResponse("Unauthorized", { status: 401 });
