@@ -57,6 +57,15 @@ expiry-tracker/
 5. **History Log** — Full audit trail, manager-only view
 6. **Remote Control** — Manager sends email reminders (stock/return)
 
+## Health Score Formula
+`MIN(100, MAX(0, 100 - (expired×3 + critical×2 + warning×0.5) + (safe×2)))`
+- Expired: −3 pts per item
+- Critical: −2 pts per item
+- Warning: −0.5 pts per item
+- Safe: +2 pts per item
+- Calculated in: `app/api/dashboard/health/route.ts`
+- Displayed in: `components/dashboard/SystemHealthCard.tsx` (desktop), `components/mobile/MobileDashboard.tsx` (score only)
+
 ## Environment Variables
 See `.env.example` for all required variables.
 

@@ -105,8 +105,8 @@ export async function GET(req: NextRequest) {
   }
 
   const totalActive  = rows.length;
-  const rawPenalty   = expiredCount * 3 + criticalCount * 2;
-  const safeBonus    = Math.round(safeCount * 0.5 * 10) / 10;
+  const rawPenalty   = expiredCount * 3 + criticalCount * 2 + warningCount * 0.5;
+  const safeBonus    = Math.round(safeCount * 2 * 10) / 10;
   const netAdjustment = Math.round((safeBonus - rawPenalty) * 10) / 10;
   const score        = Math.min(100, Math.max(0, Math.round(100 - rawPenalty + safeBonus)));
   const { label, color } = scoreLabel(score);
@@ -251,7 +251,7 @@ export async function GET(req: NextRequest) {
         totalActive,
         expired:  { count: expiredCount,  penalty: expiredCount  * 3 },
         critical: { count: criticalCount, penalty: criticalCount * 2 },
-        warning:  { count: warningCount,  penalty: 0               },
+        warning:  { count: warningCount,  penalty: Math.round(warningCount * 0.5 * 10) / 10 },
         safe:     { count: safeCount,     bonus: safeBonus         },
         netAdjustment,
       },

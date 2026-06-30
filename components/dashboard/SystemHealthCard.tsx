@@ -23,7 +23,7 @@ const URGENCY_ROWS: Array<{
 }> = [
   { key: "expired",  label: "Expired",  dot: "#dc2626", type: "penalty",  ptColor: "#dc2626" },
   { key: "critical", label: "Critical", dot: "#ea580c", type: "penalty",  ptColor: "#ea580c" },
-  { key: "warning",  label: "Warning",  dot: "#ca8a04", type: "neutral",  ptColor: null      },
+  { key: "warning",  label: "Warning",  dot: "#ca8a04", type: "penalty",  ptColor: "#ca8a04" },
   { key: "safe",     label: "Safe",     dot: "#16a34a", type: "bonus",    ptColor: "#16a34a" },
 ];
 
@@ -222,7 +222,7 @@ export default function SystemHealthCard({ data, isLoading, isManager = false }:
       {/* Note — all roles */}
       {data && !isLoading && (
         <p className="mt-4 text-[11px] text-[#94a3b8]">
-          Resolve expired &amp; critical items to improve score. Safe stock earns bonus points.
+          Resolve expired, critical &amp; warning items to improve score. Safe stock earns bonus points.
         </p>
       )}
 
