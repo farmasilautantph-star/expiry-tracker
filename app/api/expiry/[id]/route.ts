@@ -176,7 +176,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const { user, error, status } = await authAny(req);
+  const { user, error, status } = await authManager(req);
   if (!user) {
     return NextResponse.json({ success: false, error }, { status });
   }
@@ -211,20 +211,28 @@ export async function DELETE(
 
   const now = new Date().toISOString();
 
-  await pool.query("DELETE FROM expiry_logs WHERE id = $1", [id]);
-
-  await pool.query(
-    "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-    [
-      "DELETE",
-      "expiry",
-      id,
-      user.userId,
-      user.picName,
-      `Deleted by ${user.picName}. Reason: ${reason} | Entry: ${existing.description} (${existing.barcode}, ${existing.expiry_date})`,
-      now,
-    ],
-  );
+  try {
+    await pool.query("DELETE FROM offers WHERE expiry_log_id = $1", [id]);
+    await pool.query("DELETE FROM expiry_logs WHERE id = $1", [id]);
+    await pool.query(
+      "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [
+        "DELETE",
+        "expiry",
+        id,
+        user.userId,
+        user.picName,
+        `Deleted by ${user.picName}. Reason: ${reason} | Entry: ${existing.description} (${existing.barcode}, ${existing.expiry_date})`,
+        now,
+      ],
+    );
+  } catch (err) {
+    console.error("DELETE expiry error:", err);
+    return NextResponse.json(
+      { success: false, error: "Failed to delete entry. Please try again." },
+      { status: 500 },
+    );
+  }
 
   return NextResponse.json({ success: true, data: { id } });
 }
