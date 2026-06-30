@@ -486,19 +486,12 @@ export default function MobileItemReviewModal({
                           onClick={() => { setMoreOpen(false); setShowOfferForm(true); }}
                         />
                       )}
-                      {isManager && (
-                        <MoreItem
-                          icon={<IconTrash />}
-                          label="Delete Entry"
-                          variant="danger"
-                          onClick={() => { setMoreOpen(false); setDeleteState("confirming"); }}
-                        />
-                      )}
-                      {!canOffer && !isManager && item.item_status === "active" && (
-                        <div style={{ padding: "8px 12px", fontSize: 12, color: "#94a3b8" }}>
-                          No additional actions
-                        </div>
-                      )}
+                      <MoreItem
+                        icon={<IconTrash />}
+                        label="Delete Entry"
+                        variant="danger"
+                        onClick={() => { setMoreOpen(false); setDeleteState("confirming"); }}
+                      />
                     </div>
                   )}
                 </div>

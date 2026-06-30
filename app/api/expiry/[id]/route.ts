@@ -176,7 +176,7 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
-  const { user, error, status } = await authManager(req);
+  const { user, error, status } = await authAny(req);
   if (!user) {
     return NextResponse.json({ success: false, error }, { status });
   }
@@ -191,9 +191,9 @@ export async function DELETE(
 
   const body = await req.json().catch(() => null);
   const reason: string = body?.reason?.trim() ?? "";
-  if (!reason) {
+  if (reason.length < 10) {
     return NextResponse.json(
-      { success: false, error: "Reason is required" },
+      { success: false, error: "Reason must be at least 10 characters" },
       { status: 400 },
     );
   }
