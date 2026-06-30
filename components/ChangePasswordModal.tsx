@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { XMarkIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 interface Props {
   isOpen: boolean;
@@ -19,6 +19,9 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: Prop
   const [newError, setNewError] = useState<string | null>(null);
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -37,6 +40,9 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: Prop
     setCurrentError(null);
     setNewError(null);
     setConfirmError(null);
+    setShowCurrent(false);
+    setShowNew(false);
+    setShowConfirm(false);
     onClose();
   }
 
@@ -122,18 +128,27 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: Prop
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Current Password
             </label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => { setCurrentPassword(e.target.value); setCurrentError(null); }}
-              placeholder="Enter current password"
-              autoFocus
-              className="w-full text-sm text-slate-800 rounded-lg px-3 py-2.5 outline-none transition-colors"
-              style={{
-                border: currentError ? "1.5px solid #dc2626" : "1px solid #e2e8f0",
-                background: currentError ? "#fff5f5" : "white",
-              }}
-            />
+            <div className="relative">
+              <input
+                type={showCurrent ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => { setCurrentPassword(e.target.value); setCurrentError(null); }}
+                placeholder="Enter current password"
+                autoFocus
+                className="w-full text-sm text-slate-800 rounded-lg px-3 py-2.5 pr-10 outline-none transition-colors"
+                style={{
+                  border: currentError ? "1.5px solid #dc2626" : "1px solid #e2e8f0",
+                  background: currentError ? "#fff5f5" : "white",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              >
+                {showCurrent ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+              </button>
+            </div>
             {currentError && (
               <p className="text-[11px] text-red-500 mt-1">{currentError}</p>
             )}
@@ -144,17 +159,26 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: Prop
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               New Password
             </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => { setNewPassword(e.target.value); setNewError(null); }}
-              placeholder="Enter new password"
-              className="w-full text-sm text-slate-800 rounded-lg px-3 py-2.5 outline-none transition-colors"
-              style={{
-                border: newError ? "1.5px solid #dc2626" : "1px solid #e2e8f0",
-                background: newError ? "#fff5f5" : "white",
-              }}
-            />
+            <div className="relative">
+              <input
+                type={showNew ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); setNewError(null); }}
+                placeholder="Enter new password"
+                className="w-full text-sm text-slate-800 rounded-lg px-3 py-2.5 pr-10 outline-none transition-colors"
+                style={{
+                  border: newError ? "1.5px solid #dc2626" : "1px solid #e2e8f0",
+                  background: newError ? "#fff5f5" : "white",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              >
+                {showNew ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+              </button>
+            </div>
             {newError ? (
               <p className="text-[11px] text-red-500 mt-1">{newError}</p>
             ) : (
@@ -167,18 +191,27 @@ export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: Prop
             <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
               Confirm New Password
             </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(null); }}
-              placeholder="Repeat new password"
-              className="w-full text-sm text-slate-800 rounded-lg px-3 py-2.5 outline-none transition-colors"
-              style={{
-                border: confirmError ? "1.5px solid #dc2626" : "1px solid #e2e8f0",
-                background: confirmError ? "#fff5f5" : "white",
-              }}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
-            />
+            <div className="relative">
+              <input
+                type={showConfirm ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setConfirmError(null); }}
+                placeholder="Repeat new password"
+                className="w-full text-sm text-slate-800 rounded-lg px-3 py-2.5 pr-10 outline-none transition-colors"
+                style={{
+                  border: confirmError ? "1.5px solid #dc2626" : "1px solid #e2e8f0",
+                  background: confirmError ? "#fff5f5" : "white",
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+              >
+                {showConfirm ? <EyeSlashIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+              </button>
+            </div>
             {confirmError && (
               <p className="text-[11px] text-red-500 mt-1">{confirmError}</p>
             )}
