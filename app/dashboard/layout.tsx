@@ -18,7 +18,11 @@ import {
   BellIcon,
   Bars3Icon,
   UserGroupIcon,
+  LockClosedIcon,
 } from "@heroicons/react/24/outline";
+import ChangePasswordModal from "@/components/ChangePasswordModal";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 interface NotifEntry {
   id: number;
@@ -138,6 +142,7 @@ function SidebarContent({
   role,
   onLinkClick,
   onLogout,
+  onChangePassword,
 }: {
   pathname: string;
   isManager: boolean;
@@ -147,6 +152,7 @@ function SidebarContent({
   role: string;
   onLinkClick: () => void;
   onLogout: () => void;
+  onChangePassword: () => void;
 }) {
   return (
     <div className="flex flex-col h-full bg-white">
@@ -229,6 +235,13 @@ function SidebarContent({
             </div>
           </div>
           <button
+            onClick={onChangePassword}
+            title="Change Password"
+            className="flex-shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+          >
+            <LockClosedIcon className="w-5 h-5" />
+          </button>
+          <button
             onClick={onLogout}
             title="Sign Out"
             className="flex-shrink-0 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
@@ -249,7 +262,9 @@ export default function DashboardLayout({
   const { user, isLoading, isManager, logout } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const { toasts, showSuccess, dismiss } = useToast();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [changePwOpen, setChangePwOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotifEntry[]>([]);
   const [notifLoading, setNotifLoading] = useState(true);
@@ -342,6 +357,7 @@ export default function DashboardLayout({
     role: currentUser.role,
     onLinkClick: () => {},
     onLogout: logout,
+    onChangePassword: () => setChangePwOpen(true),
   };
 
   return (
@@ -523,6 +539,13 @@ export default function DashboardLayout({
       <div className="md:hidden">
         <MobileBottomNav />
       </div>
+
+      <ChangePasswordModal
+        isOpen={changePwOpen}
+        onClose={() => setChangePwOpen(false)}
+        onSuccess={showSuccess}
+      />
+      <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }
