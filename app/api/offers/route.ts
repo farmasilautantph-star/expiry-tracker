@@ -277,27 +277,6 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const otherStaff = (
-        await pool.query(
-          `SELECT id FROM users
-           WHERE role = 'staff' AND id <> $1 AND id <> $2`,
-          [picId ?? 0, user.userId],
-        )
-      ).rows as { id: number }[];
-
-      for (const staff of otherStaff) {
-        tasks.push(
-          sendPushNotification({
-            userId: staff.id,
-            title: "Review Reminder",
-            body: `New outlet offer logged: ${itemLabel} → ${outletLabel}.`,
-            url: "/dashboard",
-            type: "offer_review",
-            tag: `offer-review-${newId}`,
-          }),
-        );
-      }
-
       await Promise.allSettled(tasks);
     } catch (notifyErr) {
       console.warn("[offers] notification dispatch failed:", notifyErr);
