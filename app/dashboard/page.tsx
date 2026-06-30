@@ -28,6 +28,7 @@ interface Stats {
   critical: number;
   warning: number;
   safe: number;
+  push: number;
 }
 
 interface WeeklyData {
@@ -68,12 +69,14 @@ interface StatCardProps {
   color: string;
   trend?: number;
   rangeLabel?: string;
+  onClick?: () => void;
 }
 
-function StatCard({ label, value, description, color, trend, rangeLabel }: StatCardProps) {
+function StatCard({ label, value, description, color, trend, rangeLabel, onClick }: StatCardProps) {
   return (
     <div
-      className="rounded-2xl bg-white px-4 pt-3 pb-4 md:px-5 md:pt-4 md:pb-5 shadow-sm"
+      onClick={onClick}
+      className={`rounded-2xl bg-white px-4 pt-3 pb-4 md:px-5 md:pt-4 md:pb-5 shadow-sm ${onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
       style={{ border: "1px solid #e2e8f0" }}
     >
       {/* Top row: dot + label / badge */}
@@ -273,7 +276,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4">
             <StatCard
               label="EXPIRED"
               value={stats?.expired ?? null}
@@ -301,6 +304,15 @@ export default function DashboardPage() {
               description="More than 8 months left"
               color="#16a34a"
               rangeLabel="8 mo+"
+            />
+            <StatCard
+              label="PUSH ITEMS"
+              value={stats?.push ?? null}
+              description="Manager-flagged for priority sales"
+              color="#7c3aed"
+              onClick={() => {
+                window.location.href = "/dashboard/shortlist?tab=push";
+              }}
             />
           </div>
           {!isManager && (

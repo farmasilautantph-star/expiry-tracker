@@ -20,6 +20,7 @@ interface Stats {
   critical: number;
   warning: number;
   safe: number;
+  push: number;
 }
 
 interface Props {
@@ -99,6 +100,7 @@ const STAT_PILLS: StatPillCfg[] = [
   { key: "critical", label: "Critical", bg: "#fff7ed", numColor: "#c2410c", labelColor: "#ea580c", urgency: "critical" },
   { key: "warning",  label: "Warning",  bg: "#fffbeb", numColor: "#b45309", labelColor: "#ca8a04", urgency: "warning"  },
   { key: "safe",     label: "Safe",     bg: "#f0fdf4", numColor: "#15803d", labelColor: "#16a34a", urgency: "safe"     },
+  { key: "push",     label: "Push",     bg: "#faf5ff", numColor: "#6d28d9", labelColor: "#7c3aed", urgency: "push"     },
 ];
 
 const STATUS_PILL: Record<string, { dot: string; bg: string; color: string }> = {
@@ -274,8 +276,9 @@ export default function MobileDashboard({
         critical: sh.critical.count,
         warning: sh.warning.count,
         safe: sh.safe.count,
+        push: stats?.push ?? 0,
       }
-    : stats ?? { expired: 0, critical: 0, warning: 0, safe: 0 };
+    : stats ?? { expired: 0, critical: 0, warning: 0, safe: 0, push: 0 };
   const urgent = counts.expired + counts.critical + counts.warning;
   const total = urgent + counts.safe;
 
@@ -1064,25 +1067,29 @@ export default function MobileDashboard({
         )}
       </div>
 
-      {/* Stat pills (4 in a row) */}
+      {/* Stat pills (5 in a row) */}
       <div style={{ padding: "0 16px 18px" }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 8,
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: 6,
           }}
         >
           {STAT_PILLS.map((c) => (
             <button
               key={c.key}
               onClick={() =>
-                router.push(`/dashboard/shortlist?urgency=${c.urgency}`)
+                router.push(
+                  c.key === "push"
+                    ? "/dashboard/shortlist?tab=push"
+                    : `/dashboard/shortlist?urgency=${c.urgency}`,
+                )
               }
               style={{
                 background: c.bg,
                 borderRadius: 12,
-                padding: "10px 6px 11px",
+                padding: "10px 4px 11px",
                 border: "none",
                 cursor: "pointer",
                 textAlign: "center",
@@ -1091,7 +1098,7 @@ export default function MobileDashboard({
             >
               <div
                 style={{
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: 900,
                   color: c.numColor,
                   lineHeight: 1,
@@ -1103,7 +1110,7 @@ export default function MobileDashboard({
               </div>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 10.5,
                   fontWeight: 600,
                   color: c.labelColor,
                 }}

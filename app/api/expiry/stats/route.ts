@@ -4,6 +4,7 @@ import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
   expiry_date: string;
+  is_push_item: boolean;
 }
 
 export async function GET(req: NextRequest) {
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
 
   const rows = (
     await pool.query(
-      `SELECT expiry_date FROM expiry_logs ${whereClause}`,
+      `SELECT expiry_date, is_push_item FROM expiry_logs ${whereClause}`,
       params,
     )
   ).rows as unknown as ExpiryRow[];
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
   let critical = 0;
   let warning = 0;
   let safe = 0;
+  let push = 0;
 
   for (const row of rows) {
     const d = new Date(row.expiry_date);
@@ -56,10 +58,12 @@ export async function GET(req: NextRequest) {
     else if (daysLeft < 90)    critical++;
     else if (daysLeft <= 240)  warning++;
     else                       safe++;
+
+    if (row.is_push_item) push++;
   }
 
   return NextResponse.json({
     success: true,
-    data: { expired, critical, warning, safe },
+    data: { expired, critical, warning, safe, push },
   });
 }

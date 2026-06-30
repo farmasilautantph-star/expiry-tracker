@@ -25,6 +25,9 @@ interface ExpiryRow {
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
   remarks: string | null;
+  is_push_item: boolean;
+  push_item_marked_at: string | null;
+  push_item_marked_by: number | null;
 }
 
 interface OfferRow {
@@ -142,6 +145,9 @@ export async function GET(
       review_status: reviewStatus,
       last_reviewed_display: formatReviewedAt(row.last_reviewed_at),
       remarks: row.remarks ?? null,
+      is_push_item: !!row.is_push_item,
+      push_item_marked_at: row.push_item_marked_at,
+      push_item_marked_by: row.push_item_marked_by,
     },
   });
 }

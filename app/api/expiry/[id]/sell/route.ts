@@ -86,7 +86,10 @@ export async function POST(
            completed_notes = $5,
            review_status  = 'resolved',
            last_updated_at = $6,
-           last_reviewed_at = $7
+           last_reviewed_at = $7,
+           is_push_item        = FALSE,
+           push_item_marked_at = NULL,
+           push_item_marked_by = NULL
        WHERE id = $8`,
       [
         capturedOriginalQty,

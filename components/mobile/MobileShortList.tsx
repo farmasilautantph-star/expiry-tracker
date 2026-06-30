@@ -82,6 +82,9 @@ interface Props {
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
+  onSwitchToPush?: () => void;
+  onSwitchToActive?: () => void;
+  activeTab?: "active" | "push" | "sales";
   onToast?: (msg: string) => void;
   deepLinkReviewId?: number | null;
   deepLinkModalOpen?: boolean;
@@ -101,6 +104,9 @@ export default function MobileShortList({
   onPatchEntry,
   onRemoveEntry,
   onSwitchToSales,
+  onSwitchToPush,
+  onSwitchToActive,
+  activeTab = "active",
   onToast,
   deepLinkReviewId,
   deepLinkModalOpen,
@@ -231,6 +237,96 @@ export default function MobileShortList({
             )}
           </button>
         </div>
+      </div>
+
+      {/* ─── Tabs (Item Status / Push Item) ─── */}
+      <div
+        style={{
+          background: "#fff",
+          padding: "0 16px",
+          display: "flex",
+          gap: 4,
+          borderBottom: "1px solid #f0f4f8",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => onSwitchToActive?.()}
+          style={{
+            flex: 1,
+            padding: "12px 8px",
+            fontSize: 13,
+            fontWeight: 700,
+            background: "transparent",
+            color: activeTab === "active" ? "#1d4ed8" : "#94a3b8",
+            borderBottom:
+              activeTab === "active"
+                ? "2.5px solid #1d4ed8"
+                : "2.5px solid transparent",
+            marginBottom: -1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          Item Status
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              padding: "1.5px 6px",
+              borderRadius: 999,
+              background: activeTab === "active" ? "#dbeafe" : "#f1f5f9",
+              color: activeTab === "active" ? "#1d4ed8" : "#64748b",
+            }}
+          >
+            {counts.total}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => onSwitchToPush?.()}
+          style={{
+            flex: 1,
+            padding: "12px 8px",
+            fontSize: 13,
+            fontWeight: 700,
+            background: "transparent",
+            color: activeTab === "push" ? "#7c3aed" : "#94a3b8",
+            borderBottom:
+              activeTab === "push"
+                ? "2.5px solid #7c3aed"
+                : "2.5px solid transparent",
+            marginBottom: -1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+          }}
+        >
+          Push Item
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              padding: "1.5px 6px",
+              borderRadius: 999,
+              background:
+                counts.push > 0
+                  ? activeTab === "push"
+                    ? "#ede9fe"
+                    : "#ede9fe"
+                  : "#f1f5f9",
+              color:
+                counts.push > 0
+                  ? "#7c3aed"
+                  : "#64748b",
+            }}
+          >
+            {counts.push}
+          </span>
+        </button>
       </div>
 
       {/* ─── Search ─── */}

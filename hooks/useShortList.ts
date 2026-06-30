@@ -38,6 +38,9 @@ export interface ShortListEntry {
   offered_qty: number;
   has_active_offer: boolean;
   remarks: string | null;
+  is_push_item: boolean;
+  push_item_marked_at: string | null;
+  push_item_marked_by: number | null;
 }
 
 export interface ShortListFilters {
@@ -53,6 +56,7 @@ export interface ShortListCounts {
   critical: number;
   warning: number;
   safe: number;
+  push: number;
   total: number;
 }
 
@@ -69,6 +73,7 @@ const EMPTY_COUNTS: ShortListCounts = {
   critical: 0,
   warning: 0,
   safe: 0,
+  push: 0,
   total: 0,
 };
 
@@ -123,16 +128,20 @@ export function useShortList(): UseShortListReturn {
       }
 
       setEntries(data);
-      const c = {
+      const c: ShortListCounts = {
         expired: 0,
         critical: 0,
         warning: 0,
         safe: 0,
+        push: 0,
         total: data.length,
       };
       for (const e of data) {
-        const u = e.urgency as keyof typeof c;
-        if (u in c) (c[u] as number)++;
+        const u = e.urgency;
+        if (u === "expired" || u === "critical" || u === "warning" || u === "safe") {
+          c[u]++;
+        }
+        if (e.is_push_item) c.push++;
       }
       setCounts(c);
     } catch (err) {

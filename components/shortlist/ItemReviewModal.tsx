@@ -51,6 +51,9 @@ export interface FullItemDetail {
   review_status: string;
   last_reviewed_display: string | null;
   remarks: string | null;
+  is_push_item: boolean;
+  push_item_marked_at: string | null;
+  push_item_marked_by: number | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -851,6 +854,93 @@ function RemarksSection({
   );
 }
 
+// ─── Section: Push Item (manager only) ───────────────────────────────────────
+
+function PushItemSection({
+  item,
+  onItemUpdate,
+  onPatchEntry,
+  onToast,
+}: {
+  item: FullItemDetail;
+  onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
+  onPatchEntry?: (id: number, patch: Partial<FullItemDetail>) => void;
+  onToast?: (msg: string) => void;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+
+  async function toggle() {
+    const nextMark = !item.is_push_item;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}/push-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mark: nextMark }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      const data = json.data ?? {};
+      onItemUpdate((prev) => ({
+        ...prev,
+        is_push_item: nextMark,
+        push_item_marked_at: data.push_item_marked_at ?? null,
+        push_item_marked_by: data.push_item_marked_by ?? null,
+      }));
+      onPatchEntry?.(item.id, {
+        is_push_item: nextMark,
+        push_item_marked_at: data.push_item_marked_at ?? null,
+        push_item_marked_by: data.push_item_marked_by ?? null,
+      });
+      onToast?.(nextMark ? "Marked as Push Item" : "Unmarked as Push Item");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      <SectionHeader>Push Item</SectionHeader>
+      <div
+        className="rounded-xl p-3 flex items-center justify-between gap-3"
+        style={{
+          background: item.is_push_item ? "#faf5ff" : "#f8fafc",
+          border: item.is_push_item ? "1px solid #ddd6fe" : "1px solid #e2e8f0",
+        }}
+      >
+        <div className="min-w-0">
+          <p
+            className="text-xs font-semibold"
+            style={{ color: item.is_push_item ? "#7c3aed" : "#475569" }}
+          >
+            {item.is_push_item ? "Flagged for sales priority" : "Not flagged"}
+          </p>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            {item.is_push_item
+              ? "PIC has been notified to prioritize sales."
+              : "Mark this item to alert the PIC and surface it in the Push Item tab."}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={toggle}
+          disabled={submitting}
+          className="h-9 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 flex-shrink-0"
+          style={
+            item.is_push_item
+              ? { background: "#ede9fe", color: "#7c3aed", border: "1px solid #ddd6fe" }
+              : { background: "#7c3aed", color: "#ffffff" }
+          }
+        >
+          {submitting ? "Saving…" : item.is_push_item ? "Unmark" : "Mark as Push Item"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 interface Props {
@@ -861,7 +951,15 @@ interface Props {
   onReviewed?: (ts: { last_reviewed_at: string; last_reviewed_display: string }) => void;
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
-  onPatchEntry?: (id: number, patch: { remarks: string | null }) => void;
+  onPatchEntry?: (
+    id: number,
+    patch: {
+      remarks?: string | null;
+      is_push_item?: boolean;
+      push_item_marked_at?: string | null;
+      push_item_marked_by?: number | null;
+    },
+  ) => void;
   onDeleted?: (id: number) => void;
 }
 
@@ -1069,6 +1167,18 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                 onItemUpdate={handleItemUpdate}
                 onPatchEntry={onPatchEntry}
               />
+
+              {isManager && item.item_status === "active" && item.qty > 0 && (
+                <>
+                  <Divider />
+                  <PushItemSection
+                    item={item}
+                    onItemUpdate={handleItemUpdate}
+                    onPatchEntry={onPatchEntry}
+                    onToast={onToast}
+                  />
+                </>
+              )}
 
               {showSales && (
                 <>

@@ -26,6 +26,9 @@ interface ExpiryRow {
   item_status: "active" | "sold" | "completed";
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
+  is_push_item: boolean;
+  push_item_marked_at: string | null;
+  push_item_marked_by: number | null;
 }
 
 interface RawRow extends ExpiryRow {
@@ -178,9 +181,13 @@ export async function GET(req: NextRequest) {
     critical: 0,
     warning: 0,
     safe: 0,
+    push: 0,
     total: entries.length,
   };
-  for (const e of entries) counts[e.urgency]++;
+  for (const e of entries) {
+    counts[e.urgency]++;
+    if (e.is_push_item) counts.push++;
+  }
 
   return NextResponse.json({ success: true, data: entries, counts });
 }

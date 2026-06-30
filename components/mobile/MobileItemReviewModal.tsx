@@ -43,7 +43,15 @@ interface Props {
   onReviewed?: (ts: { last_reviewed_at: string; last_reviewed_display: string }) => void;
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
-  onPatchEntry?: (id: number, patch: { remarks: string | null }) => void;
+  onPatchEntry?: (
+    id: number,
+    patch: {
+      remarks?: string | null;
+      is_push_item?: boolean;
+      push_item_marked_at?: string | null;
+      push_item_marked_by?: number | null;
+    },
+  ) => void;
   onDeleted?: (id: number) => void;
 }
 
@@ -274,6 +282,40 @@ export default function MobileItemReviewModal({
       alert(err instanceof Error ? err.message : "Failed to save remarks");
     } finally {
       setRemarksSaving(false);
+    }
+  }
+
+  // ── Push Item toggle (manager only) ──
+  const [pushSubmitting, setPushSubmitting] = useState(false);
+  async function togglePushItem() {
+    if (!item) return;
+    const nextMark = !item.is_push_item;
+    setPushSubmitting(true);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}/push-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mark: nextMark }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      const data = json.data ?? {};
+      updateItem((prev) => ({
+        ...prev,
+        is_push_item: nextMark,
+        push_item_marked_at: data.push_item_marked_at ?? null,
+        push_item_marked_by: data.push_item_marked_by ?? null,
+      }));
+      onPatchEntry?.(item.id, {
+        is_push_item: nextMark,
+        push_item_marked_at: data.push_item_marked_at ?? null,
+        push_item_marked_by: data.push_item_marked_by ?? null,
+      });
+      onToast?.(nextMark ? "Marked as Push Item" : "Unmarked as Push Item");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed");
+    } finally {
+      setPushSubmitting(false);
     }
   }
 
@@ -612,6 +654,38 @@ export default function MobileItemReviewModal({
                       />
                     )}
                   </div>
+                  {isManager && canSell && (
+                    <button
+                      type="button"
+                      onClick={togglePushItem}
+                      disabled={pushSubmitting}
+                      style={{
+                        width: "100%",
+                        height: 44,
+                        borderRadius: 12,
+                        fontSize: 13.5,
+                        fontWeight: 700,
+                        marginBottom: 18,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        opacity: pushSubmitting ? 0.6 : 1,
+                        background: item.is_push_item ? "#ede9fe" : "#7c3aed",
+                        color: item.is_push_item ? "#7c3aed" : "#ffffff",
+                        border: item.is_push_item ? "1.5px solid #ddd6fe" : "1.5px solid #7c3aed",
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2v6m0 0l-3-3m3 3l3-3M4 14l8 8 8-8" />
+                      </svg>
+                      {pushSubmitting
+                        ? "Saving…"
+                        : item.is_push_item
+                        ? "Unmark Push Item"
+                        : "Mark as Push Item"}
+                    </button>
+                  )}
                 </>
               )}
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import { sendPushNotification } from "@/lib/sendPushNotification";
 
 interface ExpiryRow {
   id: number;
@@ -8,10 +9,12 @@ interface ExpiryRow {
   pic_name: string;
   description: string;
   barcode: string;
-  return_status: string | null;
+  expiry_date: string;
+  quantity: number;
+  is_push_item: boolean;
 }
 
-export async function PUT(
+export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } },
 ) {
@@ -32,6 +35,12 @@ export async function PUT(
     );
   }
 
+  if (user.role !== "manager")
+    return NextResponse.json(
+      { success: false, error: "Forbidden" },
+      { status: 403 },
+    );
+
   const id = parseInt(params.id, 10);
   if (isNaN(id))
     return NextResponse.json(
@@ -39,9 +48,12 @@ export async function PUT(
       { status: 400 },
     );
 
+  const body = (await req.json().catch(() => null)) ?? {};
+  const mark = Boolean(body.mark);
+
   const existing = (
     await pool.query(
-      "SELECT id, pic_id, pic_name, description, barcode, return_status FROM expiry_logs WHERE id = $1",
+      "SELECT id, pic_id, pic_name, description, barcode, expiry_date, quantity, is_push_item FROM expiry_logs WHERE id = $1",
       [id],
     )
   ).rows[0] as unknown as ExpiryRow | undefined;
@@ -52,42 +64,17 @@ export async function PUT(
       { status: 404 },
     );
 
-  if (user.role !== "manager" && existing.pic_id !== user.userId)
-    return NextResponse.json(
-      { success: false, error: "Forbidden" },
-      { status: 403 },
-    );
-
-  const body = (await req.json().catch(() => null)) ?? {};
-  const { return_status, return_notes } = body as {
-    return_status: string;
-    return_notes?: string;
-  };
-
-  if (!["returned", "not_approved"].includes(return_status))
-    return NextResponse.json(
-      { success: false, error: "Invalid status. Use returned or not_approved" },
-      { status: 400 },
-    );
-
   const now = new Date().toISOString();
 
-  if (return_status === "returned") {
+  if (mark) {
     await pool.query(
       `UPDATE expiry_logs
-       SET return_status = 'returned',
-           return_notes = $1,
-           item_status = 'completed',
-           completed_via = 'returned',
-           completed_at = $2,
-           review_status = 'resolved',
-           last_reviewed_at = $3,
-           last_updated_at = $4,
-           is_push_item         = FALSE,
-           push_item_marked_at  = NULL,
-           push_item_marked_by  = NULL
-       WHERE id = $5`,
-      [return_notes ?? null, now, now, now, id],
+       SET is_push_item         = TRUE,
+           push_item_marked_at  = $1,
+           push_item_marked_by  = $2,
+           last_updated_at      = $3
+       WHERE id = $4`,
+      [now, user.userId, now, id],
     );
 
     await pool.query(
@@ -100,26 +87,35 @@ export async function PUT(
         id,
         user.userId,
         user.picName,
-        `Return completed for ${existing.description} (Barcode: ${existing.barcode}) by ${existing.pic_name}`,
+        `Marked as Push Item by ${user.picName}: ${existing.description} (${existing.barcode})`,
         now,
       ],
     );
+
+    if (existing.pic_id && existing.pic_id !== user.userId) {
+      try {
+        await sendPushNotification({
+          userId: existing.pic_id,
+          title: "Push Item — Action Required",
+          body: `${existing.description} marked as Push Item. Please prioritize sales.`,
+          url: "/dashboard/shortlist?tab=push",
+          type: "push_item",
+          tag: `push-item-${id}`,
+          requireInteraction: true,
+        });
+      } catch (notifyErr) {
+        console.warn("[push-item] notification dispatch failed:", notifyErr);
+      }
+    }
   } else {
     await pool.query(
       `UPDATE expiry_logs
-       SET return_status = 'not_approved',
-           return_notes = $1,
-           item_status = 'completed',
-           completed_via = 'not_approved',
-           completed_at = $2,
-           review_status = 'resolved',
-           last_reviewed_at = $3,
-           last_updated_at = $4,
-           is_push_item         = FALSE,
+       SET is_push_item         = FALSE,
            push_item_marked_at  = NULL,
-           push_item_marked_by  = NULL
-       WHERE id = $5`,
-      [return_notes ?? null, now, now, now, id],
+           push_item_marked_by  = NULL,
+           last_updated_at      = $1
+       WHERE id = $2`,
+      [now, id],
     );
 
     await pool.query(
@@ -132,7 +128,7 @@ export async function PUT(
         id,
         user.userId,
         user.picName,
-        `Return not approved for ${existing.description} by ${existing.pic_name}${return_notes ? `. Notes: ${return_notes}` : ""}`,
+        `Unmarked as Push Item by ${user.picName}: ${existing.description} (${existing.barcode})`,
         now,
       ],
     );
@@ -141,5 +137,6 @@ export async function PUT(
   const entry = (
     await pool.query("SELECT * FROM expiry_logs WHERE id = $1", [id])
   ).rows[0];
+
   return NextResponse.json({ success: true, data: entry });
 }

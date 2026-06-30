@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
@@ -14,7 +14,7 @@ import type { ExpiryFormData } from "@/hooks/useExpiry";
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
   const { toasts, showSuccess, dismiss } = useToast();
-  const [activeTab, setActiveTab] = useState<"active" | "sales">("active");
+  const [activeTab, setActiveTab] = useState<"active" | "push" | "sales">("active");
   const [salesCount, setSalesCount] = useState<number | null>(null);
   const [deepLinkModalOpen, setDeepLinkModalOpen] = useState(false);
   const [deepLinkReviewId, setDeepLinkReviewId]   = useState<number | null>(null);
@@ -51,11 +51,24 @@ export default function ShortListPage() {
     if (urgency && validUrgency.includes(urgency)) {
       setFilter("status", urgency);
     }
-    if (reviewId || urgency) {
+    const tab = params.get("tab");
+    if (tab === "push" || tab === "sales" || tab === "active") {
+      setActiveTab(tab);
+    }
+    if (reviewId || urgency || tab) {
       window.history.replaceState({}, "", "/dashboard/shortlist");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const pushEntries = useMemo(
+    () =>
+      entries
+        .filter((e) => e.is_push_item)
+        .slice()
+        .sort((a, b) => a.days_left - b.days_left),
+    [entries],
+  );
 
   if (!user) return null;
 
@@ -90,9 +103,9 @@ export default function ShortListPage() {
       <Toast toasts={toasts} onDismiss={dismiss} />
 
       {/* ── Mobile V2 (below md) ── */}
-      {activeTab === "active" && (
+      {(activeTab === "active" || activeTab === "push") && (
         <MobileShortList
-          entries={entries}
+          entries={activeTab === "push" ? pushEntries : entries}
           counts={counts}
           isLoading={isLoading}
           isManager={isManager}
@@ -105,6 +118,9 @@ export default function ShortListPage() {
           onPatchEntry={patchEntry}
           onRemoveEntry={removeEntry}
           onSwitchToSales={() => setActiveTab("sales")}
+          onSwitchToPush={() => setActiveTab("push")}
+          onSwitchToActive={() => setActiveTab("active")}
+          activeTab={activeTab}
           onToast={showSuccess}
           deepLinkReviewId={deepLinkReviewId}
           deepLinkModalOpen={deepLinkModalOpen}
@@ -113,11 +129,11 @@ export default function ShortListPage() {
       )}
 
       {/* ── Desktop / Sales-tab content (md and up, or mobile when on sales) ── */}
-      <div className={activeTab === "active" ? "hidden md:block space-y-5" : "space-y-5"}>
+      <div className={activeTab === "active" || activeTab === "push" ? "hidden md:block space-y-5" : "space-y-5"}>
 
       {/* Deep-link modal (desktop) */}
       <ItemReviewModal
-        isOpen={deepLinkModalOpen && activeTab !== "active"}
+        isOpen={deepLinkModalOpen && activeTab === "sales"}
         onClose={() => setDeepLinkModalOpen(false)}
         entryId={deepLinkReviewId}
         onUpdated={refresh}
@@ -176,6 +192,25 @@ export default function ShortListPage() {
           </span>
         </button>
         <button
+          onClick={() => setActiveTab("push")}
+          className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+            activeTab === "push"
+              ? "border-[#7c3aed] text-[#7c3aed]"
+              : "border-transparent text-[#94a3b8] hover:text-[#475569]"
+          }`}
+        >
+          Push Item
+          <span
+            className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+              counts.push > 0
+                ? "bg-[#ede9fe] text-[#7c3aed]"
+                : "bg-[#f1f5f9] text-[#64748b]"
+            }`}
+          >
+            {counts.push}
+          </span>
+        </button>
+        <button
           onClick={() => setActiveTab("sales")}
           className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
             activeTab === "sales"
@@ -196,7 +231,7 @@ export default function ShortListPage() {
       </div>
 
       {/* Error banner */}
-      {error && activeTab === "active" && (
+      {error && activeTab !== "sales" && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
           {error}
         </div>
@@ -223,6 +258,42 @@ export default function ShortListPage() {
           mobileMoreOpen={mobileMoreOpen}
           onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
         />
+      ) : activeTab === "push" ? (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[#ede9fe] bg-[#faf5ff] px-4 py-3 text-sm">
+            <div className="font-semibold text-[#7c3aed] mb-0.5">
+              Push Items ({pushEntries.length})
+            </div>
+            <div className="text-xs text-[#7c3aed]/80">
+              Manager-flagged items requiring sales prioritization. Sorted by days remaining.
+            </div>
+          </div>
+          {pushEntries.length === 0 ? (
+            <div className="rounded-xl border border-[#e2e8f0] bg-white px-6 py-12 text-center text-sm text-[#64748b]">
+              No items have been marked as Push Item.
+            </div>
+          ) : (
+            <ShortListModule
+              entries={pushEntries}
+              counts={counts}
+              isLoading={isLoading}
+              isManager={isManager}
+              picName={user.picName}
+              filters={filters}
+              setFilter={setFilter}
+              clearFilters={clearFilters}
+              activeFilterCount={activeFilterCount}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onRefresh={refresh}
+              onPatchEntry={patchEntry}
+              onRemoveEntry={removeEntry}
+              onSwitchToSales={() => setActiveTab("sales")}
+              mobileMoreOpen={mobileMoreOpen}
+              onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
+            />
+          )}
+        </div>
       ) : (
         <SalesRecord
           isManager={isManager}
