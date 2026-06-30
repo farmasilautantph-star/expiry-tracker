@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import { sendPushNotification } from "@/lib/sendPushNotification";
 
 async function authManager(req: NextRequest) {
   const token = getTokenFromRequest(req);
@@ -31,7 +32,13 @@ export async function PUT(
 
   const existing = (
     await pool.query("SELECT * FROM offers WHERE id = $1", [id])
-  ).rows[0];
+  ).rows[0] as
+    | {
+        offer_status: string;
+        description: string;
+        outlet_name: string;
+      }
+    | undefined;
   if (!existing)
     return NextResponse.json(
       { success: false, error: "Not found" },
@@ -100,6 +107,38 @@ export async function PUT(
   const updated = (
     await pool.query("SELECT * FROM offers WHERE id = $1", [id])
   ).rows[0];
+
+  // Notify other managers when status actually transitioned
+  if (
+    offer_status !== undefined &&
+    validStatus.includes(offer_status) &&
+    offer_status !== existing.offer_status
+  ) {
+    try {
+      const managers = (
+        await pool.query(
+          `SELECT id FROM users WHERE role = 'manager' AND id <> $1`,
+          [user.userId],
+        )
+      ).rows as { id: number }[];
+
+      await Promise.all(
+        managers.map((m) =>
+          sendPushNotification({
+            userId: m.id,
+            title: "Outlet Offer Update",
+            body: `${existing.description} → ${existing.outlet_name}: ${offer_status} by ${user.picName}`,
+            url: "/dashboard/offers",
+            type: "offer_status",
+            tag: `offer-status-${id}`,
+          }),
+        ),
+      );
+    } catch (err) {
+      console.warn("[push] manager status notify failed:", err);
+    }
+  }
+
   return NextResponse.json({ success: true, data: updated });
 }
 

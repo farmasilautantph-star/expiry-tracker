@@ -1,6 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import { sendPushNotification } from "@/lib/sendPushNotification";
+
+async function notifyManagersOfStatusChange(args: {
+  excludeUserId: number;
+  offerId: number;
+  itemName: string;
+  outletName: string;
+  newStatus: string;
+  actorName: string;
+}): Promise<void> {
+  try {
+    const managers = (
+      await pool.query(
+        `SELECT id FROM users WHERE role = 'manager' AND id <> $1`,
+        [args.excludeUserId],
+      )
+    ).rows as { id: number }[];
+
+    await Promise.all(
+      managers.map((m) =>
+        sendPushNotification({
+          userId: m.id,
+          title: "Outlet Offer Update",
+          body: `${args.itemName} → ${args.outletName}: ${args.newStatus} by ${args.actorName}`,
+          url: "/dashboard/offers",
+          type: "offer_status",
+          tag: `offer-status-${args.offerId}`,
+        }),
+      ),
+    );
+  } catch (err) {
+    console.warn("[push] notifyManagersOfStatusChange failed:", err);
+  }
+}
 
 interface OfferRow {
   id: number;
@@ -186,7 +220,17 @@ export async function PUT(
       ["UPDATE", "offers", id, user.userId, user.picName, historyDesc, now],
     );
 
-    // Step 7: return
+    // Step 7: notify managers (best-effort)
+    await notifyManagersOfStatusChange({
+      excludeUserId: user.userId,
+      offerId: id,
+      itemName: offer.description,
+      outletName: offer.outlet_name,
+      newStatus: "accepted",
+      actorName: user.picName,
+    });
+
+    // Step 8: return
     const updated = (
       await pool.query(`SELECT * FROM offers WHERE id = $1`, [id])
     ).rows[0];
@@ -223,7 +267,17 @@ export async function PUT(
     ["UPDATE", "offers", id, user.userId, user.picName, rejectDesc, now],
   );
 
-  // Step 4: return
+  // Step 4: notify managers (best-effort)
+  await notifyManagersOfStatusChange({
+    excludeUserId: user.userId,
+    offerId: id,
+    itemName: offer.description,
+    outletName: offer.outlet_name,
+    newStatus: "rejected",
+    actorName: user.picName,
+  });
+
+  // Step 5: return
   const updated = (
     await pool.query(`SELECT * FROM offers WHERE id = $1`, [id])
   ).rows[0];
