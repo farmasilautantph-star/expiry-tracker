@@ -110,6 +110,7 @@ export async function GET(req: NextRequest) {
   const pic = searchParams.get("pic")?.trim() ?? "";
   const statusFilter = searchParams.get("status")?.trim() ?? "";
   const search = searchParams.get("search")?.trim() ?? "";
+  const pushOnly = searchParams.get("push_only") === "true";
 
   let p = 1;
   const conditions: string[] = [];
@@ -118,12 +119,17 @@ export async function GET(req: NextRequest) {
   // Always filter to active items only
   conditions.push("el.item_status = 'active'");
 
-  if (user.role !== "manager") {
-    conditions.push(`el.pic_id = $${p++}`);
-    bindings.push(user.userId);
-  } else if (pic) {
-    conditions.push(`el.pic_name = $${p++}`);
-    bindings.push(pic);
+  if (pushOnly) {
+    // Push Item tab is outlet-wide — no user scoping, filter by flag only
+    conditions.push("el.is_push_item = TRUE");
+  } else {
+    if (user.role !== "manager") {
+      conditions.push(`el.pic_id = $${p++}`);
+      bindings.push(user.userId);
+    } else if (pic) {
+      conditions.push(`el.pic_name = $${p++}`);
+      bindings.push(pic);
+    }
   }
 
   if (category) {

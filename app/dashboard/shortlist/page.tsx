@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
@@ -21,6 +21,7 @@ export default function ShortListPage() {
   const [mobileMoreOpen, setMobileMoreOpen]       = useState(false);
   const {
     entries,
+    pushEntries,
     counts,
     isLoading,
     error,
@@ -60,15 +61,6 @@ export default function ShortListPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const pushEntries = useMemo(
-    () =>
-      entries
-        .filter((e) => e.is_push_item)
-        .slice()
-        .sort((a, b) => a.days_left - b.days_left),
-    [entries],
-  );
 
   if (!user) return null;
 

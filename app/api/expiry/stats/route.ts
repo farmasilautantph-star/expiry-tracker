@@ -4,7 +4,6 @@ import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 interface ExpiryRow {
   expiry_date: string;
-  is_push_item: boolean;
 }
 
 export async function GET(req: NextRequest) {
@@ -33,12 +32,19 @@ export async function GET(req: NextRequest) {
   const params: (string | number)[] =
     user.role !== "manager" ? [user.userId] : [];
 
-  const rows = (
-    await pool.query(
-      `SELECT expiry_date, is_push_item FROM expiry_logs ${whereClause}`,
+  const [urgencyResult, pushResult] = await Promise.all([
+    pool.query(
+      `SELECT expiry_date FROM expiry_logs ${whereClause}`,
       params,
-    )
-  ).rows as unknown as ExpiryRow[];
+    ),
+    // Push count is always outlet-wide regardless of role
+    pool.query(
+      `SELECT COUNT(*)::int AS cnt FROM expiry_logs WHERE item_status = 'active' AND is_push_item = TRUE`,
+    ),
+  ]);
+
+  const rows = urgencyResult.rows as unknown as Pick<ExpiryRow, "expiry_date">[];
+  const push: number = (pushResult.rows[0] as { cnt: number }).cnt;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -47,7 +53,6 @@ export async function GET(req: NextRequest) {
   let critical = 0;
   let warning = 0;
   let safe = 0;
-  let push = 0;
 
   for (const row of rows) {
     const d = new Date(row.expiry_date);
@@ -58,8 +63,6 @@ export async function GET(req: NextRequest) {
     else if (daysLeft < 90)    critical++;
     else if (daysLeft <= 240)  warning++;
     else                       safe++;
-
-    if (row.is_push_item) push++;
   }
 
   return NextResponse.json({

@@ -79,6 +79,7 @@ const EMPTY_COUNTS: ShortListCounts = {
 
 interface UseShortListReturn {
   entries: ShortListEntry[];
+  pushEntries: ShortListEntry[];
   counts: ShortListCounts;
   isLoading: boolean;
   error: string | null;
@@ -96,10 +97,25 @@ interface UseShortListReturn {
 
 export function useShortList(): UseShortListReturn {
   const [entries, setEntries] = useState<ShortListEntry[]>([]);
+  const [pushEntries, setPushEntries] = useState<ShortListEntry[]>([]);
   const [counts, setCounts] = useState<ShortListCounts>(EMPTY_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<ShortListFilters>(EMPTY_FILTERS);
+
+  const fetchPushItems = useCallback(async () => {
+    try {
+      const res = await fetch("/api/shortlist?push_only=true");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success) return;
+      const data: ShortListEntry[] = json.data;
+      setPushEntries(data.slice().sort((a, b) => a.days_left - b.days_left));
+      setCounts((prev) => ({ ...prev, push: data.length }));
+    } catch {
+      /* silent — push items are supplemental */
+    }
+  }, []);
 
   const fetchData = useCallback(async (f: ShortListFilters) => {
     setIsLoading(true);
@@ -133,7 +149,7 @@ export function useShortList(): UseShortListReturn {
         critical: 0,
         warning: 0,
         safe: 0,
-        push: 0,
+        push: 0, // will be overwritten by fetchPushItems
         total: data.length,
       };
       for (const e of data) {
@@ -141,9 +157,8 @@ export function useShortList(): UseShortListReturn {
         if (u === "expired" || u === "critical" || u === "warning" || u === "safe") {
           c[u]++;
         }
-        if (e.is_push_item) c.push++;
       }
-      setCounts(c);
+      setCounts((prev) => ({ ...c, push: prev.push }));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -154,6 +169,10 @@ export function useShortList(): UseShortListReturn {
   useEffect(() => {
     fetchData(filters);
   }, [fetchData, filters]);
+
+  useEffect(() => {
+    fetchPushItems();
+  }, [fetchPushItems]);
 
   function setFilter<K extends keyof ShortListFilters>(
     key: K,
@@ -176,8 +195,13 @@ export function useShortList(): UseShortListReturn {
     setEntries(prev => prev.filter(e => e.id !== id));
   }, []);
 
+  const patchPushEntry = useCallback((id: number, patch: Partial<ShortListEntry>) => {
+    setPushEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  }, []);
+
   return {
     entries,
+    pushEntries,
     counts,
     isLoading,
     error,
@@ -185,8 +209,17 @@ export function useShortList(): UseShortListReturn {
     setFilter,
     clearFilters,
     activeFilterCount,
-    refresh: () => fetchData(filters),
-    patchEntry,
-    removeEntry,
+    refresh: async () => {
+      await Promise.all([fetchData(filters), fetchPushItems()]);
+    },
+    patchEntry: (id, patch) => {
+      patchEntry(id, patch);
+      patchPushEntry(id, patch);
+    },
+    removeEntry: (id) => {
+      removeEntry(id);
+      setPushEntries(prev => prev.filter(e => e.id !== id));
+      setCounts(prev => ({ ...prev, push: Math.max(0, prev.push - 1) }));
+    },
   };
 }
