@@ -9,6 +9,7 @@ import type {
   ActiveOffer,
   FullItemDetail,
 } from "@/components/shortlist/ItemReviewModal";
+import type { ShortListEntry } from "@/hooks/useShortList";
 
 const URGENCY: Record<
   string,
@@ -43,15 +44,7 @@ interface Props {
   onReviewed?: (ts: { last_reviewed_at: string; last_reviewed_display: string }) => void;
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
-  onPatchEntry?: (
-    id: number,
-    patch: {
-      remarks?: string | null;
-      is_push_item?: boolean;
-      push_item_marked_at?: string | null;
-      push_item_marked_by?: number | null;
-    },
-  ) => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onDeleted?: (id: number) => void;
 }
 
@@ -66,7 +59,6 @@ export default function MobileItemReviewModal({
   isOpen,
   onClose,
   entryId,
-  onUpdated,
   onReviewed,
   onSwitchToSales,
   onToast,
@@ -195,9 +187,12 @@ export default function MobileItemReviewModal({
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       const newQty = json.fully_sold ? 0 : (json.remaining as number ?? 0);
       updateItem((prev) => ({ ...prev, qty: newQty, item_status: newQty === 0 ? "sold" : prev.item_status }));
+      onPatchEntry?.(item.id, {
+        quantity: newQty,
+        ...(newQty === 0 ? { item_status: "sold" as const } : {}),
+      });
       setPanel({ type: "none" });
       onToast?.("Sale recorded & marked reviewed");
-      onUpdated();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to record sale");
     } finally {
@@ -225,11 +220,15 @@ export default function MobileItemReviewModal({
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       const newQty: number = json.new_qty;
       updateItem((prev) => ({ ...prev, qty: newQty, item_status: newQty === 0 ? "completed" : prev.item_status }));
+      onPatchEntry?.(item.id, {
+        quantity: newQty,
+        ...(newQty === 0 ? { item_status: "completed" as const } : {}),
+      });
       setPanel({ type: "none" });
       setTransferOutlet("");
       setTransferQtyInput("1");
-      onToast?.("Transfer recorded & marked reviewed");
-      onUpdated();
+      onToast?.(`Transferred to ${name} successfully`);
+      onClose();
     } catch (err) {
       setTransferError(err instanceof Error ? err.message : "Failed to record transfer");
     } finally {
@@ -250,11 +249,11 @@ export default function MobileItemReviewModal({
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       updateItem((prev) => ({ ...prev, return_status: status, return_notes: returnNotes || null }));
+      onPatchEntry?.(item.id, { return_status: status });
       setPanel({ type: "none" });
       setReturnNotes("");
       setReturnAction("choose");
       onToast?.(status === "returned" ? "Marked as returned & reviewed" : "Return not approved & marked reviewed");
-      onUpdated();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update return status");
     } finally {
@@ -346,6 +345,7 @@ export default function MobileItemReviewModal({
 
   // ── Offer (create new) ──
   async function handleOfferSubmit(data: OfferFormData): Promise<void> {
+    if (!item) return;
     const res = await fetch("/api/offers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -353,11 +353,25 @@ export default function MobileItemReviewModal({
     });
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+
+    const newOfferId: number | null = json.data?.id ?? null;
+    const currentOffered = item.active_offers
+      .filter((o) => o.offer_status === "offered")
+      .reduce((sum, o) => sum + o.quantity_offered, 0);
+    const newOfferedQty = currentOffered + data.quantity;
+    const newTotalOffered = item.active_offers.reduce((sum, o) => sum + o.quantity_offered, 0) + data.quantity;
+
+    onPatchEntry?.(item.id, {
+      offered_qty: newOfferedQty,
+      total_offered: newTotalOffered,
+      has_active_offer: true,
+      offer_status: "offered",
+      ...(newOfferId !== null ? { offer_id: newOfferId } : {}),
+    });
+
     setShowOfferForm(false);
-    const detailRes = await fetch(`/api/expiry/${item!.id}/full-detail`);
-    const detailJson = await detailRes.json();
-    if (detailJson.success) setItem(detailJson.data as FullItemDetail);
-    onUpdated();
+    onToast?.(`Item offered to ${data.outlet_name} successfully`);
+    onClose();
   }
 
   if (!mounted || !isOpen) return null;
@@ -939,12 +953,28 @@ export default function MobileItemReviewModal({
                         offer={offer}
                         canAct={isManager && offer.offer_status === "offered"}
                         onUpdate={(updated) => {
+                          const wasOffered = item.active_offers.find((o) => o.id === updated.id)?.offer_status === "offered";
+                          const acceptedDelta = updated.offer_status === "accepted" ? updated.quantity_offered : 0;
+                          const offeredDelta = wasOffered ? updated.quantity_offered : 0;
+
                           updateItem((prev) => ({
                             ...prev,
-                            qty: updated.offer_status === "accepted" ? Math.max(0, prev.qty - updated.quantity_offered) : prev.qty,
+                            qty: Math.max(0, prev.qty - acceptedDelta),
                             active_offers: prev.active_offers.map((o) => o.id === updated.id ? updated : o),
                           }));
-                          onUpdated();
+
+                          const remainingOffered = item.active_offers
+                            .filter((o) => o.id !== updated.id && o.offer_status === "offered")
+                            .reduce((sum, o) => sum + o.quantity_offered, 0);
+
+                          onPatchEntry?.(item.id, {
+                            quantity: Math.max(0, item.qty - acceptedDelta),
+                            offered_qty: Math.max(0, remainingOffered),
+                            has_active_offer: remainingOffered > 0,
+                            ...(offeredDelta > 0 && remainingOffered === 0
+                              ? { offer_status: updated.offer_status as ShortListEntry["offer_status"] }
+                              : {}),
+                          });
                         }}
                       />
                     ))}

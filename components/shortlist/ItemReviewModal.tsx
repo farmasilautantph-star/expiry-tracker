@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import OfferForm from "@/components/offers/OfferForm";
 import type { OfferFormData } from "@/hooks/useOffers";
+import type { ShortListEntry } from "@/hooks/useShortList";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -187,10 +188,12 @@ type ReturnAction = "idle" | "confirming_returned" | "confirming_not_approved";
 function ReturnSection({
   item,
   onItemUpdate,
+  onPatchEntry,
   onToast,
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onToast?: (msg: string) => void;
 }) {
   const [action, setAction] = useState<ReturnAction>("idle");
@@ -208,6 +211,7 @@ function ReturnSection({
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       onItemUpdate((prev) => ({ ...prev, return_status: status, return_notes: notes || null }));
+      onPatchEntry?.(item.id, { return_status: status });
       setAction("idle");
       setNotes("");
       onToast?.(status === "returned" ? "Marked as returned & reviewed" : "Return not approved & marked reviewed");
@@ -416,26 +420,44 @@ function OffersSection({
   item,
   isManager,
   onItemUpdate,
-  onUpdated,
+  onPatchEntry,
+  onClose,
+  onToast,
 }: {
   item: FullItemDetail;
   isManager: boolean;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
-  onUpdated: () => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
+  onClose: () => void;
+  onToast?: (msg: string) => void;
 }) {
   const [showOfferForm, setShowOfferForm] = useState(false);
 
   function handleOfferUpdate(updated: ActiveOffer) {
+    const wasOffered = item.active_offers.find((o) => o.id === updated.id)?.offer_status === "offered";
+    const acceptedDelta = updated.offer_status === "accepted" ? updated.quantity_offered : 0;
+    const offeredDelta = wasOffered ? updated.quantity_offered : 0;
+
     onItemUpdate((prev) => ({
       ...prev,
-      qty: updated.offer_status === "accepted"
-        ? Math.max(0, prev.qty - updated.quantity_offered)
-        : prev.qty,
+      qty: Math.max(0, prev.qty - acceptedDelta),
       active_offers: prev.active_offers.map((o) =>
         o.id === updated.id ? updated : o,
       ),
     }));
-    onUpdated();
+
+    const remainingOffered = item.active_offers
+      .filter((o) => o.id !== updated.id && o.offer_status === "offered")
+      .reduce((sum, o) => sum + o.quantity_offered, 0);
+
+    onPatchEntry?.(item.id, {
+      quantity: Math.max(0, item.qty - acceptedDelta),
+      offered_qty: Math.max(0, remainingOffered),
+      has_active_offer: remainingOffered > 0,
+      ...(offeredDelta > 0 && remainingOffered === 0
+        ? { offer_status: updated.offer_status as ShortListEntry["offer_status"] }
+        : {}),
+    });
   }
 
   async function handleOfferSubmit(data: OfferFormData): Promise<void> {
@@ -446,12 +468,25 @@ function OffersSection({
     });
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+
+    const newOfferId: number | null = json.data?.id ?? null;
+    const currentOffered = item.active_offers
+      .filter((o) => o.offer_status === "offered")
+      .reduce((sum, o) => sum + o.quantity_offered, 0);
+    const newOfferedQty = currentOffered + data.quantity;
+    const newTotalOffered = item.active_offers.reduce((sum, o) => sum + o.quantity_offered, 0) + data.quantity;
+
+    onPatchEntry?.(item.id, {
+      offered_qty: newOfferedQty,
+      total_offered: newTotalOffered,
+      has_active_offer: true,
+      offer_status: "offered",
+      ...(newOfferId !== null ? { offer_id: newOfferId } : {}),
+    });
+
     setShowOfferForm(false);
-    // Refresh item to show new offer
-    const detailRes = await fetch(`/api/expiry/${item.id}/full-detail`);
-    const detailJson = await detailRes.json();
-    if (detailJson.success) onItemUpdate(() => detailJson.data as FullItemDetail);
-    onUpdated();
+    onToast?.(`Item offered to ${data.outlet_name} successfully`);
+    onClose();
   }
 
   const totalOffered = item.active_offers
@@ -512,12 +547,14 @@ function OffersSection({
 function SalesSection({
   item,
   onItemUpdate,
-  onUpdated,
+  onPatchEntry,
+  onClose,
   onToast,
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
-  onUpdated: () => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
+  onClose: () => void;
   onToast?: (msg: string) => void;
 }) {
   const [showForm, setShowForm] = useState<"idle" | "sell" | "transfer">("idle");
@@ -552,9 +589,12 @@ function SalesSection({
         qty: newQty,
         item_status: newQty === 0 ? "sold" : prev.item_status,
       }));
+      onPatchEntry?.(item.id, {
+        quantity: newQty,
+        ...(newQty === 0 ? { item_status: "sold" as const } : {}),
+      });
       setShowForm("idle");
       onToast?.("Sale recorded & marked reviewed");
-      onUpdated();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to record sale");
     } finally {
@@ -583,11 +623,15 @@ function SalesSection({
         qty: newQty,
         item_status: newQty === 0 ? "completed" : prev.item_status,
       }));
+      onPatchEntry?.(item.id, {
+        quantity: newQty,
+        ...(newQty === 0 ? { item_status: "completed" as const } : {}),
+      });
       setShowForm("idle");
       setOutletName("");
       setTransferQtyInput("1");
-      onToast?.("Transfer recorded & marked reviewed");
-      onUpdated();
+      onToast?.(`Transferred to ${name} successfully`);
+      onClose();
     } catch (err) {
       setTransferError(err instanceof Error ? err.message : "Failed to record transfer");
     } finally {
@@ -743,7 +787,7 @@ function RemarksSection({
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
-  onPatchEntry?: (id: number, patch: { remarks: string | null }) => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
 }) {
   const [mode, setMode] = useState<RemarksMode>("view");
   const [draft, setDraft] = useState(item.remarks ?? "");
@@ -864,7 +908,7 @@ function PushItemSection({
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
-  onPatchEntry?: (id: number, patch: Partial<FullItemDetail>) => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onToast?: (msg: string) => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
@@ -951,19 +995,11 @@ interface Props {
   onReviewed?: (ts: { last_reviewed_at: string; last_reviewed_display: string }) => void;
   onSwitchToSales?: () => void;
   onToast?: (msg: string) => void;
-  onPatchEntry?: (
-    id: number,
-    patch: {
-      remarks?: string | null;
-      is_push_item?: boolean;
-      push_item_marked_at?: string | null;
-      push_item_marked_by?: number | null;
-    },
-  ) => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onDeleted?: (id: number) => void;
 }
 
-export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, onReviewed, onSwitchToSales, onToast, onPatchEntry, onDeleted }: Props) {
+export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, onSwitchToSales, onToast, onPatchEntry, onDeleted }: Props) {
   const [mounted, setMounted] = useState(false);
   const [item, setItem] = useState<FullItemDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -974,7 +1010,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const { user, isManager } = useAuth();
+  const { isManager } = useAuth();
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -1149,7 +1185,12 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
               {showReturn && (
                 <>
                   <Divider />
-                  <ReturnSection item={item} onItemUpdate={handleItemUpdate} onToast={onToast} />
+                  <ReturnSection
+                    item={item}
+                    onItemUpdate={handleItemUpdate}
+                    onPatchEntry={onPatchEntry}
+                    onToast={onToast}
+                  />
                 </>
               )}
 
@@ -1158,7 +1199,9 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                 item={item}
                 isManager={isManager}
                 onItemUpdate={handleItemUpdate}
-                onUpdated={onUpdated}
+                onPatchEntry={onPatchEntry}
+                onClose={onClose}
+                onToast={onToast}
               />
 
               <Divider />
@@ -1186,7 +1229,8 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onUpdated, o
                   <SalesSection
                     item={item}
                     onItemUpdate={handleItemUpdate}
-                    onUpdated={onUpdated}
+                    onPatchEntry={onPatchEntry}
+                    onClose={onClose}
                     onToast={onToast}
                   />
                 </>
