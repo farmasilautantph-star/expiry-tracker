@@ -40,15 +40,18 @@ export async function triggerPushSubscription(): Promise<boolean> {
     return false;
   }
 
+  // iOS Safari: requestPermission must be called before any await so it
+  // stays within the user-activation window. SW registration awaits
+  // after this point are fine since permission is already resolved.
+  if (Notification.permission === "denied") return false;
+  if (Notification.permission === "default") {
+    const result = await Notification.requestPermission();
+    if (result !== "granted") return false;
+  }
+
   try {
     const reg = await getOrRegisterSW();
     if (!reg) return false;
-
-    if (Notification.permission === "denied") return false;
-    if (Notification.permission === "default") {
-      const result = await Notification.requestPermission();
-      if (result !== "granted") return false;
-    }
 
     const existing = await reg.pushManager.getSubscription();
     const sub =

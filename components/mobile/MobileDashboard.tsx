@@ -784,6 +784,8 @@ export default function MobileDashboard({
             border: "1px solid #bfdbfe",
             borderRadius: 16,
             padding: "12px 14px",
+            position: "relative",
+            zIndex: 10,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -799,9 +801,12 @@ export default function MobileDashboard({
           <div style={{ display: "flex", gap: 8 }}>
             <button
               type="button"
-              onClick={handleEnableNotifications}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEnableNotifications();
+              }}
               style={{
-                height: 36,
+                height: 44,
                 padding: "0 16px",
                 borderRadius: 10,
                 background: "#1d4ed8",
@@ -811,18 +816,21 @@ export default function MobileDashboard({
                 border: "none",
                 cursor: "pointer",
                 fontFamily: "inherit",
-              }}
+                touchAction: "manipulation",
+                WebkitTapHighlightColor: "transparent",
+              } as React.CSSProperties}
             >
               Enable
             </button>
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 sessionStorage.setItem("push_banner_dismissed", "1");
                 setBannerDismissed(true);
               }}
               style={{
-                height: 36,
+                height: 44,
                 padding: "0 14px",
                 borderRadius: 10,
                 background: "transparent",
@@ -832,7 +840,9 @@ export default function MobileDashboard({
                 border: "1px solid #bfdbfe",
                 cursor: "pointer",
                 fontFamily: "inherit",
-              }}
+                touchAction: "manipulation",
+                WebkitTapHighlightColor: "transparent",
+              } as React.CSSProperties}
             >
               Later
             </button>
