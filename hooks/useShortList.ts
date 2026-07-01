@@ -111,7 +111,6 @@ export function useShortList(): UseShortListReturn {
       if (!json.success) return;
       const data: ShortListEntry[] = json.data;
       setPushEntries(data.slice().sort((a, b) => a.days_left - b.days_left));
-      setCounts((prev) => ({ ...prev, push: data.length }));
     } catch {
       /* silent — push items are supplemental */
     }
@@ -149,7 +148,7 @@ export function useShortList(): UseShortListReturn {
         critical: 0,
         warning: 0,
         safe: 0,
-        push: 0, // will be overwritten by fetchPushItems
+        push: 0, // overridden with pushEntries.length at return time
         total: data.length,
       };
       for (const e of data) {
@@ -158,7 +157,7 @@ export function useShortList(): UseShortListReturn {
           c[u]++;
         }
       }
-      setCounts((prev) => ({ ...c, push: prev.push }));
+      setCounts(c);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -188,21 +187,40 @@ export function useShortList(): UseShortListReturn {
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const patchEntry = useCallback((id: number, patch: Partial<ShortListEntry>) => {
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    let mergedEntry: ShortListEntry | undefined;
+    setEntries(prev => prev.map(e => {
+      if (e.id !== id) return e;
+      mergedEntry = { ...e, ...patch };
+      return mergedEntry;
+    }));
+
+    if (!("is_push_item" in patch)) {
+      setPushEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+      return;
+    }
+
+    // is_push_item changed: pushEntries is a separately-fetched list, so a
+    // plain map won't add newly-marked items or drop newly-unmarked ones —
+    // keep it (and therefore counts.push, which is derived from it) in sync.
+    setPushEntries(prev => {
+      const withoutId = prev.filter(e => e.id !== id);
+      if (!patch.is_push_item) return withoutId;
+      const source = prev.find(e => e.id === id) ?? mergedEntry;
+      if (!source) return prev;
+      return [...withoutId, { ...source, ...patch }].sort((a, b) => a.days_left - b.days_left);
+    });
   }, []);
 
   const removeEntry = useCallback((id: number) => {
     setEntries(prev => prev.filter(e => e.id !== id));
   }, []);
 
-  const patchPushEntry = useCallback((id: number, patch: Partial<ShortListEntry>) => {
-    setPushEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
-  }, []);
-
   return {
     entries,
     pushEntries,
-    counts,
+    // push count is derived from pushEntries so it can never drift out of
+    // sync with the list that actually drives the tab badge
+    counts: { ...counts, push: pushEntries.length },
     isLoading,
     error,
     filters,
@@ -212,14 +230,10 @@ export function useShortList(): UseShortListReturn {
     refresh: async () => {
       await Promise.all([fetchData(filters), fetchPushItems()]);
     },
-    patchEntry: (id, patch) => {
-      patchEntry(id, patch);
-      patchPushEntry(id, patch);
-    },
+    patchEntry,
     removeEntry: (id) => {
       removeEntry(id);
       setPushEntries(prev => prev.filter(e => e.id !== id));
-      setCounts(prev => ({ ...prev, push: Math.max(0, prev.push - 1) }));
     },
   };
 }
