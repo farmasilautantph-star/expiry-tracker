@@ -62,7 +62,7 @@ export default function StaffReportPage() {
         <MonthPicker
           value={allTime ? null : monthFilter}
           onChange={handleFilterChange}
-          placeholder="Current Month"
+          placeholder="All Time"
         />
         <button
           onClick={() => setFilter(null, true)}

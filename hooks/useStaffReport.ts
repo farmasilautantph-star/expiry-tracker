@@ -28,7 +28,11 @@ export function useStaffReport() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [monthFilter, setMonthFilter] = useState<MonthValue | null>(null);
-  const [allTime, setAllTime] = useState(false);
+  // Default to All Time: Active/Missed-Sundays are date-unfiltered, so a
+  // current-month default makes every other stat read 0 whenever there's no
+  // activity logged this month — producing a logically impossible report
+  // (e.g. Active > Logged). All Time keeps the whole report consistent.
+  const [allTime, setAllTime] = useState(true);
 
   const fetch_ = useCallback(async () => {
     setIsLoading(true);
