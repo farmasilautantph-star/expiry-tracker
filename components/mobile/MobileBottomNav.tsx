@@ -111,8 +111,8 @@ export default function MobileBottomNav() {
       {TABS.map((tab) => {
         const isActive = pathname === tab.href;
         const isPressed = pressedTab === tab.href;
-        const color = isActive ? "#1d4ed8" : "#94a3b8";
-        const weight = isActive ? 700 : 400;
+        const color = isActive ? "#fff" : "#94a3b8";
+        const weight = isActive ? 700 : 500;
         return (
           <Link
             key={tab.href}
@@ -123,11 +123,9 @@ export default function MobileBottomNav() {
             style={{
               flex: 1,
               display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "center",
-              gap: 3,
-              padding: "5px 4px 0",
+              padding: "0 4px",
               WebkitTapHighlightColor: "transparent",
               textDecoration: "none",
               transition: "transform 0.1s ease, opacity 0.1s ease",
@@ -135,10 +133,22 @@ export default function MobileBottomNav() {
               opacity: isPressed ? 0.7 : 1,
             }}
           >
-            {tab.icon(color)}
-            <span style={{ fontSize: 10, fontWeight: weight, color }}>
-              {tab.label}
-            </span>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 3,
+                padding: isActive ? "6px 16px" : "6px 4px",
+                borderRadius: 14,
+                background: isActive ? "#1d4ed8" : "transparent",
+              }}
+            >
+              {tab.icon(color)}
+              <span style={{ fontSize: 10, fontWeight: weight, color }}>
+                {tab.label}
+              </span>
+            </div>
           </Link>
         );
       })}

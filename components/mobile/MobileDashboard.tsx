@@ -96,14 +96,72 @@ interface StatPillCfg {
   numColor: string;
   labelColor: string;
   urgency: string;
+  icon: (color: string) => React.ReactNode;
+}
+
+function iconProps(color: string) {
+  return {
+    width: 18,
+    height: 18,
+    viewBox: "0 0 24 24",
+    fill: "none" as const,
+    stroke: color,
+    strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
 }
 
 const STAT_PILLS: StatPillCfg[] = [
-  { key: "expired",  label: "Expired",  bg: "#fef2f2", numColor: "#b91c1c", labelColor: "#dc2626", urgency: "expired"  },
-  { key: "critical", label: "Critical", bg: "#fff7ed", numColor: "#c2410c", labelColor: "#ea580c", urgency: "critical" },
-  { key: "warning",  label: "Warning",  bg: "#fffbeb", numColor: "#b45309", labelColor: "#ca8a04", urgency: "warning"  },
-  { key: "safe",     label: "Safe",     bg: "#f0fdf4", numColor: "#15803d", labelColor: "#16a34a", urgency: "safe"     },
-  { key: "push",     label: "Push",     bg: "#faf5ff", numColor: "#6d28d9", labelColor: "#7c3aed", urgency: "push"     },
+  {
+    key: "expired", label: "Expired", bg: "#fef2f2", numColor: "#b91c1c", labelColor: "#dc2626", urgency: "expired",
+    icon: (c) => (
+      <svg {...iconProps(c)}>
+        <path d="M6 2h12" />
+        <path d="M6 22h12" />
+        <path d="M6 2c0 5 5 6.5 6 8 1-1.5 6-3 6-8" />
+        <path d="M6 22c0-5 5-6.5 6-8 1 1.5 6 3 6 8" />
+      </svg>
+    ),
+  },
+  {
+    key: "critical", label: "Critical", bg: "#fff7ed", numColor: "#c2410c", labelColor: "#ea580c", urgency: "critical",
+    icon: (c) => (
+      <svg {...iconProps(c)}>
+        <circle cx="12" cy="12" r="9" />
+        <line x1="12" y1="8" x2="12" y2="12.5" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+    ),
+  },
+  {
+    key: "warning", label: "Warning", bg: "#fffbeb", numColor: "#b45309", labelColor: "#ca8a04", urgency: "warning",
+    icon: (c) => (
+      <svg {...iconProps(c)}>
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+  },
+  {
+    key: "safe", label: "Safe", bg: "#f0fdf4", numColor: "#15803d", labelColor: "#16a34a", urgency: "safe",
+    icon: (c) => (
+      <svg {...iconProps(c)}>
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+    ),
+  },
+  {
+    key: "push", label: "Push", bg: "#faf5ff", numColor: "#6d28d9", labelColor: "#7c3aed", urgency: "push",
+    icon: (c) => (
+      <svg {...iconProps(c)}>
+        <line x1="22" y1="2" x2="11" y2="13" />
+        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+      </svg>
+    ),
+  },
 ];
 
 const STATUS_PILL: Record<string, { dot: string; bg: string; color: string }> = {
@@ -170,6 +228,104 @@ function daysText(daysLeft: number): string {
   if (daysLeft < 0) return `${Math.abs(daysLeft)}d overdue`;
   if (daysLeft === 0) return "Today!";
   return `${daysLeft}d left`;
+}
+
+function ActionCard({
+  gradient,
+  shadow,
+  icon,
+  count,
+  badgeColor,
+  title,
+  subtitle,
+  onClick,
+}: {
+  gradient: string;
+  shadow: string;
+  icon: React.ReactNode;
+  count?: number;
+  badgeColor: string;
+  title: string;
+  subtitle: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        flex: 1,
+        position: "relative",
+        borderRadius: 20,
+        padding: "16px 16px 14px",
+        minHeight: 106,
+        border: "none",
+        cursor: "pointer",
+        textAlign: "left",
+        fontFamily: "inherit",
+        background: gradient,
+        boxShadow: shadow,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 12,
+            background: "rgba(255,255,255,0.22)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {icon}
+        </div>
+        {!!count && count > 0 && (
+          <div
+            style={{
+              minWidth: 24,
+              height: 24,
+              padding: "0 6px",
+              borderRadius: 12,
+              background: "#fff",
+              color: badgeColor,
+              fontSize: 12,
+              fontWeight: 800,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {count}
+          </div>
+        )}
+      </div>
+      <div>
+        <div style={{ color: "#fff", fontWeight: 800, fontSize: 14.5, marginBottom: 3, letterSpacing: -0.2 }}>
+          {title}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+          <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: 500 }}>{subtitle}</span>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="rgba(255,255,255,0.85)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ flexShrink: 0 }}
+          >
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        </div>
+      </div>
+    </button>
+  );
 }
 
 export default function MobileDashboard({
@@ -355,9 +511,29 @@ export default function MobileDashboard({
               {firstName}
             </div>
             <div
-              style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+                fontSize: 12,
+                color: "#94a3b8",
+                fontWeight: 500,
+              }}
             >
-              {formatDateLong()}
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#94a3b8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M3 10h18M8 2v4M16 2v4" />
+              </svg>
+              <span>{formatDateLong()}</span>
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
@@ -905,169 +1081,79 @@ export default function MobileDashboard({
       <div
         style={{
           background: "#fff",
-          padding: "12px 16px",
+          padding: "14px 16px 16px",
           borderBottom: "1px solid #f0f4f8",
           display: "flex",
-          gap: 10,
+          gap: 12,
         }}
       >
         {isManager ? (
           <>
-            {/* Push Items */}
-            <button
+            <ActionCard
+              gradient="linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)"
+              shadow="0 6px 16px rgba(109,40,217,0.28)"
+              badgeColor="#6d28d9"
+              count={stats?.push ?? 0}
+              title="Push Items"
+              subtitle="Items to be pushed"
               onClick={() => router.push("/dashboard/shortlist?tab=push")}
-              style={{
-                flex: 1,
-                height: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                borderRadius: 13,
-                background: "#6d28d9",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#fff",
-                position: "relative",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-              Push Items
-              {(stats?.push ?? 0) > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 8,
-                    minWidth: 18,
-                    height: 18,
-                    borderRadius: 9,
-                    background: "#fff",
-                    color: "#6d28d9",
-                    fontSize: 10,
-                    fontWeight: 800,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                    lineHeight: 1,
-                  }}
-                >
-                  {stats!.push}
-                </span>
-              )}
-            </button>
-            {/* Pending Offers */}
-            <button
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20V6" />
+                  <path d="M6 12l6-6 6 6" />
+                  <path d="M4 20h16" />
+                </svg>
+              }
+            />
+            <ActionCard
+              gradient="linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)"
+              shadow="0 6px 16px rgba(29,78,216,0.28)"
+              badgeColor="#1d4ed8"
+              count={pendingOffersCount ?? 0}
+              title="Pending Offers"
+              subtitle="Offers awaiting action"
               onClick={() => router.push("/dashboard/offers")}
-              style={{
-                flex: 1,
-                height: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                borderRadius: 13,
-                background: "#eef3fa",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#1d4ed8",
-                position: "relative",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 12V22H4V12" />
-                <path d="M22 7H2v5h20V7z" />
-                <path d="M12 22V7" />
-                <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
-                <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
-              </svg>
-              Pending Offers
-              {(pendingOffersCount ?? 0) > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 8,
-                    minWidth: 18,
-                    height: 18,
-                    borderRadius: 9,
-                    background: "#1d4ed8",
-                    color: "#fff",
-                    fontSize: 10,
-                    fontWeight: 800,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                    lineHeight: 1,
-                  }}
-                >
-                  {pendingOffersCount}
-                </span>
-              )}
-            </button>
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 12V22H4V12" />
+                  <path d="M22 7H2v5h20V7z" />
+                  <path d="M12 22V7" />
+                  <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+                  <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                </svg>
+              }
+            />
           </>
         ) : (
           <>
-            <button
+            <ActionCard
+              gradient="linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)"
+              shadow="0 6px 16px rgba(29,78,216,0.28)"
+              badgeColor="#1d4ed8"
+              title="Log Entry"
+              subtitle="Add short-expiry item"
               onClick={onOpenForm}
-              style={{
-                flex: 1,
-                height: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                borderRadius: 13,
-                background: "#1d4ed8",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#fff",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Log Entry
-            </button>
-            <button
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              }
+            />
+            <ActionCard
+              gradient="linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)"
+              shadow="0 6px 16px rgba(109,40,217,0.28)"
+              badgeColor="#6d28d9"
+              title="Review Items"
+              subtitle="Check your entries"
               onClick={() => router.push("/dashboard/shortlist")}
-              style={{
-                flex: 1,
-                height: 44,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 7,
-                borderRadius: 13,
-                background: "#eef3fa",
-                border: "none",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#1d4ed8",
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-                <rect x="9" y="3" width="6" height="4" rx="1" />
-                <path d="m9 12 2 2 4-4" />
-              </svg>
-              Review Items
-            </button>
+              icon={
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+                  <rect x="9" y="3" width="6" height="4" rx="1" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+              }
+            />
           </>
         )}
       </div>
@@ -1187,13 +1273,31 @@ export default function MobileDashboard({
                 <div
                   style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}
                 >
-                  {urgent} item{urgent === 1 ? "" : "s"} need action now
+                  <span style={{ color: "#1d4ed8", fontWeight: 800 }}>{urgent}</span> item{urgent === 1 ? "" : "s"} need action now
                 </div>
                 <div
                   style={{ fontSize: 11, color: "#94a3b8", fontWeight: 700 }}
                 >
                   {urgent}/{total}
                 </div>
+              </div>
+              <div
+                style={{
+                  height: 6,
+                  borderRadius: 999,
+                  background: "#eef2f7",
+                  overflow: "hidden",
+                  marginBottom: 10,
+                }}
+              >
+                <div
+                  style={{
+                    height: "100%",
+                    width: `${total > 0 ? Math.min(100, (urgent / total) * 100) : 0}%`,
+                    borderRadius: 999,
+                    background: "#1d4ed8",
+                  }}
+                />
               </div>
               <div
                 style={{ display: "flex", alignItems: "center", gap: 6 }}
@@ -1251,8 +1355,12 @@ export default function MobileDashboard({
                 cursor: "pointer",
                 textAlign: "center",
                 fontFamily: "inherit",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
               }}
             >
+              <div style={{ marginBottom: 5 }}>{c.icon(c.numColor)}</div>
               <div
                 style={{
                   fontSize: 20,
@@ -1418,6 +1526,19 @@ export default function MobileDashboard({
                     >
                       {daysText(item.days_left)}
                     </div>
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#cbd5e1"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
                   </button>
                 );
               })}
