@@ -604,6 +604,11 @@ export default function MobileItemReviewModal({
                   valueFontSize={14}
                   subtext={fmtDate(item.logged_at)}
                 />
+                <InfoCell
+                  label="BARCODE"
+                  value={item.barcode || "—"}
+                  valueFontSize={14}
+                />
               </div>
 
               {/* Last reviewed (compact note) */}

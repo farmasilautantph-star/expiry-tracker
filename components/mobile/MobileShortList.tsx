@@ -690,6 +690,18 @@ export default function MobileShortList({
                   {entry.description}
                 </div>
 
+                {/* Barcode */}
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#94a3b8",
+                    fontWeight: 500,
+                    marginBottom: 6,
+                  }}
+                >
+                  {entry.barcode}
+                </div>
+
                 {/* Bottom row: expiry + days-left + return */}
                 <div
                   style={{
@@ -752,6 +764,41 @@ export default function MobileShortList({
                       {rs.label}
                     </span>
                   )}
+                </div>
+
+                {/* Last reviewed */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 6,
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={entry.last_reviewed_display ? "#16a34a" : "#94a3b8"}
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      color: entry.last_reviewed_display ? "#16a34a" : "#94a3b8",
+                    }}
+                  >
+                    {entry.last_reviewed_display
+                      ? `Reviewed: ${entry.last_reviewed_display}`
+                      : "Not yet reviewed"}
+                  </span>
                 </div>
               </div>
             );
