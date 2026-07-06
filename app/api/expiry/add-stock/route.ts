@@ -13,6 +13,7 @@ interface ExpiryLogRow {
   original_qty: number | null;
   notes: string | null;
   uom: string | null;
+  item_status: string;
 }
 
 async function auth(req: NextRequest) {
@@ -78,23 +79,65 @@ export async function POST(req: NextRequest) {
   const trimmedReason = String(reason).trim();
 
   const noteAppend = `[${fmtDate(now)}]: +${addQty} unit(s) added by ${user.picName}. Reason: ${trimmedReason}`;
-  const updatedNotes = entry.notes
-    ? `${entry.notes}\n${noteAppend}`
-    : noteAppend;
 
-  if (entry.original_qty === null) {
+  // A row shows up in the Sales Record tab when it looks like a sale, i.e. when
+  // `original_qty IS NOT NULL`, `item_status = 'sold'`, or a note line contains
+  // "unit(s) sold". Adding stock is NOT a sale, so it must never leave the item
+  // in any of those states.
+  const wasClosed =
+    entry.item_status === "sold" ||
+    entry.item_status === "completed" ||
+    previousQty === 0;
+
+  if (wasClosed) {
+    // The item had been fully sold / completed and closed. Restocking it makes
+    // it a fresh ACTIVE item again, so clear every sale/completion field and
+    // drop the historical "unit(s) sold" note lines that would otherwise keep
+    // it in Sales Record. The full sale history is preserved in history_log.
+    const cleanedPriorNotes = (entry.notes ?? "")
+      .split("\n")
+      .filter((line) => !/unit\(s\) sold/i.test(line))
+      .join("\n")
+      .trim();
+    const revivedNotes = cleanedPriorNotes ? `${cleanedPriorNotes}\n${noteAppend}` : noteAppend;
+
     await pool.query(
-      "UPDATE expiry_logs SET original_qty = $1 WHERE id = $2",
-      [previousQty, entry.id],
+      `UPDATE expiry_logs
+       SET quantity         = $1,
+           original_qty     = NULL,
+           item_status      = 'active',
+           sold_at          = NULL,
+           sold_by          = NULL,
+           completed_via    = NULL,
+           completed_at     = NULL,
+           completed_notes  = NULL,
+           review_status    = 'pending',
+           last_updated_at  = $2,
+           notes            = $3
+       WHERE id = $4`,
+      [newQty, now, revivedNotes, entry.id],
+    );
+  } else {
+    // Active item. Only bump quantity. If the item is genuinely partially sold
+    // (original_qty already set), bump original_qty by the same amount so the
+    // Sales Record units_sold figure stays correct. Never SET original_qty from
+    // null — that would wrongly list a pure stock addition as a sale.
+    const updatedNotes = entry.notes ? `${entry.notes}\n${noteAppend}` : noteAppend;
+
+    if (entry.original_qty !== null) {
+      await pool.query(
+        "UPDATE expiry_logs SET original_qty = $1 WHERE id = $2",
+        [entry.original_qty + addQty, entry.id],
+      );
+    }
+
+    await pool.query(
+      `UPDATE expiry_logs
+       SET quantity = $1, last_updated_at = $2, review_status = 'pending', notes = $3
+       WHERE id = $4`,
+      [newQty, now, updatedNotes, entry.id],
     );
   }
-
-  await pool.query(
-    `UPDATE expiry_logs
-     SET quantity = $1, last_updated_at = $2, review_status = 'pending', notes = $3
-     WHERE id = $4`,
-    [newQty, now, updatedNotes, entry.id],
-  );
 
   const historyDesc =
     `+${addQty} unit(s) added to ${entry.description} ` +

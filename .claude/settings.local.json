@@ -62,7 +62,9 @@
       "Bash(netstat -ano)",
       "Bash(disown)",
       "Bash(taskkill *)",
-      "PowerShell(npm run *)"
+      "PowerShell(npm run *)",
+      "PowerShell(npx tsx scripts/fix-add-stock-original-qty.ts --execute 2>$null)",
+      "PowerShell(npx tsx scripts/_inspect-cloves.ts 2>$null)"
     ]
   }
 }
