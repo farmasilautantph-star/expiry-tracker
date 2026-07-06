@@ -571,6 +571,9 @@ export default function MobileItemReviewModal({
                   <span style={{ color: "#cbd5e1", margin: "0 6px" }}>·</span>
                   <span>PIC: <span style={{ color: "#1d4ed8", fontWeight: 700 }}>{item.pic_name}</span></span>
                 </p>
+                <p style={{ fontSize: 11.5, color: "#94a3b8", marginTop: 3, fontWeight: 500 }}>
+                  Barcode: {item.barcode || "—"}
+                </p>
               </div>
 
               {/* Info grid 2x2 */}
@@ -603,11 +606,6 @@ export default function MobileItemReviewModal({
                   value={item.pic_name}
                   valueFontSize={14}
                   subtext={fmtDate(item.logged_at)}
-                />
-                <InfoCell
-                  label="BARCODE"
-                  value={item.barcode || "—"}
-                  valueFontSize={14}
                 />
               </div>
 
