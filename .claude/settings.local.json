@@ -56,7 +56,13 @@
       "Bash(node *)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(echo \"EXIT: $?\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(git diff *)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")",
+      "Bash(netstat -ano)",
+      "Bash(disown)",
+      "Bash(taskkill *)",
+      "PowerShell(npm run *)"
     ]
   }
 }

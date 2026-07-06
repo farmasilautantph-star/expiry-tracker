@@ -81,7 +81,10 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
   if (!mounted || !isOpen) return null;
 
   const newTotal = existingEntry.current_qty + additionalQty;
-  const isDisabled = submitting || !reason.trim() || additionalQty < 1;
+  // NOTE: do NOT include `!reason.trim()` here — otherwise the button is silently
+  // disabled with no feedback ("nothing happens"). handleSubmit validates the
+  // reason and surfaces an inline "Reason is required" error instead.
+  const isDisabled = submitting || additionalQty < 1;
 
   async function handleSubmit() {
     if (!reason.trim()) {
