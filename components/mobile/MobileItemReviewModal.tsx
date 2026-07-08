@@ -248,8 +248,8 @@ export default function MobileItemReviewModal({
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
-      updateItem((prev) => ({ ...prev, return_status: status, return_notes: returnNotes || null }));
-      onPatchEntry?.(item.id, { return_status: status });
+      updateItem((prev) => ({ ...prev, return_status: status, return_notes: returnNotes || null, item_status: "completed" }));
+      onPatchEntry?.(item.id, { return_status: status, item_status: "completed" });
       setPanel({ type: "none" });
       setReturnNotes("");
       setReturnAction("choose");

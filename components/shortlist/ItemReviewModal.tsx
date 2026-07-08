@@ -210,8 +210,8 @@ function ReturnSection({
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
-      onItemUpdate((prev) => ({ ...prev, return_status: status, return_notes: notes || null }));
-      onPatchEntry?.(item.id, { return_status: status });
+      onItemUpdate((prev) => ({ ...prev, return_status: status, return_notes: notes || null, item_status: "completed" }));
+      onPatchEntry?.(item.id, { return_status: status, item_status: "completed" });
       setAction("idle");
       setNotes("");
       onToast?.(status === "returned" ? "Marked as returned & reviewed" : "Return not approved & marked reviewed");
