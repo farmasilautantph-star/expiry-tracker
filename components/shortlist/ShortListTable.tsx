@@ -45,6 +45,8 @@ const COLUMN_LABELS: Record<string, string> = {
 function getReturnLabel(status: string | null): string {
   if (!status) return "—";
   if (status === "pending") return "Return";
+  if (status === "returned") return "Returned";
+  if (status === "not_approved") return "Not Approved";
   return "Non-Return";
 }
 
@@ -173,15 +175,20 @@ function ReturnBadge({
   onClick?: (e: React.MouseEvent) => void;
 }) {
   if (!status) return <span className="text-[#cbd5e1] text-xs">—</span>;
-  const isPending = status === "pending";
+  const styles: Record<string, { bg: string; color: string; dot: string; label: string }> = {
+    pending:      { bg: "#fef3c7", color: "#d97706", dot: "#d97706", label: "Return" },
+    returned:     { bg: "#dcfce7", color: "#16a34a", dot: "#16a34a", label: "Returned" },
+    not_approved: { bg: "#fee2e2", color: "#dc2626", dot: "#dc2626", label: "Not Approved" },
+  };
+  const s = styles[status] ?? { bg: "#f1f5f9", color: "#64748b", dot: "#94a3b8", label: "Non-Return" };
   return (
     <span
       className="badge"
-      style={{ background: isPending ? "#fef3c7" : "#f1f5f9", color: isPending ? "#d97706" : "#64748b" }}
+      style={{ background: s.bg, color: s.color }}
       onClick={onClick}
     >
-      <Dot color={isPending ? "#d97706" : "#94a3b8"} />
-      {isPending ? "Return" : "Non-Return"}
+      <Dot color={s.dot} />
+      {s.label}
     </span>
   );
 }
