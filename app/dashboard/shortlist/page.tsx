@@ -19,6 +19,7 @@ export default function ShortListPage() {
   const [deepLinkModalOpen, setDeepLinkModalOpen] = useState(false);
   const [deepLinkReviewId, setDeepLinkReviewId]   = useState<number | null>(null);
   const [mobileMoreOpen, setMobileMoreOpen]       = useState(false);
+  const [isMobileViewport, setIsMobileViewport]   = useState(false);
   const {
     entries,
     pushEntries,
@@ -35,6 +36,16 @@ export default function ShortListPage() {
   } = useShortList();
 
   useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
+
+  // Track real viewport width so deep-linked review popups render with the
+  // correct desktop/mobile modal instead of following the tab name.
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobileViewport(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobileViewport(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   // Deep-link: ?review=<id> opens modal, ?urgency=<value> pre-sets status filter
   useEffect(() => {
@@ -115,7 +126,7 @@ export default function ShortListPage() {
           activeTab={activeTab}
           onToast={showSuccess}
           deepLinkReviewId={deepLinkReviewId}
-          deepLinkModalOpen={deepLinkModalOpen}
+          deepLinkModalOpen={deepLinkModalOpen && isMobileViewport}
           onCloseDeepLink={() => setDeepLinkModalOpen(false)}
         />
       )}
@@ -125,7 +136,7 @@ export default function ShortListPage() {
 
       {/* Deep-link modal (desktop) */}
       <ItemReviewModal
-        isOpen={deepLinkModalOpen && activeTab === "sales"}
+        isOpen={deepLinkModalOpen && (activeTab === "sales" || !isMobileViewport)}
         onClose={() => setDeepLinkModalOpen(false)}
         entryId={deepLinkReviewId}
         onUpdated={refresh}
