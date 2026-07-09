@@ -92,6 +92,8 @@ interface Props {
   headerTitle?: string;
   /** Hide the tab bar entirely (used on the standalone Push Item page). */
   hideTabs?: boolean;
+  /** When set, card taps call this instead of opening the built-in review modal. */
+  onOpenItem?: (id: number) => void;
 }
 
 export default function MobileShortList({
@@ -115,6 +117,7 @@ export default function MobileShortList({
   onCloseDeepLink,
   headerTitle = "Expiry Monitor",
   hideTabs = false,
+  onOpenItem,
 }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -142,6 +145,7 @@ export default function MobileShortList({
   }, [entries]);
 
   function openReview(id: number) {
+    if (onOpenItem) { onOpenItem(id); return; }
     savedScrollY.current = window.scrollY;
     setReviewingId(id);
     setReviewOpen(true);

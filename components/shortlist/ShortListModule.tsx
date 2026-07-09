@@ -31,6 +31,8 @@ interface Props {
   onSwitchToSales?: () => void;
   mobileMoreOpen?: boolean;
   onToggleMobileMore?: () => void;
+  /** When set, row clicks call this instead of opening the built-in Item Review modal. */
+  onRowClick?: (id: number) => void;
 }
 
 export default function ShortListModule({
@@ -51,6 +53,7 @@ export default function ShortListModule({
   onSwitchToSales,
   mobileMoreOpen = false,
   onToggleMobileMore,
+  onRowClick,
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
 
@@ -116,6 +119,7 @@ export default function ShortListModule({
         onPatchEntry={onPatchEntry}
         onRemoveEntry={onRemoveEntry}
         onSwitchToSales={onSwitchToSales}
+        onRowClick={onRowClick}
       />
 
       {isManager && (

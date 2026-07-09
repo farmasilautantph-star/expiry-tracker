@@ -206,6 +206,8 @@ interface Props {
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
+  /** When set, row clicks call this instead of opening the built-in Item Review modal. */
+  onRowClick?: (id: number) => void;
 }
 
 const TH_BASE = "sticky top-0 z-10 px-4 py-3 text-left whitespace-nowrap";
@@ -222,6 +224,7 @@ export default function ShortListTable({
   onPatchEntry,
   onRemoveEntry,
   onSwitchToSales,
+  onRowClick,
 }: Props) {
   const [reviewModalOpen, setReviewModalOpen]   = useState(false);
   const [reviewingEntryId, setReviewingEntryId] = useState<number | null>(null);
@@ -391,6 +394,7 @@ export default function ShortListTable({
                 <div
                   key={entry.id}
                   onClick={() => {
+                    if (onRowClick) { onRowClick(entry.id); return; }
                     savedScrollY.current = window.scrollY;
                     setReviewingEntryId(entry.id);
                     setReviewModalOpen(true);
@@ -517,6 +521,7 @@ export default function ShortListTable({
                         if (dx > 5 || dy > 5) return;
                         const sel = window.getSelection();
                         if (sel && sel.toString().length > 0) return;
+                        if (onRowClick) { onRowClick(entry.id); return; }
                         savedScrollY.current = window.scrollY;
                         setReviewingEntryId(entry.id);
                         setReviewModalOpen(true);

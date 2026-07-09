@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useShortList } from "@/hooks/useShortList";
 import ShortListModule from "@/components/shortlist/ShortListModule";
-import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
+import PushItemDetail from "@/components/PushItemDetail";
+import MobilePushItemDetail from "@/components/mobile/MobilePushItemDetail";
 import MobileShortList from "@/components/mobile/MobileShortList";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
@@ -15,10 +16,10 @@ export default function PushItemsPage() {
   const { user, isManager } = useAuth();
   const router = useRouter();
   const { toasts, showSuccess, dismiss } = useToast();
-  const [deepLinkModalOpen, setDeepLinkModalOpen] = useState(false);
-  const [deepLinkReviewId, setDeepLinkReviewId]   = useState<number | null>(null);
-  const [mobileMoreOpen, setMobileMoreOpen]       = useState(false);
-  const [isMobileViewport, setIsMobileViewport]   = useState(false);
+  const [detailOpen, setDetailOpen]             = useState(false);
+  const [detailId, setDetailId]                 = useState<number | null>(null);
+  const [mobileMoreOpen, setMobileMoreOpen]     = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const {
     pushEntries,
     counts,
@@ -45,19 +46,24 @@ export default function PushItemsPage() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  // Deep-link: ?review=<id> opens modal
+  // Deep-link: ?review=<id> opens the push detail popup
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const reviewId = params.get("review");
     if (reviewId) {
       const id = parseInt(reviewId, 10);
       if (!isNaN(id)) {
-        setDeepLinkReviewId(id);
-        setDeepLinkModalOpen(true);
+        setDetailId(id);
+        setDetailOpen(true);
       }
       window.history.replaceState({}, "", "/dashboard/push-items");
     }
   }, []);
+
+  function openDetail(id: number) {
+    setDetailId(id);
+    setDetailOpen(true);
+  }
 
   if (!user) return null;
 
@@ -93,6 +99,26 @@ export default function PushItemsPage() {
     <>
       <Toast toasts={toasts} onDismiss={dismiss} />
 
+      {/* Sales-card detail popup — mobile bottom sheet / desktop modal */}
+      <MobilePushItemDetail
+        isOpen={detailOpen && isMobileViewport}
+        onClose={() => setDetailOpen(false)}
+        entryId={detailId}
+        isManager={isManager}
+        onPatchEntry={patchEntry}
+        onRemoveEntry={removeEntry}
+        onToast={showSuccess}
+      />
+      <PushItemDetail
+        isOpen={detailOpen && !isMobileViewport}
+        onClose={() => setDetailOpen(false)}
+        entryId={detailId}
+        isManager={isManager}
+        onPatchEntry={patchEntry}
+        onRemoveEntry={removeEntry}
+        onToast={showSuccess}
+      />
+
       {/* ── Mobile V2 (below md) ── */}
       <MobileShortList
         entries={pushEntries}
@@ -112,23 +138,11 @@ export default function PushItemsPage() {
         headerTitle="Push Item"
         hideTabs
         onToast={showSuccess}
-        deepLinkReviewId={deepLinkReviewId}
-        deepLinkModalOpen={deepLinkModalOpen && isMobileViewport}
-        onCloseDeepLink={() => setDeepLinkModalOpen(false)}
+        onOpenItem={openDetail}
       />
 
       {/* ── Desktop (md and up) ── */}
       <div className="hidden md:block space-y-5">
-        {/* Deep-link modal (desktop) */}
-        <ItemReviewModal
-          isOpen={deepLinkModalOpen && !isMobileViewport}
-          onClose={() => setDeepLinkModalOpen(false)}
-          entryId={deepLinkReviewId}
-          onUpdated={refresh}
-          onSwitchToSales={() => { setDeepLinkModalOpen(false); goToSales(); }}
-          onToast={showSuccess}
-          onDeleted={removeEntry}
-        />
 
         {/* Header */}
         <div>
@@ -179,6 +193,7 @@ export default function PushItemsPage() {
             onSwitchToSales={goToSales}
             mobileMoreOpen={mobileMoreOpen}
             onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
+            onRowClick={openDetail}
           />
         )}
       </div>

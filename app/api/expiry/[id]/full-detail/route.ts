@@ -28,6 +28,9 @@ interface ExpiryRow {
   is_push_item: boolean;
   push_item_marked_at: string | null;
   push_item_marked_by: number | null;
+  push_product_image: string | null;
+  push_active_ingredient: string | null;
+  push_selling_points: string | null;
 }
 
 interface OfferRow {
@@ -148,6 +151,9 @@ export async function GET(
       is_push_item: !!row.is_push_item,
       push_item_marked_at: row.push_item_marked_at,
       push_item_marked_by: row.push_item_marked_by,
+      push_product_image: row.push_product_image ?? null,
+      push_active_ingredient: row.push_active_ingredient ?? null,
+      push_selling_points: row.push_selling_points ?? null,
     },
   });
 }

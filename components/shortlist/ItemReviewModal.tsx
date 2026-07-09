@@ -56,6 +56,9 @@ export interface FullItemDetail {
   is_push_item: boolean;
   push_item_marked_at: string | null;
   push_item_marked_by: number | null;
+  push_product_image: string | null;
+  push_active_ingredient: string | null;
+  push_selling_points: string | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
