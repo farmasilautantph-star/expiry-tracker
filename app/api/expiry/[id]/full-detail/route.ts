@@ -21,6 +21,7 @@ interface ExpiryRow {
   return_status: string | null;
   return_by_date: string | null;
   return_notes: string | null;
+  return_exception_reason: string | null;
   item_status: string;
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
@@ -134,6 +135,7 @@ export async function GET(
       return_status: row.return_status,
       return_by_date: row.return_by_date,
       return_notes: row.return_notes,
+      return_exception_reason: row.return_exception_reason ?? null,
       active_offers: offers.map((o) => ({
         id: o.id,
         outlet_name: o.outlet_name,

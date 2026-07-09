@@ -59,9 +59,10 @@ export async function PUT(
     );
 
   const body = (await req.json().catch(() => null)) ?? {};
-  const { return_status, return_notes } = body as {
+  const { return_status, return_notes, exception_reason } = body as {
     return_status: string;
     return_notes?: string;
+    exception_reason?: string;
   };
 
   if (!["returned", "not_approved"].includes(return_status))
@@ -70,6 +71,24 @@ export async function PUT(
       { status: 400 },
     );
 
+  // Items normally flagged Non-Return can only be recorded as an exception
+  // return, and require a reason explaining the exception.
+  const isExceptionReturn = existing.return_status === "non-returnable";
+  let exceptionReason: string | null = null;
+  if (isExceptionReturn) {
+    if (return_status !== "returned")
+      return NextResponse.json(
+        { success: false, error: "Non-Return items can only be recorded as an exception return" },
+        { status: 400 },
+      );
+    exceptionReason = (exception_reason ?? "").trim();
+    if (exceptionReason.length < 10)
+      return NextResponse.json(
+        { success: false, error: "Exception reason must be at least 10 characters" },
+        { status: 400 },
+      );
+  }
+
   const now = new Date().toISOString();
 
   if (return_status === "returned") {
@@ -77,17 +96,18 @@ export async function PUT(
       `UPDATE expiry_logs
        SET return_status = 'returned',
            return_notes = $1,
+           return_exception_reason = $2,
            item_status = 'completed',
            completed_via = 'returned',
-           completed_at = $2,
+           completed_at = $3,
            review_status = 'resolved',
-           last_reviewed_at = $3,
-           last_updated_at = $4,
+           last_reviewed_at = $4,
+           last_updated_at = $5,
            is_push_item         = FALSE,
            push_item_marked_at  = NULL,
            push_item_marked_by  = NULL
-       WHERE id = $5`,
-      [return_notes ?? null, now, now, now, id],
+       WHERE id = $6`,
+      [return_notes ?? null, exceptionReason, now, now, now, id],
     );
 
     await pool.query(
@@ -100,7 +120,9 @@ export async function PUT(
         id,
         user.userId,
         user.picName,
-        `Return completed for ${existing.description} (Barcode: ${existing.barcode}) by ${existing.pic_name}`,
+        isExceptionReturn
+          ? `Exception return — normally Non-Return item returned to warehouse. Reason: ${exceptionReason}. By: ${user.picName}.`
+          : `Return completed for ${existing.description} (Barcode: ${existing.barcode}) by ${existing.pic_name}`,
         now,
       ],
     );

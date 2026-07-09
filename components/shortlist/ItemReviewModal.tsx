@@ -47,6 +47,7 @@ export interface FullItemDetail {
   return_status: string | null;
   return_by_date: string | null;
   return_notes: string | null;
+  return_exception_reason: string | null;
   active_offers: ActiveOffer[];
   last_reviewed_at: string | null;
   last_reviewed_by: string | null;
@@ -187,7 +188,7 @@ function ItemInfoSection({ item }: { item: FullItemDetail }) {
 
 // ─── Section 2: Return ────────────────────────────────────────────────────────
 
-type ReturnAction = "idle" | "confirming_returned" | "confirming_not_approved";
+type ReturnAction = "idle" | "confirming_returned" | "confirming_not_approved" | "confirming_exception";
 
 function ReturnSection({
   item,
@@ -202,7 +203,11 @@ function ReturnSection({
 }) {
   const [action, setAction] = useState<ReturnAction>("idle");
   const [notes, setNotes] = useState("");
+  const [exceptionReason, setExceptionReason] = useState("");
+  const [exceptionError, setExceptionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const isNonReturnable = item.return_status === "non-returnable";
 
   async function submit(status: "returned" | "not_approved") {
     setSubmitting(true);
@@ -226,17 +231,55 @@ function ReturnSection({
     }
   }
 
+  async function confirmException() {
+    const reason = exceptionReason.trim();
+    if (reason.length < 10) {
+      setExceptionError("Reason must be at least 10 characters.");
+      return;
+    }
+    setExceptionError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/returns/${item.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ return_status: "returned", exception_reason: reason }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      onItemUpdate((prev) => ({
+        ...prev,
+        return_status: "returned",
+        return_exception_reason: reason,
+        item_status: "completed",
+      }));
+      onPatchEntry?.(item.id, { return_status: "returned", item_status: "completed" });
+      setAction("idle");
+      setExceptionReason("");
+      onToast?.("Exception return recorded");
+    } catch (err) {
+      setExceptionError(err instanceof Error ? err.message : "Failed to record exception return");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   return (
     <div>
       <SectionHeader>Return to Warehouse</SectionHeader>
 
       {item.return_status === "returned" ? (
-        <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: "#dcfce7" }}>
-          <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0" />
+        <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "#dcfce7" }}>
+          <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0 mt-0.5" />
           <div>
             <p className="text-xs font-semibold text-[#16a34a]">Returned to Warehouse</p>
             {item.return_by_date && (
               <p className="text-xs text-[#16a34a] opacity-75 mt-0.5">Return by: {fmtDate(item.return_by_date)}</p>
+            )}
+            {item.return_exception_reason && (
+              <p className="text-xs font-medium mt-1.5" style={{ color: "#b45309" }}>
+                Exception Return — {item.return_exception_reason}
+              </p>
             )}
           </div>
         </div>
@@ -249,6 +292,57 @@ function ReturnSection({
               <p className="text-xs text-[#dc2626] opacity-75 mt-0.5">{item.return_notes}</p>
             )}
           </div>
+        </div>
+      ) : isNonReturnable ? (
+        <div className="rounded-xl p-3 space-y-3" style={{ border: "1px solid #e2e8f0" }}>
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium" style={{ color: "#64748b" }}>
+              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#94a3b8" }} />
+              Non-Return
+            </span>
+            <p className="text-xs text-slate-400 mt-1">
+              This item is not normally returnable to warehouse.
+            </p>
+          </div>
+
+          {action === "idle" && (
+            <Btn
+              variant="slate"
+              onClick={() => { setExceptionReason(""); setExceptionError(null); setAction("confirming_exception"); }}
+            >
+              Return to Warehouse
+            </Btn>
+          )}
+
+          {action === "confirming_exception" && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-600">
+                This item is normally Non-Return. Please provide a reason for this exception
+                return (e.g. warehouse recall, packaging defect).
+              </p>
+              <textarea
+                className="w-full text-xs rounded-lg px-3 py-2 resize-none outline-none"
+                style={{
+                  border: exceptionError ? "1px solid #dc2626" : "1px solid #e2e8f0",
+                  minHeight: 70,
+                }}
+                placeholder="Reason (min. 10 characters) *"
+                value={exceptionReason}
+                onChange={(e) => { setExceptionReason(e.target.value); setExceptionError(null); }}
+              />
+              {exceptionError && <p className="text-xs text-red-500">{exceptionError}</p>}
+              <div className="flex gap-2">
+                <Btn variant="slate" onClick={() => setAction("idle")} disabled={submitting}>Cancel</Btn>
+                <Btn
+                  variant="green"
+                  onClick={confirmException}
+                  disabled={submitting || exceptionReason.trim().length < 10}
+                >
+                  {submitting ? "Saving…" : "Confirm Return"}
+                </Btn>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="rounded-xl p-3 space-y-3" style={{ border: "1px solid #e2e8f0" }}>
@@ -1238,7 +1332,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, 
   if (!mounted || !isOpen) return null;
 
   const u = item ? (URGENCY[item.urgency] ?? URGENCY.safe) : URGENCY.safe;
-  const showReturn = !!item && item.return_status !== null && item.return_status !== "non-returnable";
+  const showReturn = !!item && item.return_status !== null;
   const showSales  = !!item && item.qty > 0 && item.item_status === "active";
   const canReview  = !isManager && !!item && item.item_status === "active" && !reviewDone;
 

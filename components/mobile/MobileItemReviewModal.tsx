@@ -84,6 +84,9 @@ export default function MobileItemReviewModal({
   // Return form
   const [returnAction, setReturnAction] = useState<"choose" | "confirm_returned" | "confirm_not_approved">("choose");
   const [returnNotes, setReturnNotes] = useState("");
+  // Exception return (Non-Return items)
+  const [exceptionReason, setExceptionReason] = useState("");
+  const [exceptionError, setExceptionError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -114,6 +117,8 @@ export default function MobileItemReviewModal({
     setDeleteReason("");
     setDeleteError(null);
     setRemarksMode("view");
+    setExceptionReason("");
+    setExceptionError(null);
     setIsLoading(true);
     fetch(`/api/expiry/${entryId}/full-detail`)
       .then((r) => r.json())
@@ -258,6 +263,41 @@ export default function MobileItemReviewModal({
       onToast?.(status === "returned" ? "Marked as returned & reviewed" : "Return not approved & marked reviewed");
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update return status");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // ── Exception return (Non-Return items) ──
+  async function confirmException() {
+    if (!item) return;
+    const reason = exceptionReason.trim();
+    if (reason.length < 10) {
+      setExceptionError("Reason must be at least 10 characters.");
+      return;
+    }
+    setExceptionError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/returns/${item.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ return_status: "returned", exception_reason: reason }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      updateItem((prev) => ({
+        ...prev,
+        return_status: "returned",
+        return_exception_reason: reason,
+        item_status: "completed",
+      }));
+      onPatchEntry?.(item.id, { return_status: "returned", item_status: "completed" });
+      setPanel({ type: "none" });
+      setExceptionReason("");
+      onToast?.("Exception return recorded");
+    } catch (err) {
+      setExceptionError(err instanceof Error ? err.message : "Failed to record exception return");
     } finally {
       setSubmitting(false);
     }
@@ -703,12 +743,18 @@ export default function MobileItemReviewModal({
                         }}
                       />
                     )}
-                    {isReturnable && item.return_status === "pending" && (
+                    {(item.return_status === "pending" || item.return_status === "non-returnable") && (
                       <ActionButton
                         variant="danger"
                         icon={<IconReturn />}
                         label="Return"
-                        onClick={() => { setReturnAction("choose"); setReturnNotes(""); setPanel({ type: "return" }); }}
+                        onClick={() => {
+                          setReturnAction("choose");
+                          setReturnNotes("");
+                          setExceptionReason("");
+                          setExceptionError(null);
+                          setPanel({ type: "return" });
+                        }}
                       />
                     )}
                   </div>
@@ -817,7 +863,44 @@ export default function MobileItemReviewModal({
               )}
 
               {/* RETURN panel */}
-              {panel.type === "return" && (
+              {panel.type === "return" && item && item.return_status === "non-returnable" && (
+                <ActionPanelCard
+                  title="Exception Return"
+                  onCancel={() => { setPanel({ type: "none" }); setExceptionReason(""); setExceptionError(null); }}
+                >
+                  <p style={{ fontSize: 13, color: "#334155", fontWeight: 500, marginBottom: 10 }}>
+                    This item is normally Non-Return. Please provide a reason for this exception
+                    return (e.g. warehouse recall, packaging defect).
+                  </p>
+                  <FieldLabel>Reason (min. 10 characters) *</FieldLabel>
+                  <textarea
+                    value={exceptionReason}
+                    onChange={(e) => { setExceptionReason(e.target.value); setExceptionError(null); }}
+                    rows={3}
+                    placeholder="Reason for exception return…"
+                    style={{
+                      ...inputStyle,
+                      minHeight: 70,
+                      resize: "none",
+                      border: exceptionError ? "1.5px solid #dc2626" : inputStyle.border,
+                    }}
+                  />
+                  {exceptionError && (
+                    <p style={{ fontSize: 11.5, color: "#dc2626", marginTop: 8 }}>{exceptionError}</p>
+                  )}
+                  <div style={{ height: 10 }} />
+                  <PanelButtons
+                    onCancel={() => { setPanel({ type: "none" }); setExceptionReason(""); setExceptionError(null); }}
+                    onConfirm={confirmException}
+                    confirmLabel="Confirm Return"
+                    disabled={submitting || exceptionReason.trim().length < 10}
+                    submitting={submitting}
+                    confirmColor="#16a34a"
+                  />
+                </ActionPanelCard>
+              )}
+
+              {panel.type === "return" && item && item.return_status !== "non-returnable" && (
                 <ActionPanelCard
                   title="Update Return Status"
                   onCancel={() => { setPanel({ type: "none" }); setReturnAction("choose"); }}
@@ -1500,17 +1583,21 @@ function ReturnStatusBanner({ item }: { item: FullItemDetail }) {
           border: "1px solid #bbf7d0",
           borderRadius: 12,
           padding: "10px 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
         }}
       >
-        <span style={{ width: 8, height: 8, borderRadius: 9999, background: "#16a34a" }} />
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#15803d" }}>Returned to Warehouse</span>
-        {item.return_by_date && (
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "#15803d", opacity: 0.7 }}>
-            {fmtDate(item.return_by_date)}
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 9999, background: "#16a34a" }} />
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#15803d" }}>Returned to Warehouse</span>
+          {item.return_by_date && (
+            <span style={{ marginLeft: "auto", fontSize: 11, color: "#15803d", opacity: 0.7 }}>
+              {fmtDate(item.return_by_date)}
+            </span>
+          )}
+        </div>
+        {item.return_exception_reason && (
+          <p style={{ fontSize: 11.5, color: "#b45309", fontWeight: 600, marginTop: 6 }}>
+            Exception Return — {item.return_exception_reason}
+          </p>
         )}
       </div>
     );
