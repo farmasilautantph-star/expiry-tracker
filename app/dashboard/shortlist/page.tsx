@@ -146,6 +146,7 @@ export default function ShortListPage() {
         onSwitchToSales={() => { setDeepLinkModalOpen(false); setActiveTab("sales"); }}
         onToast={showSuccess}
         onDeleted={removeEntry}
+        onRemoveEntry={removeEntry}
       />
 
       {/* Desktop header (md and up) */}

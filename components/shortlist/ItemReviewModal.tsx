@@ -193,12 +193,12 @@ type ReturnAction = "idle" | "confirming_returned" | "confirming_not_approved" |
 function ReturnSection({
   item,
   onItemUpdate,
-  onPatchEntry,
+  onRemoveEntry,
   onToast,
 }: {
   item: FullItemDetail;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
-  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
+  onRemoveEntry?: (id: number) => void;
   onToast?: (msg: string) => void;
 }) {
   const [action, setAction] = useState<ReturnAction>("idle");
@@ -220,7 +220,9 @@ function ReturnSection({
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       onItemUpdate((prev) => ({ ...prev, return_status: status, return_notes: notes || null, item_status: "completed" }));
-      onPatchEntry?.(item.id, { return_status: status, item_status: "completed" });
+      // Return completion always sets item_status = "completed" server-side,
+      // so the row must leave the Active list — not just get patched in place.
+      onRemoveEntry?.(item.id);
       setAction("idle");
       setNotes("");
       onToast?.(status === "returned" ? "Marked as returned & reviewed" : "Return not approved & marked reviewed");
@@ -253,7 +255,7 @@ function ReturnSection({
         return_exception_reason: reason,
         item_status: "completed",
       }));
-      onPatchEntry?.(item.id, { return_status: "returned", item_status: "completed" });
+      onRemoveEntry?.(item.id);
       setAction("idle");
       setExceptionReason("");
       onToast?.("Exception return recorded");
@@ -1231,9 +1233,10 @@ interface Props {
   onToast?: (msg: string) => void;
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onDeleted?: (id: number) => void;
+  onRemoveEntry?: (id: number) => void;
 }
 
-export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, onSwitchToSales, onToast, onPatchEntry, onDeleted }: Props) {
+export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, onSwitchToSales, onToast, onPatchEntry, onDeleted, onRemoveEntry }: Props) {
   const [mounted, setMounted] = useState(false);
   const [item, setItem] = useState<FullItemDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -1422,7 +1425,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, 
                   <ReturnSection
                     item={item}
                     onItemUpdate={handleItemUpdate}
-                    onPatchEntry={onPatchEntry}
+                    onRemoveEntry={onRemoveEntry}
                     onToast={onToast}
                   />
                 </>

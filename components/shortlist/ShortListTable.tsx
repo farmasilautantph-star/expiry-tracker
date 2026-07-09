@@ -341,6 +341,7 @@ export default function ShortListTable({
         onSwitchToSales={onSwitchToSales}
         onPatchEntry={onPatchEntry}
         onDeleted={onRemoveEntry}
+        onRemoveEntry={onRemoveEntry}
         onToast={showSuccess}
       />
 

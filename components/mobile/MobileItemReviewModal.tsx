@@ -47,6 +47,7 @@ interface Props {
   onToast?: (msg: string) => void;
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onDeleted?: (id: number) => void;
+  onRemoveEntry?: (id: number) => void;
 }
 
 type ActionPanel =
@@ -66,6 +67,7 @@ export default function MobileItemReviewModal({
   onToast,
   onPatchEntry,
   onDeleted,
+  onRemoveEntry,
 }: Props) {
   const { isManager } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -256,7 +258,9 @@ export default function MobileItemReviewModal({
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       updateItem((prev) => ({ ...prev, return_status: status, return_notes: returnNotes || null, item_status: "completed" }));
-      onPatchEntry?.(item.id, { return_status: status, item_status: "completed" });
+      // Return completion always sets item_status = "completed" server-side,
+      // so the row must leave the Active list — not just get patched in place.
+      onRemoveEntry?.(item.id);
       setPanel({ type: "none" });
       setReturnNotes("");
       setReturnAction("choose");
@@ -292,7 +296,7 @@ export default function MobileItemReviewModal({
         return_exception_reason: reason,
         item_status: "completed",
       }));
-      onPatchEntry?.(item.id, { return_status: "returned", item_status: "completed" });
+      onRemoveEntry?.(item.id);
       setPanel({ type: "none" });
       setExceptionReason("");
       onToast?.("Exception return recorded");

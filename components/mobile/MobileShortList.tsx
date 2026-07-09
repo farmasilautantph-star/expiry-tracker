@@ -816,6 +816,7 @@ export default function MobileShortList({
         onSwitchToSales={onSwitchToSales}
         onPatchEntry={onPatchEntry}
         onDeleted={onRemoveEntry}
+        onRemoveEntry={onRemoveEntry}
         onToast={onToast}
       />
 
@@ -828,6 +829,7 @@ export default function MobileShortList({
         onSwitchToSales={onSwitchToSales}
         onToast={onToast}
         onDeleted={onRemoveEntry}
+        onRemoveEntry={onRemoveEntry}
       />
     </div>
   );
