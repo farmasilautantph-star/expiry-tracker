@@ -14,6 +14,7 @@ import {
   BuildingStorefrontIcon,
   ClockIcon,
   Squares2X2Icon,
+  ArrowUpTrayIcon,
   ArrowRightOnRectangleIcon,
   BellIcon,
   Bars3Icon,
@@ -82,6 +83,11 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/dashboard/offers",
         icon: <BuildingStorefrontIcon style={{ width: 18, height: 18 }} />,
       },
+      {
+        label: "Push Item",
+        href: "/dashboard/push-items",
+        icon: <ArrowUpTrayIcon style={{ width: 18, height: 18 }} />,
+      },
     ],
   },
   {
@@ -118,6 +124,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/shortlist": "Expiry Monitor",
   "/dashboard/returns": "Return Management",
   "/dashboard/offers": "Outlet Offers",
+  "/dashboard/push-items": "Push Item",
   "/dashboard/history-log": "History Log",
   "/dashboard/staff-report": "Staff Report",
   "/dashboard/expiry": "Log New Expiry",

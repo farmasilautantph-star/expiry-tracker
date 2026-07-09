@@ -1096,7 +1096,7 @@ export default function MobileDashboard({
               count={stats?.push ?? 0}
               title="Push Items"
               subtitle="Items to be pushed"
-              onClick={() => router.push("/dashboard/shortlist?tab=push")}
+              onClick={() => router.push("/dashboard/push-items")}
               icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 20V6" />
@@ -1343,7 +1343,7 @@ export default function MobileDashboard({
               onClick={() =>
                 router.push(
                   c.key === "push"
-                    ? "/dashboard/shortlist?tab=push"
+                    ? "/dashboard/push-items"
                     : `/dashboard/shortlist?urgency=${c.urgency}`,
                 )
               }

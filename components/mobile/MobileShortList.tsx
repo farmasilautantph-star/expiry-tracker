@@ -82,13 +82,16 @@ interface Props {
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onRemoveEntry?: (id: number) => void;
   onSwitchToSales?: () => void;
-  onSwitchToPush?: () => void;
   onSwitchToActive?: () => void;
   activeTab?: "active" | "push" | "sales";
   onToast?: (msg: string) => void;
   deepLinkReviewId?: number | null;
   deepLinkModalOpen?: boolean;
   onCloseDeepLink?: () => void;
+  /** Header title shown at the top of the mobile page. Defaults to "Expiry Monitor". */
+  headerTitle?: string;
+  /** Hide the tab bar entirely (used on the standalone Push Item page). */
+  hideTabs?: boolean;
 }
 
 export default function MobileShortList({
@@ -104,13 +107,14 @@ export default function MobileShortList({
   onPatchEntry,
   onRemoveEntry,
   onSwitchToSales,
-  onSwitchToPush,
   onSwitchToActive,
   activeTab = "active",
   onToast,
   deepLinkReviewId,
   deepLinkModalOpen,
   onCloseDeepLink,
+  headerTitle = "Expiry Monitor",
+  hideTabs = false,
 }: Props) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -180,7 +184,7 @@ export default function MobileShortList({
                 letterSpacing: "-0.4px",
               }}
             >
-              Expiry Monitor
+              {headerTitle}
             </div>
           </div>
           <button
@@ -239,7 +243,8 @@ export default function MobileShortList({
         </div>
       </div>
 
-      {/* ─── Tabs (Item Status / Push Item) ─── */}
+      {/* ─── Tabs (Item Status / Sales Record) ─── */}
+      {!hideTabs && (
       <div
         style={{
           background: "#fff",
@@ -286,17 +291,17 @@ export default function MobileShortList({
         </button>
         <button
           type="button"
-          onClick={() => onSwitchToPush?.()}
+          onClick={() => onSwitchToSales?.()}
           style={{
             flex: 1,
             padding: "12px 8px",
             fontSize: 13,
             fontWeight: 700,
             background: "transparent",
-            color: activeTab === "push" ? "#7c3aed" : "#94a3b8",
+            color: activeTab === "sales" ? "#1d4ed8" : "#94a3b8",
             borderBottom:
-              activeTab === "push"
-                ? "2.5px solid #7c3aed"
+              activeTab === "sales"
+                ? "2.5px solid #1d4ed8"
                 : "2.5px solid transparent",
             marginBottom: -1,
             display: "flex",
@@ -305,29 +310,10 @@ export default function MobileShortList({
             gap: 6,
           }}
         >
-          Push Item
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              padding: "1.5px 6px",
-              borderRadius: 999,
-              background:
-                counts.push > 0
-                  ? activeTab === "push"
-                    ? "#ede9fe"
-                    : "#ede9fe"
-                  : "#f1f5f9",
-              color:
-                counts.push > 0
-                  ? "#7c3aed"
-                  : "#64748b",
-            }}
-          >
-            {counts.push}
-          </span>
+          Sales Record
         </button>
       </div>
+      )}
 
       {/* ─── Search ─── */}
       <div style={{ background: "#fff", padding: "12px 16px 0" }}>

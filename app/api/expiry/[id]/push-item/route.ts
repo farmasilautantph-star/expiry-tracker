@@ -98,7 +98,7 @@ export async function POST(
           userId: existing.pic_id,
           title: "Push Item — Action Required",
           body: `${existing.description} marked as Push Item. Please prioritize sales.`,
-          url: "/dashboard/shortlist?tab=push",
+          url: "/dashboard/push-items",
           type: "push_item",
           tag: `push-item-${id}`,
           requireInteraction: true,

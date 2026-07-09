@@ -246,7 +246,7 @@ export default function DashboardPage() {
       {isManager && (
         <div className="flex gap-3">
           <button
-            onClick={() => window.location.href = "/dashboard/shortlist?tab=push"}
+            onClick={() => window.location.href = "/dashboard/push-items"}
             className="flex-1 flex items-center gap-3 rounded-2xl px-5 py-4 text-left transition-shadow hover:shadow-md"
             style={{ background: "linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%)", boxShadow: "0 4px 16px rgba(109,40,217,0.25)" }}
           >
@@ -377,7 +377,7 @@ export default function DashboardPage() {
               description="Manager-flagged for priority sales"
               color="#7c3aed"
               onClick={() => {
-                window.location.href = "/dashboard/shortlist?tab=push";
+                window.location.href = "/dashboard/push-items";
               }}
             />
           </div>
