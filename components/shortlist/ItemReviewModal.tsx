@@ -12,6 +12,7 @@ import {
   ArrowRightCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
+import { fileToCompressedDataUrl } from "@/lib/compressImage";
 import OfferForm from "@/components/offers/OfferForm";
 import type { OfferFormData } from "@/hooks/useOffers";
 import type { ShortListEntry } from "@/hooks/useShortList";
@@ -912,33 +913,72 @@ function PushItemSection({
   onToast?: (msg: string) => void;
 }) {
   const [submitting, setSubmitting] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
+  const [activeIngredient, setActiveIngredient] = useState("");
+  const [sellingPoints, setSellingPoints] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
-  async function toggle() {
-    const nextMark = !item.is_push_item;
+  function openForm() {
+    setImageDataUrl(null);
+    setActiveIngredient("");
+    setSellingPoints("");
+    setFormError(null);
+    setFormOpen(true);
+  }
+
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setFormError(null);
+    try {
+      setImageDataUrl(await fileToCompressedDataUrl(file));
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Could not read image");
+    }
+  }
+
+  async function submit(mark: boolean) {
     setSubmitting(true);
+    setFormError(null);
     try {
       const res = await fetch(`/api/expiry/${item.id}/push-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mark: nextMark }),
+        body: JSON.stringify(
+          mark
+            ? {
+                mark: true,
+                productImage: imageDataUrl,
+                activeIngredient: activeIngredient.trim() || null,
+                sellingPoints: sellingPoints.trim() || null,
+              }
+            : { mark: false },
+        ),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       const data = json.data ?? {};
       onItemUpdate((prev) => ({
         ...prev,
-        is_push_item: nextMark,
+        is_push_item: mark,
         push_item_marked_at: data.push_item_marked_at ?? null,
         push_item_marked_by: data.push_item_marked_by ?? null,
       }));
       onPatchEntry?.(item.id, {
-        is_push_item: nextMark,
+        is_push_item: mark,
         push_item_marked_at: data.push_item_marked_at ?? null,
         push_item_marked_by: data.push_item_marked_by ?? null,
       });
-      onToast?.(nextMark ? "Marked as Push Item" : "Unmarked as Push Item");
+      setFormOpen(false);
+      onToast?.(mark ? "Marked as Push Item" : "Unmarked as Push Item");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed");
+      if (mark) {
+        setFormError(err instanceof Error ? err.message : "Failed");
+      } else {
+        alert(err instanceof Error ? err.message : "Failed");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -947,40 +987,137 @@ function PushItemSection({
   return (
     <div>
       <SectionHeader>Push Item</SectionHeader>
-      <div
-        className="rounded-xl p-3 flex items-center justify-between gap-3"
-        style={{
-          background: item.is_push_item ? "#faf5ff" : "#f8fafc",
-          border: item.is_push_item ? "1px solid #ddd6fe" : "1px solid #e2e8f0",
-        }}
-      >
-        <div className="min-w-0">
-          <p
-            className="text-xs font-semibold"
-            style={{ color: item.is_push_item ? "#7c3aed" : "#475569" }}
-          >
-            {item.is_push_item ? "Flagged for sales priority" : "Not flagged"}
-          </p>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            {item.is_push_item
-              ? "PIC has been notified to prioritize sales."
-              : "Mark this item to alert the PIC and surface it in the Push Item tab."}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={toggle}
-          disabled={submitting}
-          className="h-9 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 flex-shrink-0"
-          style={
-            item.is_push_item
-              ? { background: "#ede9fe", color: "#7c3aed", border: "1px solid #ddd6fe" }
-              : { background: "#7c3aed", color: "#ffffff" }
-          }
+
+      {!formOpen ? (
+        <div
+          className="rounded-xl p-3 flex items-center justify-between gap-3"
+          style={{
+            background: item.is_push_item ? "#faf5ff" : "#f8fafc",
+            border: item.is_push_item ? "1px solid #ddd6fe" : "1px solid #e2e8f0",
+          }}
         >
-          {submitting ? "Saving…" : item.is_push_item ? "Unmark" : "Mark as Push Item"}
-        </button>
-      </div>
+          <div className="min-w-0">
+            <p
+              className="text-xs font-semibold"
+              style={{ color: item.is_push_item ? "#7c3aed" : "#475569" }}
+            >
+              {item.is_push_item ? "Flagged for sales priority" : "Not flagged"}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {item.is_push_item
+                ? "PIC has been notified to prioritize sales."
+                : "Mark this item to alert the PIC and surface it in the Push Item page."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => (item.is_push_item ? submit(false) : openForm())}
+            disabled={submitting}
+            className="h-9 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 flex-shrink-0"
+            style={
+              item.is_push_item
+                ? { background: "#ede9fe", color: "#7c3aed", border: "1px solid #ddd6fe" }
+                : { background: "#7c3aed", color: "#ffffff" }
+            }
+          >
+            {submitting ? "Saving…" : item.is_push_item ? "Unmark" : "Mark as Push Item"}
+          </button>
+        </div>
+      ) : (
+        <div
+          className="rounded-xl p-3 space-y-3"
+          style={{ background: "#faf5ff", border: "1px solid #ddd6fe" }}
+        >
+          <p className="text-xs font-bold" style={{ color: "#7c3aed" }}>
+            Push Item Details
+          </p>
+
+          {/* Product image (optional) */}
+          <div>
+            <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+              Product Image <span className="font-normal text-slate-400">(optional)</span>
+            </p>
+            {imageDataUrl ? (
+              <div className="flex items-start gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={imageDataUrl}
+                  alt="Product preview"
+                  className="w-24 h-24 object-cover rounded-lg border border-[#ddd6fe] bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setImageDataUrl(null)}
+                  className="text-[11px] font-semibold text-red-500 hover:text-red-600"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label
+                className="flex items-center justify-center h-16 rounded-lg cursor-pointer text-[11px] font-semibold text-slate-500 hover:text-[#7c3aed] transition-colors bg-white"
+                style={{ border: "1.5px dashed #ddd6fe" }}
+              >
+                + Upload photo (JPG/PNG)
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+
+          {/* Active ingredient (optional) */}
+          <div>
+            <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+              Active Ingredient <span className="font-normal text-slate-400">(optional)</span>
+            </p>
+            <input
+              type="text"
+              value={activeIngredient}
+              onChange={(e) => setActiveIngredient(e.target.value)}
+              placeholder="e.g. Montelukast 4mg"
+              className="w-full h-9 px-3 rounded-lg text-xs text-slate-800 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/30"
+              style={{ border: "1px solid #ddd6fe" }}
+            />
+          </div>
+
+          {/* Selling points (optional) */}
+          <div>
+            <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+              Selling Points / Focus Points{" "}
+              <span className="font-normal text-slate-400">(optional)</span>
+            </p>
+            <textarea
+              value={sellingPoints}
+              onChange={(e) => setSellingPoints(e.target.value)}
+              rows={3}
+              placeholder="e.g. Fast-acting, suitable for children, popular with regular customers"
+              className="w-full px-3 py-2 rounded-lg text-xs text-slate-800 bg-white placeholder-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#7c3aed]/30"
+              style={{ border: "1px solid #ddd6fe" }}
+            />
+          </div>
+
+          {formError && <p className="text-xs text-red-500">{formError}</p>}
+
+          <div className="flex gap-2">
+            <Btn variant="slate" onClick={() => setFormOpen(false)} disabled={submitting}>
+              Cancel
+            </Btn>
+            <button
+              type="button"
+              onClick={() => submit(true)}
+              disabled={submitting}
+              className="h-8 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
+              style={{ background: "#7c3aed", color: "#ffffff" }}
+            >
+              {submitting ? "Saving…" : "Confirm & Mark as Push Item"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { fileToCompressedDataUrl } from "@/lib/compressImage";
 import OfferForm from "@/components/offers/OfferForm";
 import type { OfferFormData } from "@/hooks/useOffers";
 import type {
@@ -53,7 +54,8 @@ type ActionPanel =
   | { type: "sell" }
   | { type: "transfer" }
   | { type: "return" }
-  | { type: "offer" };
+  | { type: "offer" }
+  | { type: "push" };
 
 export default function MobileItemReviewModal({
   isOpen,
@@ -284,35 +286,74 @@ export default function MobileItemReviewModal({
     }
   }
 
-  // ── Push Item toggle (manager only) ──
+  // ── Push Item (manager only) ──
   const [pushSubmitting, setPushSubmitting] = useState(false);
-  async function togglePushItem() {
+  const [pushImage, setPushImage] = useState<string | null>(null);
+  const [pushIngredient, setPushIngredient] = useState("");
+  const [pushPoints, setPushPoints] = useState("");
+  const [pushError, setPushError] = useState<string | null>(null);
+
+  function openPushForm() {
+    setPushImage(null);
+    setPushIngredient("");
+    setPushPoints("");
+    setPushError(null);
+    setPanel({ type: "push" });
+  }
+
+  async function handlePushImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPushError(null);
+    try {
+      setPushImage(await fileToCompressedDataUrl(file));
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : "Could not read image");
+    }
+  }
+
+  async function submitPushItem(mark: boolean) {
     if (!item) return;
-    const nextMark = !item.is_push_item;
     setPushSubmitting(true);
+    setPushError(null);
     try {
       const res = await fetch(`/api/expiry/${item.id}/push-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mark: nextMark }),
+        body: JSON.stringify(
+          mark
+            ? {
+                mark: true,
+                productImage: pushImage,
+                activeIngredient: pushIngredient.trim() || null,
+                sellingPoints: pushPoints.trim() || null,
+              }
+            : { mark: false },
+        ),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
       const data = json.data ?? {};
       updateItem((prev) => ({
         ...prev,
-        is_push_item: nextMark,
+        is_push_item: mark,
         push_item_marked_at: data.push_item_marked_at ?? null,
         push_item_marked_by: data.push_item_marked_by ?? null,
       }));
       onPatchEntry?.(item.id, {
-        is_push_item: nextMark,
+        is_push_item: mark,
         push_item_marked_at: data.push_item_marked_at ?? null,
         push_item_marked_by: data.push_item_marked_by ?? null,
       });
-      onToast?.(nextMark ? "Marked as Push Item" : "Unmarked as Push Item");
+      setPanel({ type: "none" });
+      onToast?.(mark ? "Marked as Push Item" : "Unmarked as Push Item");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed");
+      if (mark) {
+        setPushError(err instanceof Error ? err.message : "Failed");
+      } else {
+        alert(err instanceof Error ? err.message : "Failed");
+      }
     } finally {
       setPushSubmitting(false);
     }
@@ -674,7 +715,7 @@ export default function MobileItemReviewModal({
                   {isManager && canSell && (
                     <button
                       type="button"
-                      onClick={togglePushItem}
+                      onClick={() => (item.is_push_item ? submitPushItem(false) : openPushForm())}
                       disabled={pushSubmitting}
                       style={{
                         width: "100%",
@@ -833,6 +874,96 @@ export default function MobileItemReviewModal({
                       />
                     </>
                   )}
+                </ActionPanelCard>
+              )}
+
+              {/* PUSH ITEM panel */}
+              {panel.type === "push" && item && (
+                <ActionPanelCard
+                  title="Push Item Details"
+                  onCancel={() => setPanel({ type: "none" })}
+                >
+                  <FieldLabel>Product Image (optional)</FieldLabel>
+                  {pushImage ? (
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={pushImage}
+                        alt="Product preview"
+                        style={{
+                          width: 88,
+                          height: 88,
+                          objectFit: "cover",
+                          borderRadius: 12,
+                          border: "1.5px solid #ddd6fe",
+                          background: "#fff",
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setPushImage(null)}
+                        style={{ fontSize: 12, fontWeight: 700, color: "#dc2626" }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: 58,
+                        borderRadius: 12,
+                        border: "1.5px dashed #ddd6fe",
+                        background: "#faf5ff",
+                        color: "#7c3aed",
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        marginBottom: 12,
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Upload photo (JPG/PNG)
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        onChange={handlePushImageSelect}
+                        style={{ display: "none" }}
+                      />
+                    </label>
+                  )}
+
+                  <FieldLabel>Active Ingredient (optional)</FieldLabel>
+                  <input
+                    type="text"
+                    value={pushIngredient}
+                    onChange={(e) => setPushIngredient(e.target.value)}
+                    placeholder="e.g. Montelukast 4mg"
+                    style={inputStyle}
+                  />
+                  <div style={{ height: 10 }} />
+
+                  <FieldLabel>Selling Points / Focus Points (optional)</FieldLabel>
+                  <textarea
+                    value={pushPoints}
+                    onChange={(e) => setPushPoints(e.target.value)}
+                    rows={3}
+                    placeholder="e.g. Fast-acting, suitable for children, popular with regular customers"
+                    style={{ ...inputStyle, minHeight: 70, resize: "none" }}
+                  />
+                  {pushError && (
+                    <p style={{ fontSize: 11.5, color: "#dc2626", marginTop: 8 }}>{pushError}</p>
+                  )}
+                  <div style={{ height: 10 }} />
+                  <PanelButtons
+                    onCancel={() => setPanel({ type: "none" })}
+                    onConfirm={() => submitPushItem(true)}
+                    confirmLabel="Confirm & Mark"
+                    disabled={pushSubmitting}
+                    submitting={pushSubmitting}
+                    confirmColor="#7c3aed"
+                  />
                 </ActionPanelCard>
               )}
 
