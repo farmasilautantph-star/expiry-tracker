@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
+import { parseLastSoldDate, computeUnitsSold } from "@/lib/salesCalc";
 
 interface SalesRow {
   id: number;
@@ -24,26 +25,6 @@ interface SalesRow {
 function currentMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function parseLastSoldDate(soldAt: string | null, notes: string | null): string | null {
-  if (soldAt) return soldAt;
-  if (!notes) return null;
-  const re = /\[(\d{2})\/(\d{2})\/(\d{4})\]/g;
-  let last: RegExpExecArray | null = null;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(notes)) !== null) last = m;
-  if (!last) return null;
-  return `${last[3]}-${last[2]}-${last[1]}`;
-}
-
-function computeUnitsSold(row: SalesRow): number | null {
-  if (row.original_qty != null) return row.original_qty - row.quantity;
-  if (row.completed_notes) {
-    const m = row.completed_notes.match(/All (\d+) unit\(s\) sold/);
-    if (m) return parseInt(m[1], 10);
-  }
-  return null;
 }
 
 export async function GET(req: NextRequest) {
