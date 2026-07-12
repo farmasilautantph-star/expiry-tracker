@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { OfferEntry } from "@/hooks/useOffers";
+import OfferAnalytics from "@/components/offers/OfferAnalytics";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import { XMarkIcon, CheckIcon, BuildingStorefrontIcon } from "@heroicons/react/24/outline";
@@ -427,6 +428,13 @@ export default function MobileOffers({
           Total {isLoading ? "…" : displayEntries.length}
         </p>
       </div>
+
+      {/* ─── ANALYTICS ─── */}
+      {tab === "active" && !isLoading && entries.length > 0 && (
+        <div style={{ padding: "14px 16px 0" }}>
+          <OfferAnalytics entries={entries} />
+        </div>
+      )}
 
       {/* ─── CARD LIST ─── */}
       <div

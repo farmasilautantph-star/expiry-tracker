@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOffers } from "@/hooks/useOffers";
 import ActiveOffersTab from "@/components/offers/ActiveOffersTab";
 import OfferHistoryTab from "@/components/offers/OfferHistoryTab";
+import OfferAnalytics from "@/components/offers/OfferAnalytics";
 import MobileOffers from "@/components/mobile/MobileOffers";
 import MonthPicker, { type MonthValue } from "@/components/ui/MonthPicker";
 import { InformationCircleIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
@@ -144,6 +145,10 @@ export default function OffersPage() {
 
         {/* Tab content */}
         <div className="px-6 pb-6 mt-4">
+          {tab === "active" && !isLoading && entries.length > 0 && (
+            <OfferAnalytics entries={entries} />
+          )}
+
           {tab === "active" ? (
             <ActiveOffersTab
               entries={activeEntries}
