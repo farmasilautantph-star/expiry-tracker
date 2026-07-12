@@ -13,11 +13,14 @@ import {
   type TooltipValueType,
 } from "recharts";
 import { useSalesTrend, type SalesTrendPoint } from "@/hooks/useSalesTrend";
-import type { SalesEntry, SalesFilters } from "@/hooks/useSalesRecord";
+import type { SalesEntry, SalesFilters, SalesSummary } from "@/hooks/useSalesRecord";
+import SalesSummaryInline from "./SalesSummaryInline";
 
 interface Props {
   entries: SalesEntry[]; // already filtered by the page's status/month/search/pic filters
   filters: SalesFilters;
+  summary: SalesSummary;
+  isLoading: boolean;
 }
 
 function monthLabel(ym: string): string {
@@ -208,7 +211,7 @@ function CategorySalesBreakdownCard({ entries, subtitle }: { entries: SalesEntry
   );
 }
 
-export default function SalesAnalytics({ entries, filters }: Props) {
+export default function SalesAnalytics({ entries, filters, summary, isLoading }: Props) {
   const periodLabel = filters.showAll ? "All Time" : monthLabel(filters.month);
   const catSubtitle = filters.showAll
     ? "Which categories move fastest"
@@ -220,7 +223,16 @@ export default function SalesAnalytics({ entries, filters }: Props) {
         <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Sales Analytics</h2>
         <span style={{ fontSize: 12.5, color: "#64748b" }}>This period · {periodLabel}</span>
       </div>
-      <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px" }}>Performance overview for recorded sales</p>
+
+      {/* Mobile — original generic subtitle, unchanged */}
+      <p className="md:hidden" style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px" }}>
+        Performance overview for recorded sales
+      </p>
+
+      {/* Desktop — compact stat line replaces the subtitle (Change 2: merge stats into this header) */}
+      <div className="hidden md:block" style={{ margin: "4px 0 14px" }}>
+        <SalesSummaryInline summary={summary} isLoading={isLoading} />
+      </div>
 
       <div
         style={{

@@ -62,16 +62,16 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
     filters.month !== DEFAULT_SALES_FILTERS.month;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 md:space-y-2">
       {/* Pill tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 md:gap-1.5">
         {STATUS_PILLS.map((pill) => {
           const active = filters.status === pill.value;
           return (
             <button
               key={pill.value}
               onClick={() => setFilter("status", pill.value)}
-              className="px-4 py-1.5 rounded-full text-sm font-semibold transition-colors"
+              className="px-4 py-1.5 md:px-3 md:py-1 rounded-full text-sm font-semibold transition-colors"
               style={{
                 background: active ? "#2563eb" : "#f1f5f9",
                 color: active ? "#ffffff" : "#64748b",
@@ -90,7 +90,7 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
       </div>
 
       {/* Secondary filters row */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 md:gap-2">
         {/* Month picker */}
         <select
           value={filters.showAll ? "__all__" : (filters.month || currentMonth())}
@@ -102,7 +102,7 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
               setFilter("month", e.target.value);
             }
           }}
-          className="text-sm px-3 py-2 rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none appearance-none"
+          className="text-sm px-3 py-2 md:px-2.5 md:py-1.5 rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none appearance-none"
         >
           <option value="__all__">All Time</option>
           {monthOptions.map((o) => (
@@ -120,7 +120,7 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
             placeholder="Search..."
             value={filters.search}
             onChange={(e) => setFilter("search", e.target.value)}
-            className="pl-8 pr-3 py-2 text-sm rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none w-44"
+            className="pl-8 pr-3 py-2 md:py-1.5 text-sm rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none w-44"
           />
         </div>
 
@@ -131,7 +131,7 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
             placeholder="Filter by PIC..."
             value={filters.pic}
             onChange={(e) => setFilter("pic", e.target.value)}
-            className="px-3 py-2 text-sm rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none w-40"
+            className="px-3 py-2 md:px-2.5 md:py-1.5 text-sm rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none w-40"
           />
         )}
 
@@ -150,7 +150,7 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
           <select
             value={sortValue}
             onChange={(e) => applySort(e.target.value)}
-            className="text-sm px-3 py-2 rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none appearance-none"
+            className="text-sm px-3 py-2 md:px-2.5 md:py-1.5 rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none appearance-none"
           >
             {SORT_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>

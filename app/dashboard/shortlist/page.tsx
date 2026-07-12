@@ -135,7 +135,7 @@ export default function ShortListPage() {
       )}
 
       {/* ── Desktop / Sales-tab content (md and up, or mobile when on sales) ── */}
-      <div className={activeTab === "active" ? "hidden md:block space-y-5" : "space-y-5"}>
+      <div className={activeTab === "active" ? "hidden md:block space-y-5" : "space-y-5 md:space-y-4"}>
 
       {/* Deep-link modal (desktop) */}
       <ItemReviewModal
