@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReturnEntry, ReturnFilters, ReturnCounts } from "@/hooks/useReturns";
+import ReturnAnalytics from "@/components/returns/ReturnAnalytics";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -359,6 +360,13 @@ export default function MobileReturnManagement({
           Total {isLoading ? "…" : entries.length}
         </p>
       </div>
+
+      {/* ─── ANALYTICS ─── */}
+      {tab === "active" && !isLoading && (
+        <div style={{ padding: "14px 16px 0" }}>
+          <ReturnAnalytics entries={activeEntries} counts={counts} />
+        </div>
+      )}
 
       {/* ─── CARD LIST ─── */}
       <div

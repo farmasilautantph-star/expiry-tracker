@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import ReturnsFilters from "./ReturnsFilters";
 import ReturnsSummary from "./ReturnsSummary";
+import ReturnAnalytics from "./ReturnAnalytics";
 import ReturnsTable from "./ReturnsTable";
 import type {
   ReturnEntry,
@@ -93,6 +94,10 @@ export default function ReturnsModule({
       />
 
       <ReturnsSummary counts={counts} isLoading={isLoading} />
+
+      {mode === "active" && !isLoading && (
+        <ReturnAnalytics entries={entries} counts={counts} />
+      )}
 
       <ReturnsTable
         entries={entries}
