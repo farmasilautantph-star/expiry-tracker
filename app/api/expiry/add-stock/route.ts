@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const { existing_id, additional_qty, reason } = body ?? {};
 
-  if (!reason || !String(reason).trim()) {
+  if (!reason || String(reason).trim().length < 10) {
     return NextResponse.json(
-      { success: false, error: "Reason is required" },
+      { success: false, error: "Reason must be at least 10 characters" },
       { status: 400 },
     );
   }
@@ -118,12 +118,17 @@ export async function POST(req: NextRequest) {
       [newQty, now, revivedNotes, entry.id],
     );
   } else {
-    // Active item. Only bump quantity. If the item is genuinely partially sold
-    // (original_qty already set), bump original_qty by the same amount so the
-    // Sales Record units_sold figure stays correct. Never SET original_qty from
-    // null — that would wrongly list a pure stock addition as a sale.
-    const updatedNotes = entry.notes ? `${entry.notes}\n${noteAppend}` : noteAppend;
-
+    // Active item — a same-batch restock (Case A merge). ONLY the quantity
+    // changes. Do NOT reset review_status, and do NOT touch return status,
+    // sale fields, or notes — the merge must leave all existing data intact so
+    // an already-reviewed item stays reviewed. The audit trail lives in
+    // history_log below.
+    //
+    // The one mirrored field is original_qty: if the item is genuinely
+    // partially sold (original_qty already set), bump it by the same amount so
+    // the Sales Record units_sold figure (original_qty − quantity) stays
+    // correct. Never SET original_qty from null — that would wrongly list a
+    // pure stock addition as a sale.
     if (entry.original_qty !== null) {
       await pool.query(
         "UPDATE expiry_logs SET original_qty = $1 WHERE id = $2",
@@ -133,17 +138,16 @@ export async function POST(req: NextRequest) {
 
     await pool.query(
       `UPDATE expiry_logs
-       SET quantity = $1, last_updated_at = $2, review_status = 'pending', notes = $3
-       WHERE id = $4`,
-      [newQty, now, updatedNotes, entry.id],
+       SET quantity = $1, last_updated_at = $2
+       WHERE id = $3`,
+      [newQty, now, entry.id],
     );
   }
 
   const historyDesc =
-    `+${addQty} unit(s) added to ${entry.description} ` +
-    `(Expiry: ${fmtDate(entry.expiry_date)}). ` +
-    `Reason: ${trimmedReason}. ` +
-    `New total: ${newQty} units`;
+    `${entry.description} (Expiry: ${fmtDate(entry.expiry_date)}) — ` +
+    `Quantity increased from ${previousQty} to ${newQty} units. ` +
+    `Reason: ${trimmedReason}. By: ${user.picName}`;
 
   await pool.query(
     "INSERT INTO history_log (action, module, record_id, pic_id, pic_name, description, timestamp) VALUES ($1, $2, $3, $4, $5, $6, $7)",

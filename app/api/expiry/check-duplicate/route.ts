@@ -64,12 +64,17 @@ export async function POST(req: NextRequest) {
 
   if (exactConditions.length > 0) {
     exactParams.push(`${expiry_date}%`);
+    // Case A (same batch) only applies to a still-active entry with stock on
+    // hand. A sold-out / completed entry with the same barcode+expiry is NOT a
+    // merge target — logging it again should create a fresh entry instead.
     const exactRow = (
       await pool.query(
         `SELECT id, description, barcode, expiry_date, quantity, pic_name, logged_at, category, uom
          FROM expiry_logs
          WHERE (${exactConditions.join(" OR ")})
            AND expiry_date LIKE $${p++}
+           AND quantity > 0
+           AND item_status = 'active'
          ORDER BY logged_at DESC
          LIMIT 1`,
         exactParams,

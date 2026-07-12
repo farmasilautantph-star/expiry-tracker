@@ -87,7 +87,7 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
   const isDisabled = submitting || additionalQty < 1;
 
   async function handleSubmit() {
-    if (!reason.trim()) {
+    if (reason.trim().length < 10) {
       setReasonError(true);
       return;
     }
@@ -146,7 +146,7 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
           className="flex items-center justify-between px-6 pt-6 pb-4 flex-shrink-0"
           style={{ borderBottom: "1px solid #f1f5f9" }}
         >
-          <h2 className="text-lg font-bold text-[#0f172a]">Item Already in System</h2>
+          <h2 className="text-lg font-bold text-[#0f172a]">Same Item Already Logged</h2>
           <button
             onClick={onClose}
             className="w-8 h-8 rounded-full flex items-center justify-center transition-colors text-[#64748b]"
@@ -162,7 +162,10 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
           {/* Alert row */}
           <div className="flex items-center gap-2">
             <ExclamationTriangleIcon className="w-5 h-5 text-[#d97706] flex-shrink-0" />
-            <p className="text-sm text-[#475569]">This item is already logged.</p>
+            <p className="text-sm text-[#475569]">
+              This item (same expiry date) is already logged by{" "}
+              <span className="font-semibold text-[#0f172a]">{existingEntry.pic_name}</span>.
+            </p>
           </div>
 
           {/* Info grid */}
@@ -188,7 +191,8 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
 
           <div style={{ borderTop: "1px solid #f1f5f9" }} className="pt-4 space-y-4">
             <p className="text-sm font-semibold text-[#0f172a]">
-              Would you like to add more stock?
+              Add {additionalQty} unit{additionalQty !== 1 ? "s" : ""} to existing stock of{" "}
+              {existingEntry.current_qty} unit{existingEntry.current_qty !== 1 ? "s" : ""}?
             </p>
 
             {/* Additional Qty */}
@@ -225,14 +229,15 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
             {/* Reason */}
             <div>
               <label className="block text-sm font-semibold text-[#374151] mb-1.5">
-                Reason <span className="text-[#ef4444]">*</span>
+                Reason for restock <span className="text-[#ef4444]">*</span>{" "}
+                <span className="font-normal text-[#94a3b8]">(min 10 characters)</span>
               </label>
               <textarea
                 rows={3}
                 value={reason}
                 onChange={(e) => {
                   setReason(e.target.value);
-                  if (e.target.value.trim()) setReasonError(false);
+                  if (e.target.value.trim().length >= 10) setReasonError(false);
                 }}
                 placeholder={`e.g. Warehouse distributed additional stock on ${todayDDMMYYYY()}`}
                 className={INPUT_BASE}
@@ -251,7 +256,7 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
                 }}
               />
               {reasonError && (
-                <p className="text-red-500 text-xs mt-1">Reason is required</p>
+                <p className="text-red-500 text-xs mt-1">Reason must be at least 10 characters</p>
               )}
             </div>
 
@@ -300,7 +305,7 @@ export default function AddStockModal({ isOpen, onClose, existingEntry, onSucces
             ) : (
               <>
                 <PlusIcon className="w-4 h-4" />
-                Update Quantity
+                Add to Existing Stock
               </>
             )}
           </button>
