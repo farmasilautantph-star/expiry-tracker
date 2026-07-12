@@ -42,6 +42,12 @@ export interface StatusDisplay {
   icon: string;
 }
 
+// Verified behaviour (deadline = Sunday 23:59:59 MYT):
+//   reviewed Sat 11 Jul 16:17, viewed Sun 12 Jul 16:30  -> "pending"        (bug fix)
+//   reviewed Sat 11 Jul 16:17, viewed Sat 11 Jul 16:30  -> "pending"
+//   never reviewed (logged 30 Jun), viewed Sat 11 Jul   -> "early_alert"
+//   never reviewed (logged Wed 8 Jul), viewed Sun 12 Jul-> "last_chance"    (no regression)
+//   reviewed Sun 12 Jul 10am, viewed Mon 13 Jul         -> "pending"        (Monday edge preserved)
 const getSundayReviewStatus = (
   lastReviewedAt: string | null,
   loggedAt: string,
@@ -55,10 +61,30 @@ const getSundayReviewStatus = (
   const lastSunday = getLastSundayDeadline();
   const prevSunday = getPreviousSundayDeadline();
 
+  const toMYT = (raw: string): Date =>
+    new Date(new Date(raw).toLocaleString("en-US", { timeZone: TZ }));
+
+  // Start of the CURRENT review cycle = the most recent Sunday deadline that
+  // has already passed. On Sunday itself, tonight's 23:59:59 deadline has NOT
+  // passed yet, so the current cycle actually started at the PREVIOUS Sunday
+  // (7 days ago). getLastSundayDeadline() returns tonight's deadline on Sunday,
+  // which is why a review done earlier this week (e.g. Saturday) failed the
+  // "> lastSunday" test and wrongly showed "Review today!" when viewed Sunday.
+  const cycleStart = dayOfWeek === 0 ? prevSunday : lastSunday;
+
+  // ── 1) Genuine review within the current cycle → up to date (any weekday) ──
+  // Applies only to an actual review (not the logged_at grace fallback), so a
+  // newly-logged-but-unreviewed item still flips to "last_chance" on Sunday.
+  if (lastReviewedAt) {
+    const reviewMYT = toMYT(lastReviewedAt);
+    // Reviewed after the current cycle started → reviewed this week ✅
+    if (reviewMYT > cycleStart) return "pending";
+    // Reviewed ON the cycle-closing Sunday (before its 23:59:59) → also OK ✅
+    if (reviewMYT.toDateString() === lastSunday.toDateString()) return "pending";
+  }
+
   const rawDate = lastReviewedAt ?? loggedAt;
-  const reviewDateMYT = new Date(
-    new Date(rawDate).toLocaleString("en-US", { timeZone: TZ }),
-  );
+  const reviewDateMYT = toMYT(rawDate);
 
   console.log("[SundayReviewStatus]", {
     lastReviewedAt,
@@ -66,12 +92,14 @@ const getSundayReviewStatus = (
     reviewDateMYT: reviewDateMYT.toISOString(),
     lastSunday: lastSunday.toISOString(),
     prevSunday: prevSunday.toISOString(),
-    reviewAfterLastSunday: reviewDateMYT > lastSunday,
+    cycleStart: cycleStart.toISOString(),
+    reviewAfterCycleStart: reviewDateMYT > cycleStart,
     sameDay: reviewDateMYT.toDateString() === lastSunday.toDateString(),
     dayOfWeek,
   });
 
   // Reviewed after last Sunday deadline → up to date for this week
+  // (also covers the logged_at grace period for newly-logged items on Mon–Sat)
   if (reviewDateMYT > lastSunday) return "pending";
 
   // Reviewed ON last Sunday (any time before 23:59:59) → also up to date
