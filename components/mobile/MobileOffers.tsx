@@ -430,7 +430,7 @@ export default function MobileOffers({
       </div>
 
       {/* ─── ANALYTICS ─── */}
-      {tab === "active" && !isLoading && entries.length > 0 && (
+      {isManager && tab === "active" && !isLoading && entries.length > 0 && (
         <div style={{ padding: "14px 16px 0" }}>
           <OfferAnalytics entries={entries} />
         </div>

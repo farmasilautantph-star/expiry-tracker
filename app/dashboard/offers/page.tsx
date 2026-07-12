@@ -145,7 +145,7 @@ export default function OffersPage() {
 
         {/* Tab content */}
         <div className="px-6 pb-6 mt-4">
-          {tab === "active" && !isLoading && entries.length > 0 && (
+          {isManager && tab === "active" && !isLoading && entries.length > 0 && (
             <OfferAnalytics entries={entries} />
           )}
 

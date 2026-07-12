@@ -95,7 +95,7 @@ export default function ReturnsModule({
 
       <ReturnsSummary counts={counts} isLoading={isLoading} />
 
-      {mode === "active" && !isLoading && (
+      {isManager && mode === "active" && !isLoading && (
         <ReturnAnalytics entries={entries} counts={counts} />
       )}
 

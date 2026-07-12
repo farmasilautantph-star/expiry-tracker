@@ -50,6 +50,7 @@ export default function MobileReturnManagement({
   historyEntries,
   counts,
   isLoading,
+  isManager,
   error,
   tab,
   onTabChange,
@@ -362,7 +363,7 @@ export default function MobileReturnManagement({
       </div>
 
       {/* ─── ANALYTICS ─── */}
-      {tab === "active" && !isLoading && (
+      {isManager && tab === "active" && !isLoading && (
         <div style={{ padding: "14px 16px 0" }}>
           <ReturnAnalytics entries={activeEntries} counts={counts} />
         </div>
