@@ -3,7 +3,7 @@
 import { useSalesRecord } from "@/hooks/useSalesRecord";
 import SalesFilters from "./SalesFilters";
 import SalesSummaryBar from "./SalesSummaryBar";
-import SalesSummaryInline from "./SalesSummaryInline";
+import SalesStatCards from "./SalesStatCards";
 import SalesAnalytics from "./SalesAnalytics";
 import SalesTable from "./SalesTable";
 
@@ -39,17 +39,14 @@ export default function SalesRecord({ isManager, onCountChange }: Props) {
         <SalesSummaryBar summary={summary} isLoading={isLoading} />
       </div>
 
-      {/* Desktop — compact stats, merged into the Analytics header when a
-          manager sees it, or standalone for staff (no Analytics section) */}
-      {isManager ? (
-        !isLoading && (
-          <div className="hidden md:block">
-            <SalesAnalytics entries={entries} filters={filters} summary={summary} isLoading={isLoading} />
-          </div>
-        )
-      ) : (
+      {/* Desktop — compact 4-card stat row (both roles, matches SalesSummaryBar's
+          original visibility), then the manager-only Analytics charts below it */}
+      <div className="hidden md:block">
+        <SalesStatCards summary={summary} isLoading={isLoading} />
+      </div>
+      {isManager && !isLoading && (
         <div className="hidden md:block">
-          <SalesSummaryInline summary={summary} isLoading={isLoading} />
+          <SalesAnalytics entries={entries} filters={filters} />
         </div>
       )}
 

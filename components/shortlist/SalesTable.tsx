@@ -1,7 +1,23 @@
 "use client";
 
-import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import { useEffect, useState } from "react";
+import {
+  DocumentTextIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/24/outline";
 import type { SalesEntry } from "@/hooks/useSalesRecord";
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+// Standard 7-slot page-number window with ellipsis for long lists — full run
+// of numbers when everything fits, first/last pinned with a "…" gap otherwise.
+function getPageNumbers(current: number, total: number): (number | "…")[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (current <= 4) return [1, 2, 3, 4, 5, "…", total];
+  if (current >= total - 3) return [1, "…", total - 4, total - 3, total - 2, total - 1, total];
+  return [1, "…", current - 1, current, current + 1, "…", total];
+}
 
 const SALE_STATUS_STYLE = {
   partial:    { bg: "#fef9c3", color: "#d97706", dot: "#d97706" },
@@ -40,6 +56,23 @@ interface Props {
 }
 
 export default function SalesTable({ entries, isLoading, isManager, onViewAllTime }: Props) {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Reset to page 1 whenever the underlying (filtered) dataset or page size
+  // changes, so we never land on an out-of-range empty page.
+  useEffect(() => {
+    setPage(1);
+  }, [entries, pageSize]);
+
+  const total = entries.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const clampedPage = Math.min(page, totalPages);
+  const startIdx = (clampedPage - 1) * pageSize;
+  const pageEntries = entries.slice(startIdx, startIdx + pageSize);
+  const rangeStart = total === 0 ? 0 : startIdx + 1;
+  const rangeEnd = Math.min(startIdx + pageSize, total);
+
   if (isLoading) {
     return (
       <div className="overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
@@ -76,6 +109,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
   }
 
   return (
+    <div className="space-y-3">
     <div className="overflow-x-auto overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white shadow-sm">
       <table className="w-full text-sm">
         <thead>
@@ -94,7 +128,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
           </tr>
         </thead>
         <tbody>
-          {entries.map((entry) => {
+          {pageEntries.map((entry) => {
             const statusStyle = SALE_STATUS_STYLE[entry.sale_status];
             return (
               <tr
@@ -176,6 +210,71 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
           })}
         </tbody>
       </table>
+    </div>
+
+      {/* Pagination */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+        <p className="text-xs text-[#64748b]">
+          Showing {rangeStart} to {rangeEnd} of {total} records
+        </p>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={clampedPage === 1}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748b] border border-[#e2e8f0] bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f8fafc] transition-colors"
+              aria-label="Previous page"
+            >
+              <ChevronLeftIcon className="w-3.5 h-3.5" />
+            </button>
+
+            {getPageNumbers(clampedPage, totalPages).map((p, i) =>
+              p === "…" ? (
+                <span key={`ellipsis-${i}`} className="px-1.5 text-xs text-[#94a3b8]">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPage(p)}
+                  className={`min-w-[28px] h-7 px-1.5 flex items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
+                    p === clampedPage
+                      ? "bg-[#2563eb] text-white"
+                      : "text-[#64748b] border border-[#e2e8f0] bg-white hover:bg-[#f8fafc]"
+                  }`}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={clampedPage === totalPages}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-[#64748b] border border-[#e2e8f0] bg-white disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f8fafc] transition-colors"
+              aria-label="Next page"
+            >
+              <ChevronRightIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <select
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+            className="text-xs px-2.5 py-1.5 rounded-lg border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none appearance-none"
+          >
+            {PAGE_SIZE_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n} / page
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
     </div>
   );
 }

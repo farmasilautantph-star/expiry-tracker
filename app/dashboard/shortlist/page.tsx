@@ -149,21 +149,48 @@ export default function ShortListPage() {
         onRemoveEntry={removeEntry}
       />
 
-      {/* Desktop header (md and up) */}
-      <div className="hidden md:flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-[#1e293b]">Expiry Monitor</h2>
-          <p className="text-sm text-[#64748b] mt-0.5">
-            Track and manage short-expiry items
-          </p>
+      {/* Tab nav — Export button (desktop only) aligned top-right in the same row */}
+      <div className="flex items-center justify-between border-b border-[#e2e8f0]">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+              activeTab === "active"
+                ? "border-[#2563eb] text-[#2563eb]"
+                : "border-transparent text-[#94a3b8] hover:text-[#475569]"
+            }`}
+          >
+            Item Status
+            <span className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
+              {counts.total}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveTab("sales")}
+            className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
+              activeTab === "sales"
+                ? "border-[#2563eb] text-[#2563eb]"
+                : "border-transparent text-[#94a3b8] hover:text-[#475569]"
+            }`}
+          >
+            Sales Record
+            {salesCount !== null && (
+              <span
+                className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold"
+                title={`${salesCount} sale${salesCount !== 1 ? "s" : ""} this month`}
+              >
+                {salesCount}
+              </span>
+            )}
+          </button>
         </div>
 
-        {/* Export — manager only, placeholder for Phase 10 */}
+        {/* Export — manager only, desktop only, placeholder for Phase 10 */}
         {isManager && (
           <button
             disabled
             title="Export — coming in Phase 10"
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#f1f5f9] border border-[#e2e8f0] text-[#94a3b8] text-sm font-medium cursor-not-allowed"
+            className="hidden md:flex items-center gap-2 px-4 py-2 mb-2 rounded-lg bg-[#f1f5f9] border border-[#e2e8f0] text-[#94a3b8] text-sm font-medium cursor-not-allowed flex-shrink-0"
           >
             <svg
               className="w-4 h-4"
@@ -181,41 +208,6 @@ export default function ShortListPage() {
             Export
           </button>
         )}
-      </div>
-
-      {/* Tab nav */}
-      <div className="flex border-b border-[#e2e8f0]">
-        <button
-          onClick={() => setActiveTab("active")}
-          className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
-            activeTab === "active"
-              ? "border-[#2563eb] text-[#2563eb]"
-              : "border-transparent text-[#94a3b8] hover:text-[#475569]"
-          }`}
-        >
-          Item Status
-          <span className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
-            {counts.total}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab("sales")}
-          className={`px-4 py-3 text-sm font-semibold transition-colors border-b-2 -mb-px ${
-            activeTab === "sales"
-              ? "border-[#2563eb] text-[#2563eb]"
-              : "border-transparent text-[#94a3b8] hover:text-[#475569]"
-          }`}
-        >
-          Sales Record
-          {salesCount !== null && (
-            <span
-              className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold"
-              title={`${salesCount} sale${salesCount !== 1 ? "s" : ""} this month`}
-            >
-              {salesCount}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* Error banner */}

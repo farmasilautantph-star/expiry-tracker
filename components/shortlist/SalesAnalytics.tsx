@@ -13,14 +13,11 @@ import {
   type TooltipValueType,
 } from "recharts";
 import { useSalesTrend, type SalesTrendPoint } from "@/hooks/useSalesTrend";
-import type { SalesEntry, SalesFilters, SalesSummary } from "@/hooks/useSalesRecord";
-import SalesSummaryInline from "./SalesSummaryInline";
+import type { SalesEntry, SalesFilters } from "@/hooks/useSalesRecord";
 
 interface Props {
   entries: SalesEntry[]; // already filtered by the page's status/month/search/pic filters
   filters: SalesFilters;
-  summary: SalesSummary;
-  isLoading: boolean;
 }
 
 function monthLabel(ym: string): string {
@@ -30,7 +27,7 @@ function monthLabel(ym: string): string {
 
 function CardShell({ children }: { children: ReactNode }) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #f0f4f8", borderRadius: 18, padding: "20px 22px" }}>
+    <div style={{ background: "#fff", border: "1px solid #f0f4f8", borderRadius: 18, padding: "16px 18px" }}>
       {children}
     </div>
   );
@@ -105,7 +102,7 @@ function SalesVolumeTrendCard() {
         </p>
       </div>
 
-      <div style={{ marginTop: 16, height: 240 }}>
+      <div style={{ marginTop: 14, height: 220 }}>
         {isLoading ? (
           <div className="flex items-center justify-center h-full" style={{ fontSize: 13, color: "#94a3b8" }}>
             Loading…
@@ -182,7 +179,7 @@ function CategorySalesBreakdownCard({ entries, subtitle }: { entries: SalesEntry
           No sales in this period
         </div>
       ) : (
-        <div className="flex flex-col" style={{ gap: 14, marginTop: 20 }}>
+        <div className="flex flex-col" style={{ gap: 12, marginTop: 16 }}>
           {rows.map((r, i) => (
             <div key={r.name}>
               <div className="flex items-baseline justify-between" style={{ gap: 12, marginBottom: 6 }}>
@@ -211,7 +208,7 @@ function CategorySalesBreakdownCard({ entries, subtitle }: { entries: SalesEntry
   );
 }
 
-export default function SalesAnalytics({ entries, filters, summary, isLoading }: Props) {
+export default function SalesAnalytics({ entries, filters }: Props) {
   const periodLabel = filters.showAll ? "All Time" : monthLabel(filters.month);
   const catSubtitle = filters.showAll
     ? "Which categories move fastest"
@@ -219,26 +216,25 @@ export default function SalesAnalytics({ entries, filters, summary, isLoading }:
 
   return (
     <div>
-      <div className="flex items-baseline" style={{ gap: 12, marginBottom: 6 }}>
-        <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Sales Analytics</h2>
-        <span style={{ fontSize: 12.5, color: "#64748b" }}>This period · {periodLabel}</span>
-      </div>
-
-      {/* Mobile — original generic subtitle, unchanged */}
-      <p className="md:hidden" style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px" }}>
-        Performance overview for recorded sales
-      </p>
-
-      {/* Desktop — compact stat line replaces the subtitle (Change 2: merge stats into this header) */}
-      <div className="hidden md:block" style={{ margin: "4px 0 14px" }}>
-        <SalesSummaryInline summary={summary} isLoading={isLoading} />
+      {/* Mobile — original section header (title, period, subtitle), unchanged.
+          Desktop drops this header entirely: the reference design has the two
+          chart cards sit directly under the stat cards with no wrapping title,
+          since the stat cards already cover the "at a glance" summary. */}
+      <div className="md:hidden">
+        <div className="flex items-baseline" style={{ gap: 12, marginBottom: 6 }}>
+          <h2 style={{ fontSize: 19, fontWeight: 700, letterSpacing: "-0.01em", margin: 0 }}>Sales Analytics</h2>
+          <span style={{ fontSize: 12.5, color: "#64748b" }}>This period · {periodLabel}</span>
+        </div>
+        <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px" }}>
+          Performance overview for recorded sales
+        </p>
       </div>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-          gap: 20,
+          gap: 16,
           alignItems: "stretch",
         }}
       >

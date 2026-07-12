@@ -131,13 +131,14 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/activity-log": "Item Timeline",
 };
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+function formatLastUpdated(date: Date): string {
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = date.toLocaleDateString("en-GB", { month: "short" });
+  const year = date.getFullYear();
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const ampm = date.getHours() >= 12 ? "PM" : "AM";
+  const hours = String(date.getHours() % 12 || 12).padStart(2, "0");
+  return `Last updated: ${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
 }
 
 function SidebarContent({
@@ -417,7 +418,7 @@ export default function DashboardLayout({
             </button>
             <div>
               <h1 className="text-[15px] font-bold text-[#0f172a] leading-none">{pageTitle}</h1>
-              <p className="text-[11px] text-[#94a3b8] mt-0.5">{formatDate(new Date())}</p>
+              <p className="text-[11px] text-[#94a3b8] mt-0.5">{formatLastUpdated(new Date())}</p>
             </div>
           </div>
 
