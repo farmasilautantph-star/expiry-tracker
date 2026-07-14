@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { HealthData } from "@/hooks/useDashboardHealth";
+import type { AnalyticsData } from "@/hooks/useDashboardAnalytics";
 import type { HistoryEntry } from "@/hooks/useHistory";
 import { useShortList } from "@/hooks/useShortList";
+import SystemImpact from "@/components/dashboard/SystemImpact";
 import { getMalaysiaTime } from "@/lib/sunday-deadline-client";
 import { useAuth } from "@/hooks/useAuth";
 import { triggerPushSubscription } from "@/lib/usePushNotifications";
@@ -32,6 +34,8 @@ interface Props {
   stats: Stats | null;
   healthData: HealthData | null;
   healthLoading: boolean;
+  analyticsData?: AnalyticsData | null;
+  analyticsLoading?: boolean;
   onOpenForm: () => void;
 }
 
@@ -259,6 +263,8 @@ export default function MobileDashboard({
   stats,
   healthData,
   healthLoading,
+  analyticsData,
+  analyticsLoading,
   onOpenForm,
 }: Props) {
   const router = useRouter();
@@ -1252,6 +1258,16 @@ export default function MobileDashboard({
           </div>
         )}
       </div>
+
+      {/* System Impact — manager only (cards stack vertically on mobile) */}
+      {isManager && (
+        <div style={{ padding: "0 16px 18px" }}>
+          <SystemImpact
+            data={analyticsData?.systemImpact ?? null}
+            isLoading={analyticsLoading ?? false}
+          />
+        </div>
+      )}
 
       {/* Needs Attention */}
       <div style={{ padding: "0 16px 18px" }}>

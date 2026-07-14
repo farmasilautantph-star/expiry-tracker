@@ -13,16 +13,33 @@ export interface CategoryHeatmapEntry {
   riskLevel: "high" | "medium" | "low";
 }
 
-export interface ResolutionRate {
-  total: number;
-  sold: number;
-  sold_pct: number;
-  returned: number;
-  returned_pct: number;
-  offered: number;
-  offered_pct: number;
-  active: number;
-  active_pct: number;
+export interface SystemImpact {
+  resolutionRate: {
+    resolved: number;
+    expiredUnresolved: number;
+    ratePct: number;
+    trend: { month: string; rate: number | null }[];
+    deltaPct: number;
+    sinceLabel: string;
+  };
+  timeToResolution: {
+    avgDays: number | null;
+    prevAvgDays: number | null;
+    deltaDays: number | null;
+    trend: { month: string; days: number | null }[];
+    firstLabel: string;
+    firstValue: number | null;
+    lastLabel: string;
+    lastValue: number | null;
+  };
+  complianceTrend: {
+    trend: { month: string; pct: number | null }[];
+    deltaPct: number;
+    latestLabel: string;
+    latestPct: number | null;
+    oldestLabel: string;
+    oldestPct: number | null;
+  };
 }
 
 export interface MonthlyTrendEntry {
@@ -35,7 +52,7 @@ export interface MonthlyTrendEntry {
 
 export interface AnalyticsData {
   categoryHeatmap: CategoryHeatmapEntry[];
-  resolutionRate: ResolutionRate;
+  systemImpact: SystemImpact;
   monthlyTrend: MonthlyTrendEntry[];
 }
 

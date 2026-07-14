@@ -9,12 +9,6 @@ interface ExpiryLogRow {
   expiry_date: string; // ISO string stored in DB
 }
 
-interface ResolutionGroupRow {
-  item_status: string | null;
-  completed_via: string | null;
-  cnt: number;
-}
-
 interface MonthCountRow {
   mo: string; // "YYYY-MM"
   cnt: number;
@@ -35,18 +29,6 @@ interface CategoryHeatmapEntry {
   riskLevel: RiskLevel;
 }
 
-interface ResolutionRate {
-  total: number;
-  sold: number;
-  returned: number;
-  offered: number;
-  active: number;
-  soldPct: number;
-  returnedPct: number;
-  offeredPct: number;
-  activePct: number;
-}
-
 interface MonthlyTrendEntry {
   month: string; // "Jun 2026"
   logged: number;
@@ -55,7 +37,42 @@ interface MonthlyTrendEntry {
   offered: number;
 }
 
-// ── Helper ─────────────────────────────────────────────────────────────────
+interface MonthAvgRow {
+  mo: string;
+  avg_days: number | string | null;
+  cnt: number | string;
+}
+
+interface SystemImpact {
+  resolutionRate: {
+    resolved: number;
+    expiredUnresolved: number;
+    ratePct: number;
+    trend: { month: string; rate: number | null }[];
+    deltaPct: number;
+    sinceLabel: string;
+  };
+  timeToResolution: {
+    avgDays: number | null;
+    prevAvgDays: number | null;
+    deltaDays: number | null; // prev − current; positive = faster (improvement)
+    trend: { month: string; days: number | null }[];
+    firstLabel: string;
+    firstValue: number | null;
+    lastLabel: string;
+    lastValue: number | null;
+  };
+  complianceTrend: {
+    trend: { month: string; pct: number | null }[];
+    deltaPct: number;
+    latestLabel: string;
+    latestPct: number | null;
+    oldestLabel: string;
+    oldestPct: number | null;
+  };
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function buildMonthMap(rows: MonthCountRow[]): Map<string, number> {
   const map = new Map<string, number>();
@@ -64,6 +81,53 @@ function buildMonthMap(rows: MonthCountRow[]): Map<string, number> {
   }
   return map;
 }
+
+interface MonthWindow {
+  key: string; // "YYYY-MM"
+  label: string; // "Feb"
+  start: string; // "YYYY-MM-01"
+  end: string; // "YYYY-MM-DD" (last day)
+}
+
+// The most recent N fully-completed calendar months (excludes the current,
+// still-in-progress month so trend points are never misleadingly low).
+// Returned oldest → newest.
+function lastNCompletedMonths(n: number): MonthWindow[] {
+  const now = new Date();
+  const out: MonthWindow[] = [];
+  for (let i = n; i >= 1; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth(); // 0-based
+    const key = `${y}-${String(m + 1).padStart(2, "0")}`;
+    const lastDay = new Date(y, m + 1, 0).getDate();
+    out.push({
+      key,
+      label: d.toLocaleString("en-GB", { month: "short" }),
+      start: `${key}-01`,
+      end: `${key}-${String(lastDay).padStart(2, "0")}`,
+    });
+  }
+  return out;
+}
+
+// Weighted mean of per-month averages, weighting each month by its item count.
+// Equivalent to the true average over the combined period.
+function weightedAvg(
+  items: { avg: number | null; cnt: number }[],
+): number | null {
+  let sum = 0;
+  let total = 0;
+  for (const it of items) {
+    if (it.avg != null && it.cnt > 0) {
+      sum += it.avg * it.cnt;
+      total += it.cnt;
+    }
+  }
+  return total > 0 ? sum / total : null;
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 // ── Route ──────────────────────────────────────────────────────────────────
 
@@ -162,43 +226,182 @@ export async function GET(req: NextRequest) {
     },
   );
 
-  // ── 2. resolutionRate ─────────────────────────────────────────────────────
+  // ── 2. systemImpact ───────────────────────────────────────────────────────
+  // "Resolved" = items saved from expiry loss (sold in full / returned /
+  // offer received). "Expired unresolved" = genuine losses (expiry date passed,
+  // stock still on hand, never resolved). Items still active-but-not-yet-expired
+  // are undecided and excluded from every ratio below.
 
-  const resolutionRows = (
+  const RESOLVED_SQL = "completed_via IN ('sold','returned','offer_received')";
+  const EXPIRED_UNRESOLVED_SQL =
+    "(expiry_date)::date < CURRENT_DATE AND quantity > 0 AND (completed_via IS NULL OR completed_via NOT IN ('sold','returned','offer_received'))";
+
+  const months = lastNCompletedMonths(6);
+
+  // ── 2a. Resolution snapshot (overall, all-time decided outcomes) ──
+  const snapshotRow = (
     await pool.query(
-      `SELECT item_status, completed_via, COUNT(*) as cnt
-       FROM expiry_logs
-       GROUP BY item_status, completed_via`,
+      `SELECT
+         COUNT(*) FILTER (WHERE ${RESOLVED_SQL}) AS resolved,
+         COUNT(*) FILTER (WHERE ${EXPIRED_UNRESOLVED_SQL}) AS expired_unresolved
+       FROM expiry_logs`,
     )
-  ).rows as unknown as ResolutionGroupRow[];
+  ).rows[0] as unknown as { resolved: string | number; expired_unresolved: string | number };
 
-  let total = 0;
-  let sold = 0;
-  let returned = 0;
-  let offered = 0;
-  let active = 0;
+  const resolvedTotal = Number(snapshotRow?.resolved ?? 0);
+  const expiredUnresolvedTotal = Number(snapshotRow?.expired_unresolved ?? 0);
+  const decidedTotal = resolvedTotal + expiredUnresolvedTotal;
+  const ratePct =
+    decidedTotal === 0 ? 0 : Math.round((resolvedTotal / decidedTotal) * 100);
 
-  for (const row of resolutionRows) {
-    const cnt = Number(row.cnt);
-    total += cnt;
-    if (row.item_status === "sold") sold += cnt;
-    if (row.completed_via === "returned") returned += cnt;
-    if (row.completed_via === "offer_received") offered += cnt;
-    if (row.item_status === "active") active += cnt;
+  // ── 2b. Resolution rate — month by month (decided within each month) ──
+  const monthlyResolvedRows = (
+    await pool.query(
+      `SELECT to_char((completed_at)::timestamp, 'YYYY-MM') AS mo, COUNT(*) AS cnt
+       FROM expiry_logs
+       WHERE ${RESOLVED_SQL} AND completed_at IS NOT NULL
+       GROUP BY mo`,
+    )
+  ).rows as unknown as MonthCountRow[];
+
+  const monthlyExpiredRows = (
+    await pool.query(
+      `SELECT to_char((expiry_date)::timestamp, 'YYYY-MM') AS mo, COUNT(*) AS cnt
+       FROM expiry_logs
+       WHERE ${EXPIRED_UNRESOLVED_SQL}
+       GROUP BY mo`,
+    )
+  ).rows as unknown as MonthCountRow[];
+
+  const monthlyResolvedMap = buildMonthMap(monthlyResolvedRows);
+  const monthlyExpiredMap = buildMonthMap(monthlyExpiredRows);
+
+  const resolutionTrend = months.map((mw) => {
+    const r = monthlyResolvedMap.get(mw.key) ?? 0;
+    const e = monthlyExpiredMap.get(mw.key) ?? 0;
+    const denom = r + e;
+    return {
+      month: mw.label,
+      rate: denom === 0 ? null : Math.round((r / denom) * 100),
+    };
+  });
+
+  const firstRate = resolutionTrend[0]?.rate;
+  const lastRate = resolutionTrend[resolutionTrend.length - 1]?.rate;
+  const resolutionDelta =
+    firstRate != null && lastRate != null ? lastRate - firstRate : 0;
+
+  // ── 2c. Avg time to resolution (days from logged to resolved) ──
+  const monthlyAvgRows = (
+    await pool.query(
+      `SELECT to_char((completed_at)::timestamp, 'YYYY-MM') AS mo,
+              AVG(EXTRACT(EPOCH FROM ((completed_at)::timestamp - (logged_at)::timestamp)) / 86400.0) AS avg_days,
+              COUNT(*) AS cnt
+       FROM expiry_logs
+       WHERE ${RESOLVED_SQL} AND completed_at IS NOT NULL AND logged_at IS NOT NULL
+       GROUP BY mo`,
+    )
+  ).rows as unknown as MonthAvgRow[];
+
+  const avgByMonth = new Map<string, { avg: number | null; cnt: number }>();
+  for (const row of monthlyAvgRows) {
+    if (!row.mo) continue;
+    avgByMonth.set(row.mo, {
+      avg: row.avg_days == null ? null : Number(row.avg_days),
+      cnt: Number(row.cnt),
+    });
   }
 
-  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 100));
+  const ttrTrend = months.map((mw) => {
+    const rec = avgByMonth.get(mw.key);
+    return {
+      month: mw.label,
+      days: rec?.avg != null ? round1(rec.avg) : null,
+    };
+  });
 
-  const resolutionRate: ResolutionRate = {
-    total,
-    sold,
-    returned,
-    offered,
-    active,
-    soldPct: pct(sold),
-    returnedPct: pct(returned),
-    offeredPct: pct(offered),
-    activePct: pct(active),
+  // Current quarter = newest 3 completed months; previous = the 3 before them.
+  const quarterStats = (slice: MonthWindow[]) =>
+    slice.map((mw) => avgByMonth.get(mw.key) ?? { avg: null, cnt: 0 });
+  const currentQuarterAvg = weightedAvg(quarterStats(months.slice(3, 6)));
+  const prevQuarterAvg = weightedAvg(quarterStats(months.slice(0, 3)));
+  const ttrDelta =
+    currentQuarterAvg != null && prevQuarterAvg != null
+      ? round1(prevQuarterAvg - currentQuarterAvg)
+      : null;
+
+  // ── 2d. Team-wide review compliance — month by month ──
+  // Numerator: distinct items that received a "Marked as reviewed" action that
+  // month. Denominator: items that existed and were still active at some point
+  // during that month (i.e. subject to the weekly Sunday review that month).
+  // last_reviewed_at only holds the latest review, so history_log is the only
+  // faithful source of historical review activity.
+  const reviewEventRows = (
+    await pool.query(
+      `SELECT to_char((timestamp)::timestamp, 'YYYY-MM') AS mo, COUNT(DISTINCT record_id) AS cnt
+       FROM history_log
+       WHERE module = 'expiry' AND description LIKE 'Marked as reviewed%'
+       GROUP BY mo`,
+    )
+  ).rows as unknown as MonthCountRow[];
+
+  const reviewedByMonth = buildMonthMap(reviewEventRows);
+
+  const complianceTrendPoints: { month: string; pct: number | null }[] = [];
+  for (const mw of months) {
+    const denomRow = (
+      await pool.query(
+        `SELECT COUNT(*) AS cnt
+         FROM expiry_logs
+         WHERE (logged_at)::date <= $1::date
+           AND (completed_at IS NULL OR (completed_at)::date >= $2::date)`,
+        [mw.end, mw.start],
+      )
+    ).rows[0] as unknown as MonthCountRow;
+
+    const denom = Number(denomRow?.cnt ?? 0);
+    const reviewed = reviewedByMonth.get(mw.key) ?? 0;
+    complianceTrendPoints.push({
+      month: mw.label,
+      pct: denom === 0 ? null : Math.min(100, Math.round((reviewed / denom) * 100)),
+    });
+  }
+
+  const oldestCompliance = complianceTrendPoints[0]?.pct ?? null;
+  const latestCompliance =
+    complianceTrendPoints[complianceTrendPoints.length - 1]?.pct ?? null;
+  const complianceDelta =
+    oldestCompliance != null && latestCompliance != null
+      ? latestCompliance - oldestCompliance
+      : 0;
+
+  const systemImpact: SystemImpact = {
+    resolutionRate: {
+      resolved: resolvedTotal,
+      expiredUnresolved: expiredUnresolvedTotal,
+      ratePct,
+      trend: resolutionTrend,
+      deltaPct: resolutionDelta,
+      sinceLabel: months[0]?.label ?? "",
+    },
+    timeToResolution: {
+      avgDays: currentQuarterAvg != null ? round1(currentQuarterAvg) : null,
+      prevAvgDays: prevQuarterAvg != null ? round1(prevQuarterAvg) : null,
+      deltaDays: ttrDelta,
+      trend: ttrTrend,
+      firstLabel: months[0]?.label ?? "",
+      firstValue: ttrTrend[0]?.days ?? null,
+      lastLabel: months[months.length - 1]?.label ?? "",
+      lastValue: ttrTrend[ttrTrend.length - 1]?.days ?? null,
+    },
+    complianceTrend: {
+      trend: complianceTrendPoints,
+      deltaPct: complianceDelta,
+      latestLabel: months[months.length - 1]?.label ?? "",
+      latestPct: latestCompliance,
+      oldestLabel: months[0]?.label ?? "",
+      oldestPct: oldestCompliance,
+    },
   };
 
   // ── 3. monthlyTrend ───────────────────────────────────────────────────────
@@ -280,7 +483,7 @@ export async function GET(req: NextRequest) {
     success: true,
     data: {
       categoryHeatmap,
-      resolutionRate,
+      systemImpact,
       monthlyTrend,
     },
   });

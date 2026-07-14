@@ -9,7 +9,7 @@ import SystemHealthCard from "@/components/dashboard/SystemHealthCard";
 import StaleItemsCard from "@/components/dashboard/StaleItemsCard";
 import StaffComplianceSection from "@/components/dashboard/StaffComplianceSection";
 import CategoryHeatmap from "@/components/dashboard/CategoryHeatmap";
-import ResolutionRate from "@/components/dashboard/ResolutionRate";
+import SystemImpact from "@/components/dashboard/SystemImpact";
 import MonthlyTrend from "@/components/dashboard/MonthlyTrend";
 import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
@@ -92,6 +92,8 @@ export default function DashboardPage() {
         stats={stats}
         healthData={healthData}
         healthLoading={healthLoading}
+        analyticsData={analyticsData}
+        analyticsLoading={analyticsLoading}
         onOpenForm={() => setFormOpen(true)}
       />
 
@@ -253,6 +255,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* System Impact — manager only */}
+      {isManager && (
+        <div className="mt-6">
+          <SystemImpact
+            data={analyticsData?.systemImpact ?? null}
+            isLoading={analyticsLoading}
+          />
+        </div>
+      )}
+
       {/* Staff Overview — manager only */}
       {isManager && (
         <div>
@@ -279,16 +291,10 @@ export default function DashboardPage() {
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8] mb-3 mt-6">
             Analytics
           </p>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <CategoryHeatmap
-              data={analyticsData?.categoryHeatmap ?? []}
-              isLoading={analyticsLoading}
-            />
-            <ResolutionRate
-              data={analyticsData?.resolutionRate ?? null}
-              isLoading={analyticsLoading}
-            />
-          </div>
+          <CategoryHeatmap
+            data={analyticsData?.categoryHeatmap ?? []}
+            isLoading={analyticsLoading}
+          />
         </>
       )}
 
