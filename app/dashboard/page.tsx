@@ -11,7 +11,6 @@ import StaffComplianceSection from "@/components/dashboard/StaffComplianceSectio
 import CategoryHeatmap from "@/components/dashboard/CategoryHeatmap";
 import ResolutionRate from "@/components/dashboard/ResolutionRate";
 import MonthlyTrend from "@/components/dashboard/MonthlyTrend";
-import WeeklyExpiryChart from "@/components/dashboard/WeeklyExpiryChart";
 import { useDashboardAnalytics } from "@/hooks/useDashboardAnalytics";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
 import {
@@ -31,93 +30,6 @@ interface Stats {
   push: number;
 }
 
-interface WeeklyData {
-  week: string;
-  expired: number;
-  critical: number;
-  warning: number;
-}
-
-interface Trend {
-  expired: number;
-  critical: number;
-  warning: number;
-}
-
-// Pill badge for EXPIRED trend — negative trend = improvement = green
-function TrendBadge({ value }: { value: number }) {
-  const improved = value <= 0;
-  const pct = Math.abs(value);
-  if (pct === 0) return null;
-  const color  = improved ? "#16a34a" : "#dc2626";
-  const bg     = improved ? "#dcfce7" : "#fee2e2";
-  const prefix = improved ? "+" : "-";
-  return (
-    <span
-      className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-      style={{ background: bg, color }}
-    >
-      {prefix}{pct}%
-    </span>
-  );
-}
-
-interface StatCardProps {
-  label: string;
-  value: number | null;
-  description: string;
-  color: string;
-  trend?: number;
-  rangeLabel?: string;
-  onClick?: () => void;
-}
-
-function StatCard({ label, value, description, color, trend, rangeLabel, onClick }: StatCardProps) {
-  return (
-    <div
-      onClick={onClick}
-      className={`rounded-2xl bg-white px-4 pt-3 pb-4 md:px-5 md:pt-4 md:pb-5 shadow-sm ${onClick ? "cursor-pointer hover:shadow-md transition-shadow" : ""}`}
-      style={{ border: "1px solid #e2e8f0" }}
-    >
-      {/* Top row: dot + label / badge */}
-      <div className="flex items-center justify-between mb-2 md:mb-3">
-        <div className="flex items-center gap-1.5">
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ background: color }}
-          />
-          <span
-            className="text-[10px] font-bold uppercase tracking-[0.1em]"
-            style={{ color }}
-          >
-            {label}
-          </span>
-        </div>
-        {trend !== undefined ? (
-          <TrendBadge value={trend} />
-        ) : rangeLabel ? (
-          <span className="text-[11px] font-medium text-[#94a3b8]">{rangeLabel}</span>
-        ) : null}
-      </div>
-
-      {/* Big number */}
-      <p
-        className="font-black leading-none text-[32px] md:text-[46px]"
-        style={{ color }}
-      >
-        {value === null ? (
-          <span className="inline-block w-10 h-7 md:w-12 md:h-9 bg-[#f1f5f9] animate-pulse rounded" />
-        ) : (
-          value
-        )}
-      </p>
-
-      {/* Description */}
-      <p className="text-[11px] md:text-xs font-medium text-[#94a3b8] mt-1.5 md:mt-2">{description}</p>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const { user, isManager } = useAuth();
   const { addEntry, refresh } = useExpiry();
@@ -126,10 +38,6 @@ export default function DashboardPage() {
   const { analyticsData, analyticsLoading } = useDashboardAnalytics(isManager);
 
   const [stats, setStats] = useState<Stats | null>(null);
-  const [statsError, setStatsError] = useState(false);
-  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
-  const [weeklyTrend, setWeeklyTrend] = useState<Trend | null>(null);
-  const [weeklyLoading, setWeeklyLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [pendingOffersCount, setPendingOffersCount] = useState<number | null>(null);
   const [desktopNotifPermission, setDesktopNotifPermission] = useState<NotificationPermission | null>(null);
@@ -145,32 +53,14 @@ export default function DashboardPage() {
     fetch("/api/expiry/stats")
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        if (data?.success) {
-          setStats(data.data);
-          setStatsError(false);
-        } else setStatsError(true);
+        if (data?.success) setStats(data.data);
       })
-      .catch(() => setStatsError(true));
-  }, []);
-
-  const fetchWeekly = useCallback(() => {
-    setWeeklyLoading(true);
-    fetch("/api/dashboard/weekly")
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        if (data?.success) {
-          setWeeklyData(data.weeks);
-          setWeeklyTrend(data.trend);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setWeeklyLoading(false));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     fetchStats();
-    fetchWeekly();
-  }, [fetchStats, fetchWeekly]);
+  }, [fetchStats]);
 
   useEffect(() => {
     if (!isManager) return;
@@ -191,7 +81,6 @@ export default function DashboardPage() {
     await addEntry(data);
     setFormOpen(false);
     fetchStats();
-    fetchWeekly();
   }
 
   return (
@@ -335,60 +224,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stat cards */}
-      {statsError ? (
-        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          Failed to load expiry stats. Please refresh.
-        </div>
-      ) : (
-        <div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-5 gap-3 md:gap-4">
-            <StatCard
-              label="EXPIRED"
-              value={stats?.expired ?? null}
-              description="Past expiry date"
-              color="#ef4444"
-              trend={weeklyTrend?.expired}
-            />
-            <StatCard
-              label="CRITICAL"
-              value={stats?.critical ?? null}
-              description="Expiring within 3 months"
-              color="#ea580c"
-              rangeLabel="3 mo"
-            />
-            <StatCard
-              label="WARNING"
-              value={stats?.warning ?? null}
-              description="3 to 8 months left"
-              color="#d97706"
-              rangeLabel="3–8 mo"
-            />
-            <StatCard
-              label="SAFE"
-              value={stats?.safe ?? null}
-              description="More than 8 months left"
-              color="#16a34a"
-              rangeLabel="8 mo+"
-            />
-            <StatCard
-              label="PUSH ITEMS"
-              value={stats?.push ?? null}
-              description="Manager-flagged for priority sales"
-              color="#7c3aed"
-              onClick={() => {
-                window.location.href = "/dashboard/push-items";
-              }}
-            />
-          </div>
-          {!isManager && (
-            <p className="text-xs text-[#94a3b8] text-right mt-2">
-              Showing your items only
-            </p>
-          )}
-        </div>
-      )}
-
       {/* INVENTORY HEALTH */}
       <div className="space-y-2">
         <p className="text-[11px] font-bold uppercase tracking-widest text-[#94a3b8]">
@@ -456,9 +291,6 @@ export default function DashboardPage() {
           </div>
         </>
       )}
-
-      {/* Weekly chart */}
-      <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} />
 
       </div>{/* end hidden md:block */}
 
