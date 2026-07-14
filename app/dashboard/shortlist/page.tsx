@@ -7,17 +7,9 @@ import ShortListModule from "@/components/shortlist/ShortListModule";
 import SalesRecord from "@/components/shortlist/SalesRecord";
 import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
 import MobileShortList from "@/components/mobile/MobileShortList";
-import WeeklyExpiryChart from "@/components/dashboard/WeeklyExpiryChart";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import type { ExpiryFormData } from "@/hooks/useExpiry";
-
-interface WeeklyData {
-  week: string;
-  expired: number;
-  critical: number;
-  warning: number;
-}
 
 export default function ShortListPage() {
   const { user, isManager } = useAuth();
@@ -28,9 +20,6 @@ export default function ShortListPage() {
   const [deepLinkReviewId, setDeepLinkReviewId]   = useState<number | null>(null);
   const [mobileMoreOpen, setMobileMoreOpen]       = useState(false);
   const [isMobileViewport, setIsMobileViewport]   = useState(false);
-  const [weeklyData, setWeeklyData]               = useState<WeeklyData[]>([]);
-  const [weeklyLoading, setWeeklyLoading]         = useState(true);
-  const [weeklyError, setWeeklyError]             = useState(false);
   const {
     entries,
     counts,
@@ -46,22 +35,6 @@ export default function ShortListPage() {
   } = useShortList();
 
   useEffect(() => { document.title = "Expiry Monitor | Expiry Tracker"; }, []);
-
-  useEffect(() => {
-    setWeeklyLoading(true);
-    setWeeklyError(false);
-    fetch("/api/dashboard/weekly")
-      .then((res) => (res.ok ? res.json() : Promise.reject()))
-      .then((data) => {
-        if (data?.success && Array.isArray(data.weeks)) {
-          setWeeklyData(data.weeks);
-        } else {
-          setWeeklyError(true);
-        }
-      })
-      .catch(() => setWeeklyError(true))
-      .finally(() => setWeeklyLoading(false));
-  }, []);
 
   // Track real viewport width so deep-linked review popups render with the
   // correct desktop/mobile modal instead of following the tab name.
@@ -250,28 +223,25 @@ export default function ShortListPage() {
 
       {/* Main content */}
       {activeTab === "active" ? (
-        <>
-          <ShortListModule
-            entries={entries}
-            counts={counts}
-            isLoading={isLoading}
-            isManager={isManager}
-            picName={user.picName}
-            filters={filters}
-            setFilter={setFilter}
-            clearFilters={clearFilters}
-            activeFilterCount={activeFilterCount}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onRefresh={refresh}
-            onPatchEntry={patchEntry}
-            onRemoveEntry={removeEntry}
-            onSwitchToSales={() => setActiveTab("sales")}
-            mobileMoreOpen={mobileMoreOpen}
-            onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
-          />
-          <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} hasError={weeklyError} />
-        </>
+        <ShortListModule
+          entries={entries}
+          counts={counts}
+          isLoading={isLoading}
+          isManager={isManager}
+          picName={user.picName}
+          filters={filters}
+          setFilter={setFilter}
+          clearFilters={clearFilters}
+          activeFilterCount={activeFilterCount}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onRefresh={refresh}
+          onPatchEntry={patchEntry}
+          onRemoveEntry={removeEntry}
+          onSwitchToSales={() => setActiveTab("sales")}
+          mobileMoreOpen={mobileMoreOpen}
+          onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
+        />
       ) : (
         <SalesRecord
           isManager={isManager}

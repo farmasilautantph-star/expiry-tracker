@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import ShortListTable from "./ShortListTable";
 import ShortListFilters from "./ShortListFilters";
-import ShortListSummary from "./ShortListSummary";
+import ItemStatusStatCards from "./ItemStatusStatCards";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
 import type {
   ShortListEntry,
@@ -105,7 +105,12 @@ export default function ShortListModule({
       />
 
       <div className="hidden md:block">
-        <ShortListSummary counts={counts} isLoading={isLoading} />
+        <ItemStatusStatCards
+          counts={counts}
+          isLoading={isLoading}
+          activeStatus={filters.status}
+          onSelectStatus={(status) => setFilter("status", status)}
+        />
       </div>
 
       <ShortListTable

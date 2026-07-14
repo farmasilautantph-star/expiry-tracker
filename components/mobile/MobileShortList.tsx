@@ -7,6 +7,7 @@ import type {
   ShortListCounts,
 } from "@/hooks/useShortList";
 import MobileItemReviewModal from "@/components/mobile/MobileItemReviewModal";
+import ItemStatusStatCards from "@/components/shortlist/ItemStatusStatCards";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
@@ -18,22 +19,6 @@ const BADGE_STYLE: Record<
   critical: { bg: "#ffedd5", color: "#ea580c", border: "#fdba74" },
   warning:  { bg: "#fef9c3", color: "#ca8a04", border: "#fde047" },
   safe:     { bg: "#dcfce7", color: "#16a34a", border: "#86efac" },
-};
-
-const CHIPS: Array<{ value: string; label: string; key: keyof ShortListCounts }> = [
-  { value: "",         label: "All",      key: "total"    },
-  { value: "expired",  label: "Expired",  key: "expired"  },
-  { value: "critical", label: "Critical", key: "critical" },
-  { value: "warning",  label: "Warning",  key: "warning"  },
-  { value: "safe",     label: "Safe",     key: "safe"     },
-];
-
-const ACTIVE_CHIP_STYLE: Record<string, { bg: string; color: string }> = {
-  "":         { bg: "#1d4ed8", color: "#ffffff" },
-  expired:    { bg: "#dc2626", color: "#ffffff" },
-  critical:   { bg: "#ea580c", color: "#ffffff" },
-  warning:    { bg: "#ca8a04", color: "#ffffff" },
-  safe:       { bg: "#16a34a", color: "#ffffff" },
 };
 
 function formatShortDate(iso: string): string {
@@ -391,55 +376,14 @@ export default function MobileShortList({
         </div>
       </div>
 
-      {/* ─── Filter chips (scrollable) ─── */}
-      <div
-        style={{
-          background: "#fff",
-          padding: "10px 16px 14px",
-          display: "flex",
-          gap: 8,
-          overflowX: "auto",
-          scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {CHIPS.map((chip) => {
-          const active = filters.status === chip.value;
-          const count = counts[chip.key];
-          const activeColors = ACTIVE_CHIP_STYLE[chip.value] ?? ACTIVE_CHIP_STYLE[""];
-          return (
-            <button
-              key={chip.value || "all"}
-              type="button"
-              onClick={() => setFilter("status", chip.value)}
-              style={{
-                flexShrink: 0,
-                padding: "0 14px",
-                height: 36,
-                borderRadius: 999,
-                fontSize: 12.5,
-                fontWeight: 700,
-                whiteSpace: "nowrap",
-                background: active ? activeColors.bg : "#fff",
-                color: active ? activeColors.color : "#64748b",
-                border: active
-                  ? `1.5px solid ${activeColors.bg}`
-                  : "1.5px solid #e2e8f0",
-                transition: "background-color 0.15s",
-              }}
-            >
-              {chip.label} ·{" "}
-              {isLoading ? (
-                <span
-                  className="animate-pulse"
-                  style={{ display: "inline-block", width: 12, height: 9, borderRadius: 3, background: "currentColor", opacity: 0.35, verticalAlign: "middle" }}
-                />
-              ) : (
-                count
-              )}
-            </button>
-          );
-        })}
+      {/* ─── Status stat cards (2x2) ─── */}
+      <div style={{ background: "#fff", padding: "10px 16px 14px" }}>
+        <ItemStatusStatCards
+          counts={counts}
+          isLoading={isLoading}
+          activeStatus={filters.status}
+          onSelectStatus={(status) => setFilter("status", status)}
+        />
       </div>
 
       {/* ─── More filters panel ─── */}
