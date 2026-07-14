@@ -129,18 +129,38 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const categoryHeatmap: CategoryHeatmapEntry[] = Array.from(
-    categoryMap.entries(),
-  )
+  // Compute raw risk scores per category, sorted highest-risk first.
+  const scoredCategories = Array.from(categoryMap.entries())
     .map(([category, counts]) => {
       const { expired, critical, warning, safe } = counts;
       const total = expired + critical + warning + safe;
       const riskScore = expired * 10 + critical * 5 + warning * 1;
-      const riskLevel: RiskLevel =
-        riskScore >= 20 ? "high" : riskScore >= 10 ? "medium" : "low";
-      return { category, expired, critical, warning, safe, total, riskScore, riskLevel };
+      return { category, expired, critical, warning, safe, total, riskScore };
     })
     .sort((a, b) => b.riskScore - a.riskScore);
+
+  // Relative tiering: rank categories against each other rather than against
+  // fixed thresholds (which never fit a constantly-changing dataset). The top
+  // third by risk score becomes HIGH, the middle third MEDIUM, the rest LOW.
+  // Categories with zero risk are always LOW regardless of position.
+  const n = scoredCategories.length;
+  const highCutoff = Math.ceil(n / 3);
+  const mediumCutoff = Math.ceil((2 * n) / 3);
+  const categoryHeatmap: CategoryHeatmapEntry[] = scoredCategories.map(
+    (entry, index) => {
+      let riskLevel: RiskLevel;
+      if (entry.riskScore === 0) {
+        riskLevel = "low";
+      } else if (index < highCutoff) {
+        riskLevel = "high";
+      } else if (index < mediumCutoff) {
+        riskLevel = "medium";
+      } else {
+        riskLevel = "low";
+      }
+      return { ...entry, riskLevel };
+    },
+  );
 
   // ── 2. resolutionRate ─────────────────────────────────────────────────────
 
