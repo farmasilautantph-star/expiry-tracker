@@ -290,7 +290,14 @@ export default function MobileShortList({
               color: activeTab === "active" ? "#1d4ed8" : "#64748b",
             }}
           >
-            {counts.total}
+            {isLoading ? (
+              <span
+                className="animate-pulse"
+                style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: "currentColor", opacity: 0.4 }}
+              />
+            ) : (
+              counts.total
+            )}
           </span>
         </button>
         <button
@@ -421,7 +428,15 @@ export default function MobileShortList({
                 transition: "background-color 0.15s",
               }}
             >
-              {chip.label} · {count}
+              {chip.label} ·{" "}
+              {isLoading ? (
+                <span
+                  className="animate-pulse"
+                  style={{ display: "inline-block", width: 12, height: 9, borderRadius: 3, background: "currentColor", opacity: 0.35, verticalAlign: "middle" }}
+                />
+              ) : (
+                count
+              )}
             </button>
           );
         })}

@@ -183,7 +183,11 @@ export default function ShortListPage() {
           >
             Item Status
             <span className="ml-2 px-2 py-0.5 rounded-full bg-[#f1f5f9] text-[#64748b] text-xs font-bold">
-              {counts.total}
+              {isLoading ? (
+                <span className="inline-block w-3 h-3 rounded bg-[#cbd5e1] animate-pulse align-middle" />
+              ) : (
+                counts.total
+              )}
             </span>
           </button>
           <button
