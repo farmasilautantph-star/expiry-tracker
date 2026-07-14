@@ -30,6 +30,7 @@ export default function ShortListPage() {
   const [isMobileViewport, setIsMobileViewport]   = useState(false);
   const [weeklyData, setWeeklyData]               = useState<WeeklyData[]>([]);
   const [weeklyLoading, setWeeklyLoading]         = useState(true);
+  const [weeklyError, setWeeklyError]             = useState(false);
   const {
     entries,
     counts,
@@ -48,12 +49,17 @@ export default function ShortListPage() {
 
   useEffect(() => {
     setWeeklyLoading(true);
+    setWeeklyError(false);
     fetch("/api/dashboard/weekly")
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data) => {
-        if (data?.success) setWeeklyData(data.weeks);
+        if (data?.success && Array.isArray(data.weeks)) {
+          setWeeklyData(data.weeks);
+        } else {
+          setWeeklyError(true);
+        }
       })
-      .catch(() => {})
+      .catch(() => setWeeklyError(true))
       .finally(() => setWeeklyLoading(false));
   }, []);
 
@@ -264,7 +270,7 @@ export default function ShortListPage() {
             mobileMoreOpen={mobileMoreOpen}
             onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
           />
-          <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} />
+          <WeeklyExpiryChart data={weeklyData} isLoading={weeklyLoading} hasError={weeklyError} />
         </>
       ) : (
         <SalesRecord
