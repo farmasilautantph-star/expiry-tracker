@@ -5,6 +5,7 @@ import PolicyStatsCards from "./PolicyStatsCards";
 import PolicyFilters from "./PolicyFilters";
 import PolicyTable from "./PolicyTable";
 import PolicyUploadModal from "./PolicyUploadModal";
+import QuickPolicyCheckBar from "./QuickPolicyCheckBar";
 import { useReturnPolicies } from "@/hooks/useReturnPolicies";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import Toast from "@/components/ui/Toast";
@@ -173,6 +174,8 @@ export default function PolicyModule({ isManager }: Props) {
           )}
         </div>
       )}
+
+      <QuickPolicyCheckBar />
 
       <PolicyStatsCards stats={stats} isLoading={isLoading} />
 

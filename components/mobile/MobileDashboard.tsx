@@ -11,6 +11,7 @@ import { getMalaysiaTime } from "@/lib/sunday-deadline-client";
 import { useAuth } from "@/hooks/useAuth";
 import { triggerPushSubscription } from "@/lib/usePushNotifications";
 import ChangePasswordModal from "@/components/ChangePasswordModal";
+import QuickPolicyCheckModal from "@/components/QuickPolicyCheckModal";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 
@@ -275,6 +276,7 @@ export default function MobileDashboard({
   const [visibleActivity, setVisibleActivity] = useState(4);
   const [openDropdown, setOpenDropdown] = useState<"notifications" | "profile" | null>(null);
   const [changePwOpen, setChangePwOpen] = useState(false);
+  const [policyCheckOpen, setPolicyCheckOpen] = useState(false);
   const [pendingOffersCount, setPendingOffersCount] = useState<number | null>(null);
   const { toasts, showSuccess, dismiss } = useToast();
   const [notifications, setNotifications] = useState<NotifEntry[]>([]);
@@ -874,6 +876,33 @@ export default function MobileDashboard({
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="m9 18 6-6-6-6" />
               </svg>
+            </button>
+            <button
+              onClick={() => { setOpenDropdown(null); setPolicyCheckOpen(true); }}
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                background: "none",
+                border: "none",
+                borderBottom: "1px solid #f0f4f8",
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#0f172a",
+                fontFamily: "inherit",
+                textAlign: "left",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <path d="M7 5v14M11 5v14M17 5v14" />
+              </svg>
+              <span style={{ flex: 1 }}>Check Return Policy</span>
             </button>
             <button
               onClick={() => { setOpenDropdown(null); setChangePwOpen(true); }}
@@ -1590,6 +1619,10 @@ export default function MobileDashboard({
         isOpen={changePwOpen}
         onClose={() => setChangePwOpen(false)}
         onSuccess={showSuccess}
+      />
+      <QuickPolicyCheckModal
+        isOpen={policyCheckOpen}
+        onClose={() => setPolicyCheckOpen(false)}
       />
       <Toast toasts={toasts} onDismiss={dismiss} />
     </div>
