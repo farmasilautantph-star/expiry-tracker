@@ -3,28 +3,45 @@ import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 
 /**
- * Brand-match a product description against the return_policies table so the
- * Log New Expiry form can auto-prefill Return Status / Return By Date.
+ * Match a product description against the return_policies table so the Log New
+ * Expiry form can auto-prefill Return Status / Return By Date.
  *
- * Matching (case-insensitive):
- *   - Find every policy whose non-empty `brand` appears as a substring anywhere
- *     in the product description.
- *   - Rank: a brand that equals the FIRST WORD of the description wins; otherwise
- *     the longest brand (most specific) wins.
+ * A policy can identify its brand(s) in two places:
+ *   - the structured `brand` column (single brand), or
+ *   - a delimited list inside `item_description` (multi-brand composite rows),
+ *     e.g. "CHUA\n- *Ketotop\n- **Cialis\n- **Janumet\n- **Januvia".
  *
- * Returns the single best match, or { data: null } when nothing matches (the
- * form then leaves Return Status at its existing default — no behaviour change).
+ * Both the product description and every candidate brand term are run through
+ * `normalizeForMatching` (strip asterisks, trim, lowercase) before a
+ * case-insensitive substring check, so "**JANUMET XR 50 MG..." (product) matches
+ * the policy term "**Janumet".
  *
- * A handful of policy rows (multi-brand composite rows from the source Excel)
- * have no structured `months_before_expiry` value — the figure only exists as
- * free text inside `item_description`, e.g. "- C'loves (7 MONTH BEFORE)". When
- * the structured column is null, fall back to parsing that specific brand's
- * bracketed figure out of the description text.
+ * Ranking: a brand equal to the product's first word wins; otherwise the longest
+ * matched term (most specific) wins. Returns the single best match, or
+ * { data: null } when nothing matches.
  */
-function parseMonthsFromDescription(description: string | null, brand: string): number | null {
+function normalizeForMatching(text: string): string {
+  return text.replace(/\*/g, "").trim().toLowerCase();
+}
+
+// Split a policy's item_description into individual brand terms.
+// The bracketed "(N MONTH BEFORE)" suffix is dropped from the term itself.
+function extractTerms(itemDescription: string | null): string[] {
+  if (!itemDescription) return [];
+  return itemDescription
+    .split(/[\n,]|(?:\s-\s)|^-\s?/gm)
+    .map((t) => t.replace(/\(.*?\)/g, "").trim())
+    .filter((t) => t.length > 0);
+}
+
+function parseMonthsFromDescription(description: string | null, term: string): number | null {
   if (!description) return null;
-  const escapedBrand = brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = description.match(new RegExp(`${escapedBrand}\\s*\\(\\s*(\\d+)\\s*MONTH`, "i"));
+  const escaped = normalizeForMatching(term).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (!escaped) return null;
+  // Match the term (asterisks in the source are optional) followed by "(N MONTH".
+  const match = normalizeForMatching(description).match(
+    new RegExp(`${escaped}\\s*\\(\\s*(\\d+)\\s*month`, "i"),
+  );
   if (!match) return null;
   const n = Number(match[1]);
   return Number.isFinite(n) ? n : null;
@@ -53,17 +70,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: null });
   }
 
-  // Candidate policies whose brand is a substring of the description.
   const rows = (
     await pool.query(
       `SELECT brand, supplier_name, return_type, months_before_expiry, special_conditions, item_description
-         FROM return_policies
-        WHERE COALESCE(brand, '') <> ''
-          AND POSITION(UPPER(brand) IN UPPER($1)) > 0`,
-      [description],
+         FROM return_policies`,
     )
   ).rows as Array<{
-    brand: string;
+    brand: string | null;
     supplier_name: string;
     return_type: string;
     months_before_expiry: number | null;
@@ -71,30 +84,54 @@ export async function POST(req: NextRequest) {
     item_description: string | null;
   }>;
 
-  if (rows.length === 0) {
+  const normProduct = normalizeForMatching(description);
+  const firstWord = normalizeForMatching(description.split(/\s+/)[0] ?? "");
+
+  // For each policy, find its best matching brand term against the product.
+  const candidates = rows
+    .map((row) => {
+      const terms: string[] = [];
+      if (row.brand) terms.push(row.brand);
+      terms.push(...extractTerms(row.item_description));
+
+      let bestTerm: string | null = null;
+      let bestLen = 0;
+      let isFirstWord = false;
+      for (const term of terms) {
+        const norm = normalizeForMatching(term);
+        if (norm.length < 2) continue;
+        if (!normProduct.includes(norm)) continue;
+        const fw = norm === firstWord;
+        // Prefer a first-word brand match, else the longest matched term.
+        if ((fw && !isFirstWord) || (fw === isFirstWord && norm.length > bestLen)) {
+          bestTerm = term;
+          bestLen = norm.length;
+          isFirstWord = fw;
+        }
+      }
+      return bestTerm ? { row, matchedTerm: bestTerm, len: bestLen, isFirstWord } : null;
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null);
+
+  if (candidates.length === 0) {
     return NextResponse.json({ success: true, data: null });
   }
 
-  const firstWord = description.split(/\s+/)[0]?.toUpperCase() ?? "";
+  candidates.sort((a, b) => {
+    if (a.isFirstWord !== b.isFirstWord) return a.isFirstWord ? -1 : 1;
+    return b.len - a.len;
+  });
 
-  const best = rows
-    .map((r) => ({
-      row: r,
-      isFirstWord: r.brand.toUpperCase() === firstWord,
-      len: r.brand.length,
-    }))
-    .sort((a, b) => {
-      if (a.isFirstWord !== b.isFirstWord) return a.isFirstWord ? -1 : 1;
-      return b.len - a.len;
-    })[0].row;
-
+  const best = candidates[0].row;
+  const matchedTerm = candidates[0].matchedTerm;
   const months =
-    best.months_before_expiry ?? parseMonthsFromDescription(best.item_description, best.brand);
+    best.months_before_expiry ?? parseMonthsFromDescription(best.item_description, matchedTerm);
 
   return NextResponse.json({
     success: true,
     data: {
-      brand: best.brand,
+      // Report the specific brand term that matched (falls back to the column).
+      brand: normalizeForMatching(matchedTerm).toUpperCase() || best.brand || "",
       supplier_name: best.supplier_name,
       return_type: best.return_type,
       months_before_expiry: months,

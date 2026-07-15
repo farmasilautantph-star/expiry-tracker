@@ -65,7 +65,7 @@ const EMPTY: ExpiryFormData = {
   uom: "",
   quantity: 1,
   expiry_date: "",
-  return_status: "pending",
+  return_status: "",
   return_by_date: "",
   notes: "",
 };
@@ -155,7 +155,7 @@ export default function ExpiryForm({
         quantity: editingEntry.quantity ?? 1,
         expiry_date: editingEntry.expiry_date.split("T")[0],
         return_status:
-          (editingEntry.return_status as ExpiryFormData["return_status"]) || "pending",
+          (editingEntry.return_status as ExpiryFormData["return_status"]) || "",
         return_by_date: editingEntry.return_by_date?.split("T")[0] ?? "",
         notes: editingEntry.notes ?? "",
       });
