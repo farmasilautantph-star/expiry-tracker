@@ -781,7 +781,7 @@ export default function ExpiryForm({
                   onClick={() => { set("return_status", "non-returnable"); setAutoStatus(false); }}
                   className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                     form.return_status === "non-returnable"
-                      ? "bg-slate-800 text-white border-slate-800"
+                      ? "bg-red-100 text-red-700 border-red-200"
                       : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                   }`}
                 >
@@ -792,7 +792,7 @@ export default function ExpiryForm({
                   onClick={() => { set("return_status", "pending"); setAutoStatus(false); }}
                   className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                     form.return_status === "pending"
-                      ? "bg-blue-600 text-white border-blue-600"
+                      ? "bg-green-600 text-white border-green-600"
                       : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
                   }`}
                 >
@@ -803,7 +803,7 @@ export default function ExpiryForm({
                   onClick={() => { set("return_status", "exchangeable"); setAutoStatus(false); }}
                   className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                     form.return_status === "exchangeable"
-                      ? "bg-teal-600 text-white border-teal-600"
+                      ? "bg-amber-400 text-amber-950 border-amber-400"
                       : "bg-white text-slate-600 border-slate-200 hover:border-teal-300"
                   }`}
                 >
