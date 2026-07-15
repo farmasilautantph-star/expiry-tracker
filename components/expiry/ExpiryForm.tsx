@@ -116,7 +116,8 @@ export default function ExpiryForm({
   // Return-policy auto-prefill (new entries only)
   const [policyMatch, setPolicyMatch] = useState<PolicyMatch | null>(null);
   const [autoStatus, setAutoStatus] = useState(false); // return_status came from policy match
-  const [autoDate, setAutoDate] = useState(false);      // return_by_date came from policy match
+  const [autoDate, setAutoDate] = useState(false);      // return_by_date currently reflects the auto-calculated value
+  const [dateTouchedByUser, setDateTouchedByUser] = useState(false); // staff manually edited return_by_date — stop auto-recalculating it
   const matchSeqRef = useRef(0);
 
   function clearPolicyAutofill() {
@@ -124,6 +125,7 @@ export default function ExpiryForm({
     setPolicyMatch(null);
     setAutoStatus(false);
     setAutoDate(false);
+    setDateTouchedByUser(false);
   }
 
   type EntryMode = "search" | "manual";
@@ -226,13 +228,17 @@ export default function ExpiryForm({
     };
   }, [dupBarcode, dupStockId, dupDescription, dupExpiryDate, isOpen, editingEntry]);
 
-  // Auto-compute Return By Date from a RETURNABLE policy match once an expiry
-  // date is present (staff picks the product before entering the expiry date).
+  // Auto-compute Return By Date from a RETURNABLE policy match whenever the
+  // expiry date changes (staff usually picks the product before entering the
+  // expiry date, so this has to re-run on every expiry date edit — not just
+  // once at product-select time). Skipped once the staff manually edits
+  // Return By Date themselves, so their edit is never silently overwritten.
   const policyReturnType = policyMatch?.return_type;
   const policyMonths = policyMatch?.months_before_expiry;
   const expiryDateForCalc = form.expiry_date;
   useEffect(() => {
     if (!autoStatus) return;
+    if (dateTouchedByUser) return;
     if (policyReturnType !== "RETURNABLE") return;
     if (policyMonths == null) return;
     if (!expiryDateForCalc) return;
@@ -241,7 +247,7 @@ export default function ExpiryForm({
       prev.return_by_date === computed ? prev : { ...prev, return_by_date: computed },
     );
     setAutoDate(true);
-  }, [autoStatus, policyReturnType, policyMonths, expiryDateForCalc]);
+  }, [autoStatus, dateTouchedByUser, policyReturnType, policyMonths, expiryDateForCalc]);
 
   if (!isOpen) return null;
 
@@ -834,7 +840,7 @@ export default function ExpiryForm({
                   <input
                     type="date"
                     value={form.return_by_date}
-                    onChange={(e) => { set("return_by_date", e.target.value); setAutoDate(false); }}
+                    onChange={(e) => { set("return_by_date", e.target.value); setAutoDate(false); setDateTouchedByUser(true); }}
                     className="w-full px-3 py-2.5 border border-blue-200 rounded-xl text-sm bg-blue-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
                   />
                   {autoDate && (
