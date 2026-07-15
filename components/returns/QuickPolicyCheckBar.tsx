@@ -14,7 +14,9 @@ export default function QuickPolicyCheckBar() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!query.trim()) return;
+    // Always open the modal — with an empty query it just opens ready for
+    // input (same as the mobile entry point), so the button is never a
+    // silent no-op when clicked before anything is typed.
     setActiveQuery(query.trim());
   }
 
