@@ -775,7 +775,7 @@ export default function ExpiryForm({
               <div
                 className={
                   autoStatus
-                    ? "rounded-[14px] border border-blue-100 bg-blue-50 p-3.5"
+                    ? "rounded-2xl border-[1.5px] border-blue-300 bg-blue-100 p-3.5 shadow-sm"
                     : ""
                 }
               >
