@@ -6,8 +6,9 @@ import { useReturns } from "@/hooks/useReturns";
 import ReturnsModule from "@/components/returns/ReturnsModule";
 import PolicyModule from "@/components/returns/PolicyModule";
 import MobileReturnManagement from "@/components/mobile/MobileReturnManagement";
+import QuickPolicyCheckModal from "@/components/QuickPolicyCheckModal";
 import type { MonthValue } from "@/components/ui/MonthPicker";
-import { InformationCircleIcon } from "@heroicons/react/24/outline";
+import { InformationCircleIcon, QrCodeIcon } from "@heroicons/react/24/outline";
 
 type TabKey = "active" | "history" | "policy";
 
@@ -27,6 +28,7 @@ export default function ReturnsPage() {
   const [tab, setTab] = useState<TabKey>("active");
   const [activeMonth, setActiveMonth] = useState<MonthValue | null>(null);
   const [historyMonth, setHistoryMonth] = useState<MonthValue | null>(currentMonthValue());
+  const [policyCheckOpen, setPolicyCheckOpen] = useState(false);
 
   const {
     entries,
@@ -133,6 +135,21 @@ export default function ReturnsPage() {
           </div>
         )}
 
+        {/* Quick Check Return Policy — standalone action, visible on every tab */}
+        <div className="mx-6 mt-4">
+          <button
+            type="button"
+            onClick={() => setPolicyCheckOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-white transition-colors"
+            style={{ background: "#1d4ed8" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#1e40af")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#1d4ed8")}
+          >
+            <QrCodeIcon className="w-5 h-5" />
+            Quick Check Return Policy
+          </button>
+        </div>
+
         {/* Tabs */}
         <div className="px-6 mt-4">
           <div className="overflow-x-auto">
@@ -183,6 +200,11 @@ export default function ReturnsPage() {
           )}
         </div>
       </div>
+
+      <QuickPolicyCheckModal
+        isOpen={policyCheckOpen}
+        onClose={() => setPolicyCheckOpen(false)}
+      />
     </>
   );
 }
