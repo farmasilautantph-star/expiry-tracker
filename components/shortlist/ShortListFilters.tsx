@@ -297,6 +297,7 @@ export default function ShortListFilters({
           <option value="pending">Pending</option>
           <option value="returned">Returned</option>
           <option value="non-returnable">Non-Returnable</option>
+          <option value="exchangeable">Exchangeable</option>
           <option value="none">Not Set</option>
         </select>
         <ChevronDownIcon className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#94a3b8] pointer-events-none" />

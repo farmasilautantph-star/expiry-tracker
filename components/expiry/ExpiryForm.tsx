@@ -2,8 +2,31 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ExpiryEntry, ExpiryFormData, ProductResult } from "@/hooks/useExpiry";
-import { XMarkIcon, MagnifyingGlassIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { XMarkIcon, MagnifyingGlassIcon, CheckIcon, SparklesIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import AddStockModal, { ExistingEntry } from "./AddStockModal";
+
+interface PolicyMatch {
+  brand: string;
+  supplier_name: string;
+  return_type: string; // RETURNABLE | NON_RETURNABLE | EXCHANGEABLE | UNKNOWN
+  months_before_expiry: number | null;
+  special_conditions: string | null;
+}
+
+function statusFromReturnType(t: string): ExpiryFormData["return_status"] | null {
+  if (t === "RETURNABLE") return "pending";
+  if (t === "NON_RETURNABLE") return "non-returnable";
+  if (t === "EXCHANGEABLE") return "exchangeable";
+  return null; // UNKNOWN — leave form untouched
+}
+
+// Subtract N months from an ISO (yyyy-MM-dd) date, returning yyyy-MM-dd.
+function subMonthsISO(iso: string, months: number): string {
+  const [y, m, d] = iso.split("T")[0].split("-").map(Number);
+  const dt = new Date(y, m - 1 - months, d);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+}
 
 interface Props {
   isOpen: boolean;
@@ -90,6 +113,19 @@ export default function ExpiryForm({
   const [showAddStockModal, setShowAddStockModal] = useState(false);
   const [existingEntryForStock, setExistingEntryForStock] = useState<ExistingEntry | null>(null);
 
+  // Return-policy auto-prefill (new entries only)
+  const [policyMatch, setPolicyMatch] = useState<PolicyMatch | null>(null);
+  const [autoStatus, setAutoStatus] = useState(false); // return_status came from policy match
+  const [autoDate, setAutoDate] = useState(false);      // return_by_date came from policy match
+  const matchSeqRef = useRef(0);
+
+  function clearPolicyAutofill() {
+    matchSeqRef.current++;
+    setPolicyMatch(null);
+    setAutoStatus(false);
+    setAutoDate(false);
+  }
+
   type EntryMode = "search" | "manual";
   const [entryMode, setEntryMode] = useState<EntryMode>("search");
   const [noResultsFound, setNoResultsFound] = useState(false);
@@ -103,6 +139,7 @@ export default function ExpiryForm({
       setDupConfirmed(false);
       setShowAddStockModal(false);
       setExistingEntryForStock(null);
+      clearPolicyAutofill();
       if (dupTimerRef.current) clearTimeout(dupTimerRef.current);
       return;
     }
@@ -132,6 +169,7 @@ export default function ExpiryForm({
     setDupConfirmed(false);
     setEntryMode("search");
     setNoResultsFound(false);
+    clearPolicyAutofill();
   }, [isOpen, editingEntry]);
 
   useEffect(() => {
@@ -188,6 +226,23 @@ export default function ExpiryForm({
     };
   }, [dupBarcode, dupStockId, dupDescription, dupExpiryDate, isOpen, editingEntry]);
 
+  // Auto-compute Return By Date from a RETURNABLE policy match once an expiry
+  // date is present (staff picks the product before entering the expiry date).
+  const policyReturnType = policyMatch?.return_type;
+  const policyMonths = policyMatch?.months_before_expiry;
+  const expiryDateForCalc = form.expiry_date;
+  useEffect(() => {
+    if (!autoStatus) return;
+    if (policyReturnType !== "RETURNABLE") return;
+    if (policyMonths == null) return;
+    if (!expiryDateForCalc) return;
+    const computed = subMonthsISO(expiryDateForCalc, policyMonths);
+    setForm((prev) =>
+      prev.return_by_date === computed ? prev : { ...prev, return_by_date: computed },
+    );
+    setAutoDate(true);
+  }, [autoStatus, policyReturnType, policyMonths, expiryDateForCalc]);
+
   if (!isOpen) return null;
 
   function set<K extends keyof ExpiryFormData>(field: K, value: ExpiryFormData[K]) {
@@ -224,6 +279,7 @@ export default function ExpiryForm({
     setNoResultsFound(false);
     if (productSelected) {
       setForm((prev) => ({ ...prev, stock_id: "", barcode: "", description: "", category: "", uom: "" }));
+      clearPolicyAutofill();
     }
     triggerSearch(val);
   }
@@ -232,6 +288,7 @@ export default function ExpiryForm({
     setEntryMode("manual");
     setShowDropdown(false);
     setResults([]);
+    clearPolicyAutofill();
     setForm((prev) => ({
       ...prev,
       barcode: searchQuery.trim(),
@@ -247,6 +304,39 @@ export default function ExpiryForm({
     setNoResultsFound(false);
     setForm((prev) => ({ ...prev, stock_id: "", barcode: "", description: "", category: "", uom: "" }));
     setSearchQuery("");
+    clearPolicyAutofill();
+  }
+
+  // Look up the selected product's brand in the Return Policy table and, if a
+  // policy matches, auto-prefill Return Status (and Return By Date for
+  // returnable items once an expiry date is known). Never locks the fields —
+  // staff can always override. No match → leave the form as-is.
+  async function applyPolicyAutofill(description: string) {
+    const seq = ++matchSeqRef.current;
+    try {
+      const res = await fetch("/api/return-policies/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description }),
+      });
+      const data = await res.json();
+      if (seq !== matchSeqRef.current) return; // a newer selection superseded this
+      const match: PolicyMatch | null = data?.success ? data.data : null;
+      if (!match) return;
+      const status = statusFromReturnType(match.return_type);
+      if (!status) return; // UNKNOWN policy type — no change
+      setPolicyMatch(match);
+      setAutoStatus(true);
+      setForm((prev) => ({
+        ...prev,
+        return_status: status,
+        // Clear any stale return-by date unless this is a returnable policy
+        // (the effect fills it in once an expiry date is present).
+        return_by_date: status === "pending" ? prev.return_by_date : "",
+      }));
+    } catch {
+      /* silent — auto-fill is best-effort */
+    }
   }
 
   function selectProduct(p: ProductResult) {
@@ -261,6 +351,8 @@ export default function ExpiryForm({
     setSearchQuery("");
     setResults([]);
     setShowDropdown(false);
+    clearPolicyAutofill();
+    if (p.description) applyPolicyAutofill(p.description);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -677,11 +769,11 @@ export default function ExpiryForm({
               <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Return Status
               </p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => set("return_status", "non-returnable")}
-                  className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                  onClick={() => { set("return_status", "non-returnable"); setAutoStatus(false); }}
+                  className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                     form.return_status === "non-returnable"
                       ? "bg-slate-800 text-white border-slate-800"
                       : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
@@ -691,8 +783,8 @@ export default function ExpiryForm({
                 </button>
                 <button
                   type="button"
-                  onClick={() => set("return_status", "pending")}
-                  className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${
+                  onClick={() => { set("return_status", "pending"); setAutoStatus(false); }}
+                  className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
                     form.return_status === "pending"
                       ? "bg-blue-600 text-white border-blue-600"
                       : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
@@ -700,7 +792,39 @@ export default function ExpiryForm({
                 >
                   Returnable
                 </button>
+                <button
+                  type="button"
+                  onClick={() => { set("return_status", "exchangeable"); setAutoStatus(false); }}
+                  className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                    form.return_status === "exchangeable"
+                      ? "bg-teal-600 text-white border-teal-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-teal-300"
+                  }`}
+                >
+                  Exchangeable
+                </button>
               </div>
+
+              {/* Auto-fill indicator */}
+              {autoStatus && policyMatch && (
+                <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+                  <SparklesIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  <span>
+                    Auto-filled from return policy
+                    {policyMatch.brand ? ` · ${policyMatch.brand}` : ""}
+                  </span>
+                </div>
+              )}
+
+              {/* Special conditions caveat from the matched policy */}
+              {autoStatus && policyMatch?.special_conditions && (
+                <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2">
+                  <InformationCircleIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-px" />
+                  <p className="text-[11px] text-amber-700 leading-snug">
+                    {policyMatch.special_conditions}
+                  </p>
+                </div>
+              )}
 
               {form.return_status === "pending" && (
                 <div className="mt-3">
@@ -710,9 +834,20 @@ export default function ExpiryForm({
                   <input
                     type="date"
                     value={form.return_by_date}
-                    onChange={(e) => set("return_by_date", e.target.value)}
+                    onChange={(e) => { set("return_by_date", e.target.value); setAutoDate(false); }}
                     className="w-full px-3 py-2.5 border border-blue-200 rounded-xl text-sm bg-blue-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
                   />
+                  {autoDate && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                      <SparklesIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                      <span>
+                        Auto-calculated from return policy
+                        {policyMatch?.months_before_expiry != null
+                          ? ` (${policyMatch.months_before_expiry} month${policyMatch.months_before_expiry === 1 ? "" : "s"} before expiry)`
+                          : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -74,7 +74,7 @@ export async function PUT(
     return_by_date,
   } = body ?? {};
 
-  const validReturnStatus = ["pending", "non-returnable", "returned"];
+  const validReturnStatus = ["pending", "non-returnable", "exchangeable", "returned"];
   const rs =
     return_status !== undefined
       ? validReturnStatus.includes(return_status)

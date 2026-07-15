@@ -47,6 +47,7 @@ function getReturnLabel(status: string | null): string {
   if (status === "pending") return "Return";
   if (status === "returned") return "Returned";
   if (status === "not_approved") return "Not Approved";
+  if (status === "exchangeable") return "Exchange";
   return "Non-Return";
 }
 
@@ -179,6 +180,7 @@ function ReturnBadge({
     pending:      { bg: "#fef3c7", color: "#d97706", dot: "#d97706", label: "Return" },
     returned:     { bg: "#dcfce7", color: "#16a34a", dot: "#16a34a", label: "Returned" },
     not_approved: { bg: "#fee2e2", color: "#dc2626", dot: "#dc2626", label: "Not Approved" },
+    exchangeable: { bg: "#ccfbf1", color: "#0d9488", dot: "#0d9488", label: "Exchange" },
   };
   const s = styles[status] ?? { bg: "#f1f5f9", color: "#64748b", dot: "#94a3b8", label: "Non-Return" };
   return (

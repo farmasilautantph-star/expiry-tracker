@@ -136,8 +136,14 @@ export function useShortList(): UseShortListReturn {
       if (f.return_status === "none") {
         data = data.filter((e) => !e.return_status);
       } else if (f.return_status === "returnable") {
-        // any tracked return (pending, returned, returning, not_approved — not null and not non-returnable)
-        data = data.filter((e) => e.return_status && e.return_status !== "non-returnable");
+        // any tracked return (pending, returned, returning, not_approved — not null,
+        // and not non-returnable / exchangeable which have no return workflow)
+        data = data.filter(
+          (e) =>
+            e.return_status &&
+            e.return_status !== "non-returnable" &&
+            e.return_status !== "exchangeable",
+        );
       } else if (f.return_status) {
         data = data.filter((e) => e.return_status === f.return_status);
       }

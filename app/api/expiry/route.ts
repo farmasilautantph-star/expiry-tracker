@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     );
   }
   const qty = qtyNum;
-  const validReturnStatus = ["pending", "non-returnable", "returned"];
+  const validReturnStatus = ["pending", "non-returnable", "exchangeable", "returned"];
   const rs =
     return_status && validReturnStatus.includes(return_status)
       ? return_status

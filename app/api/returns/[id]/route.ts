@@ -102,7 +102,7 @@ export async function PUT(
   }
 
   // Manager: can update return_by_date, notes, and/or return_status
-  const validStatus = ["pending", "returned", "non-returnable"];
+  const validStatus = ["pending", "returned", "non-returnable", "exchangeable"];
   const newStatus =
     return_status && validStatus.includes(return_status)
       ? return_status

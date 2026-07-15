@@ -1626,6 +1626,26 @@ function ReturnStatusBanner({ item }: { item: FullItemDetail }) {
       </div>
     );
   }
+  if (item.return_status === "exchangeable") {
+    return (
+      <div
+        style={{
+          background: "#f0fdfa",
+          border: "1px solid #99f6e4",
+          borderRadius: 12,
+          padding: "10px 12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 9999, background: "#0d9488" }} />
+          <span style={{ fontSize: 12.5, fontWeight: 700, color: "#0d9488" }}>Exchangeable</span>
+        </div>
+        <p style={{ fontSize: 11.5, color: "#0f766e", opacity: 0.85, marginTop: 4 }}>
+          Handled outside this system — no return tracking needed.
+        </p>
+      </div>
+    );
+  }
   // pending
   return (
     <div

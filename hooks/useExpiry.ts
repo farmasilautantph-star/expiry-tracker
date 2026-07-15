@@ -28,7 +28,7 @@ export interface ExpiryFormData {
   stock_id: string;
   uom: string;
   quantity: number;
-  return_status: "pending" | "non-returnable" | "";
+  return_status: "pending" | "non-returnable" | "exchangeable" | "";
   return_by_date: string;
 }
 

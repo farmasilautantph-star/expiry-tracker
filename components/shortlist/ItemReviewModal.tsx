@@ -208,6 +208,7 @@ function ReturnSection({
   const [submitting, setSubmitting] = useState(false);
 
   const isNonReturnable = item.return_status === "non-returnable";
+  const isExchangeable = item.return_status === "exchangeable";
 
   async function submit(status: "returned" | "not_approved") {
     setSubmitting(true);
@@ -268,9 +269,19 @@ function ReturnSection({
 
   return (
     <div>
-      <SectionHeader>Return to Warehouse</SectionHeader>
+      <SectionHeader>{isExchangeable ? "Return Status" : "Return to Warehouse"}</SectionHeader>
 
-      {item.return_status === "returned" ? (
+      {isExchangeable ? (
+        <div className="rounded-xl p-3" style={{ border: "1px solid #99f6e4", background: "#f0fdfa" }}>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: "#0d9488" }}>
+            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#0d9488" }} />
+            Exchangeable
+          </span>
+          <p className="text-xs text-slate-500 mt-1">
+            This item is exchangeable. The exchange is handled outside this system — no return-to-warehouse tracking needed.
+          </p>
+        </div>
+      ) : item.return_status === "returned" ? (
         <div className="rounded-xl px-4 py-3 flex items-start gap-2" style={{ background: "#dcfce7" }}>
           <CheckIcon className="w-4 h-4 text-[#16a34a] flex-shrink-0 mt-0.5" />
           <div>

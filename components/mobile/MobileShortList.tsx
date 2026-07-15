@@ -50,6 +50,8 @@ function returnStyle(status: string | null): ReturnStyle | null {
     return { bg: "#fef2f2", color: "#b91c1c", border: "#fecaca", label: "Not Approved" };
   if (status === "non-returnable")
     return { bg: "#f1f5f9", color: "#64748b", border: "#e2e8f0", label: "Non-Return" };
+  if (status === "exchangeable")
+    return { bg: "#ccfbf1", color: "#0d9488", border: "#99f6e4", label: "Exchange" };
   return { bg: "#f1f5f9", color: "#64748b", border: "#e2e8f0", label: status };
 }
 
@@ -436,6 +438,7 @@ export default function MobileShortList({
             <option value="pending">Pending</option>
             <option value="returned">Returned</option>
             <option value="non-returnable">Non-Returnable</option>
+            <option value="exchangeable">Exchangeable</option>
             <option value="none">Not Set</option>
           </select>
           {isManager && (

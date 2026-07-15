@@ -173,8 +173,9 @@ export default function ExpiryPage() {
           className="px-3 py-2 rounded-lg bg-white border border-[#e2e8f0] text-sm text-[#1e293b] focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#3b82f6] transition"
         >
           <option value="">All Returns</option>
-          <option value="returnable">Returnable</option>
+          <option value="pending">Returnable</option>
           <option value="non-returnable">Non-Returnable</option>
+          <option value="exchangeable">Exchangeable</option>
           <option value="none">Not Set</option>
         </select>
 

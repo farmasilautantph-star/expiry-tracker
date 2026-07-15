@@ -73,17 +73,17 @@ function DaysLeftBadge({ expiryDate }: { expiryDate: string }) {
 
 function ReturnBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-[#cbd5e1] text-xs">—</span>;
-  const isPending = status === "returnable";
+  const styles: Record<string, { bg: string; color: string; dot: string; label: string }> = {
+    pending:      { bg: "#fef3c7", color: "#d97706", dot: "#d97706", label: "Return" },
+    returned:     { bg: "#dcfce7", color: "#16a34a", dot: "#16a34a", label: "Returned" },
+    not_approved: { bg: "#fee2e2", color: "#dc2626", dot: "#dc2626", label: "Not Approved" },
+    exchangeable: { bg: "#ccfbf1", color: "#0d9488", dot: "#0d9488", label: "Exchange" },
+  };
+  const s = styles[status] ?? { bg: "#f1f5f9", color: "#64748b", dot: "#94a3b8", label: "Non-Return" };
   return (
-    <span
-      className="badge"
-      style={{
-        background: isPending ? "#dcfce7" : "#f1f5f9",
-        color: isPending ? "#16a34a" : "#64748b",
-      }}
-    >
-      <Dot color={isPending ? "#16a34a" : "#94a3b8"} />
-      {isPending ? "Returnable" : "Non-Return"}
+    <span className="badge" style={{ background: s.bg, color: s.color }}>
+      <Dot color={s.dot} />
+      {s.label}
     </span>
   );
 }
