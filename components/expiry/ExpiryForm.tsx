@@ -772,90 +772,98 @@ export default function ExpiryForm({
 
             {/* SECTION 5 — Return Status */}
             <div className="mt-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                Return Status
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => { set("return_status", "non-returnable"); setAutoStatus(false); }}
-                  className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
-                    form.return_status === "non-returnable"
-                      ? "bg-red-100 text-red-700 border-red-200"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                  }`}
-                >
-                  Non-Returnable
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { set("return_status", "pending"); setAutoStatus(false); }}
-                  className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
-                    form.return_status === "pending"
-                      ? "bg-green-600 text-white border-green-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
-                  }`}
-                >
-                  Returnable
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { set("return_status", "exchangeable"); setAutoStatus(false); }}
-                  className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
-                    form.return_status === "exchangeable"
-                      ? "bg-amber-400 text-amber-950 border-amber-400"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-teal-300"
-                  }`}
-                >
-                  Exchangeable
-                </button>
+              <div
+                className={
+                  autoStatus
+                    ? "rounded-[14px] border border-blue-100 bg-blue-50 p-3.5"
+                    : ""
+                }
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Return Status
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { set("return_status", "non-returnable"); setAutoStatus(false); }}
+                    className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                      form.return_status === "non-returnable"
+                        ? "bg-red-100 text-red-700 border-red-200"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                    }`}
+                  >
+                    Non-Returnable
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { set("return_status", "pending"); setAutoStatus(false); }}
+                    className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                      form.return_status === "pending"
+                        ? "bg-green-600 text-white border-green-600"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-blue-300"
+                    }`}
+                  >
+                    Returnable
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { set("return_status", "exchangeable"); setAutoStatus(false); }}
+                    className={`py-2.5 rounded-xl text-xs font-semibold border-2 transition-all ${
+                      form.return_status === "exchangeable"
+                        ? "bg-amber-400 text-amber-950 border-amber-400"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-teal-300"
+                    }`}
+                  >
+                    Exchangeable
+                  </button>
+                </div>
+
+                {/* Auto-fill confirmation prompt */}
+                {autoStatus && policyMatch && (
+                  <div className="mt-2 flex items-center gap-1.5 text-[12px] font-medium text-[#1d4ed8]">
+                    <SparklesIcon className="w-4 h-4 flex-shrink-0" />
+                    <span>
+                      Auto-filled from {policyMatch.brand ? `${policyMatch.brand} ` : ""}
+                      return policy — please review before continuing.
+                    </span>
+                  </div>
+                )}
+
+                {/* Special conditions caveat from the matched policy */}
+                {autoStatus && policyMatch?.special_conditions && (
+                  <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2">
+                    <InformationCircleIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-px" />
+                    <p className="text-[11px] text-amber-700 leading-snug">
+                      {policyMatch.special_conditions}
+                    </p>
+                  </div>
+                )}
+
+                {form.return_status === "pending" && (
+                  <div className="mt-3">
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                      Return By Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={form.return_by_date}
+                      onChange={(e) => { set("return_by_date", e.target.value); setAutoDate(false); setDateTouchedByUser(true); }}
+                      className="w-full px-3 py-2.5 border border-blue-200 rounded-xl text-sm bg-blue-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
+                    />
+                    {autoDate && (
+                      <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <SparklesIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                        <span>
+                          Auto-calculated from return policy
+                          {policyMatch?.months_before_expiry != null
+                            ? ` (${policyMatch.months_before_expiry} month${policyMatch.months_before_expiry === 1 ? "" : "s"} before expiry)`
+                            : ""}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* Auto-fill indicator */}
-              {autoStatus && policyMatch && (
-                <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
-                  <SparklesIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                  <span>
-                    Auto-filled from return policy
-                    {policyMatch.brand ? ` · ${policyMatch.brand}` : ""}
-                  </span>
-                </div>
-              )}
-
-              {/* Special conditions caveat from the matched policy */}
-              {autoStatus && policyMatch?.special_conditions && (
-                <div className="mt-2 flex items-start gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-2.5 py-2">
-                  <InformationCircleIcon className="w-4 h-4 text-amber-500 flex-shrink-0 mt-px" />
-                  <p className="text-[11px] text-amber-700 leading-snug">
-                    {policyMatch.special_conditions}
-                  </p>
-                </div>
-              )}
-
-              {form.return_status === "pending" && (
-                <div className="mt-3">
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                    Return By Date *
-                  </label>
-                  <input
-                    type="date"
-                    value={form.return_by_date}
-                    onChange={(e) => { set("return_by_date", e.target.value); setAutoDate(false); setDateTouchedByUser(true); }}
-                    className="w-full px-3 py-2.5 border border-blue-200 rounded-xl text-sm bg-blue-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-colors"
-                  />
-                  {autoDate && (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-500">
-                      <SparklesIcon className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                      <span>
-                        Auto-calculated from return policy
-                        {policyMatch?.months_before_expiry != null
-                          ? ` (${policyMatch.months_before_expiry} month${policyMatch.months_before_expiry === 1 ? "" : "s"} before expiry)`
-                          : ""}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
 
             {/* SECTION 6 — Notes + PIC */}
