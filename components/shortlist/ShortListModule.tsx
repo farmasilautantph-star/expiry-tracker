@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import ShortListTable from "./ShortListTable";
 import ShortListFilters from "./ShortListFilters";
 import ItemStatusStatCards from "./ItemStatusStatCards";
+import PushItemSummaryBar from "./PushItemSummaryBar";
 import ExpiryForm from "@/components/expiry/ExpiryForm";
 import type {
   ShortListEntry,
@@ -33,6 +34,8 @@ interface Props {
   onToggleMobileMore?: () => void;
   /** When set, row clicks call this instead of opening the built-in Item Review modal. */
   onRowClick?: (id: number) => void;
+  /** "push" swaps the Expired/Critical/Warning/Safe stat cards for a compact Push-Item summary line. */
+  variant?: "default" | "push";
 }
 
 export default function ShortListModule({
@@ -54,6 +57,7 @@ export default function ShortListModule({
   mobileMoreOpen = false,
   onToggleMobileMore,
   onRowClick,
+  variant = "default",
 }: Props) {
   const [editingEntry, setEditingEntry] = useState<ShortListEntry | null>(null);
 
@@ -105,12 +109,16 @@ export default function ShortListModule({
       />
 
       <div className="hidden md:block">
-        <ItemStatusStatCards
-          counts={counts}
-          isLoading={isLoading}
-          activeStatus={filters.status}
-          onSelectStatus={(status) => setFilter("status", status)}
-        />
+        {variant === "push" ? (
+          <PushItemSummaryBar entries={entries} isLoading={isLoading} />
+        ) : (
+          <ItemStatusStatCards
+            counts={counts}
+            isLoading={isLoading}
+            activeStatus={filters.status}
+            onSelectStatus={(status) => setFilter("status", status)}
+          />
+        )}
       </div>
 
       <ShortListTable

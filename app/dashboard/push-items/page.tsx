@@ -194,6 +194,7 @@ export default function PushItemsPage() {
             mobileMoreOpen={mobileMoreOpen}
             onToggleMobileMore={() => setMobileMoreOpen((o) => !o)}
             onRowClick={openDetail}
+            variant="push"
           />
         )}
       </div>

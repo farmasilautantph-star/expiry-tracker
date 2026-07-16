@@ -64,7 +64,16 @@
       "Bash(taskkill *)",
       "PowerShell(npm run *)",
       "PowerShell(npx tsx scripts/fix-add-stock-original-qty.ts --execute 2>$null)",
-      "PowerShell(npx tsx scripts/_inspect-cloves.ts 2>$null)"
+      "PowerShell(npx tsx scripts/_inspect-cloves.ts 2>$null)",
+      "PowerShell(npx tsx scripts/add-push-item-details.ts)",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\CLIENT\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Projects-EXPIRY-TRACKER\\\\db534d41-fa51-4958-9dd6-60b472858ac7\\\\scratchpad\\\\test-push-details.ts\")",
+      "PowerShell(npx tsx scripts/add-return-exception-reason.ts)",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\CLIENT\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Projects-EXPIRY-TRACKER\\\\db534d41-fa51-4958-9dd6-60b472858ac7\\\\scratchpad\\\\test-return-exception.ts\")",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\CLIENT\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Projects-EXPIRY-TRACKER\\\\db534d41-fa51-4958-9dd6-60b472858ac7\\\\scratchpad\\\\inspect-stuck-items.ts\")",
+      "PowerShell(npx tsx \"C:\\\\Users\\\\CLIENT\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Projects-EXPIRY-TRACKER\\\\db534d41-fa51-4958-9dd6-60b472858ac7\\\\scratchpad\\\\test-exception-lifecycle.ts\")",
+      "Bash(python3 -c \"import sys,json; [print\\(json.dumps\\(json.loads\\(l\\), indent=2\\)[:1500]\\) for l in [sys.stdin.readline\\(\\)]]\")",
+      "Bash(grep -v \"SECURITY WARNING\\\\|next major\\\\|prepare for\\\\|current behavior\\\\|libpq\\\\|See https\\\\|trace-warnings\\\\|^In the\\\\|^-\\\\|^$\")",
+      "Bash(grep -vE \"SECURITY WARNING|next major|prepare for|current behavior|libpq|See https|trace-warnings|^In the|^- If|^$|Warning:\")"
     ]
   }
 }

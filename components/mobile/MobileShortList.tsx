@@ -8,6 +8,7 @@ import type {
 } from "@/hooks/useShortList";
 import MobileItemReviewModal from "@/components/mobile/MobileItemReviewModal";
 import ItemStatusStatCards from "@/components/shortlist/ItemStatusStatCards";
+import PushItemSummaryBar from "@/components/shortlist/PushItemSummaryBar";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
@@ -378,14 +379,18 @@ export default function MobileShortList({
         </div>
       </div>
 
-      {/* ─── Status stat cards (2x2) ─── */}
+      {/* ─── Status stat cards (2x2) / Push Item summary ─── */}
       <div style={{ background: "#fff", padding: "10px 16px 14px" }}>
-        <ItemStatusStatCards
-          counts={counts}
-          isLoading={isLoading}
-          activeStatus={filters.status}
-          onSelectStatus={(status) => setFilter("status", status)}
-        />
+        {activeTab === "push" ? (
+          <PushItemSummaryBar entries={entries} isLoading={isLoading} />
+        ) : (
+          <ItemStatusStatCards
+            counts={counts}
+            isLoading={isLoading}
+            activeStatus={filters.status}
+            onSelectStatus={(status) => setFilter("status", status)}
+          />
+        )}
       </div>
 
       {/* ─── More filters panel ─── */}
