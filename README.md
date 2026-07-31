@@ -43,10 +43,6 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-**Default login (after seed):**
-- Manager: `manager` / `manager123`
-- Staff: `nadiah` / `staff123`
-
 > ⚠️ Change passwords before going live!
 
 ## Data Migration (from Google Sheets)
