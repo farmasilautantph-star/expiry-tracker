@@ -32,6 +32,10 @@ interface ExpiryRow {
   push_product_image: string | null;
   push_active_ingredient: string | null;
   push_selling_points: string | null;
+  is_locked: boolean;
+  locked_at: string | null;
+  unlocked_reason: string | null;
+  unlocked_by: number | null;
 }
 
 interface OfferRow {
@@ -156,6 +160,10 @@ export async function GET(
       push_product_image: row.push_product_image ?? null,
       push_active_ingredient: row.push_active_ingredient ?? null,
       push_selling_points: row.push_selling_points ?? null,
+      is_locked: !!row.is_locked,
+      locked_at: row.locked_at,
+      unlocked_reason: row.unlocked_reason ?? null,
+      unlocked_by: row.unlocked_by ?? null,
     },
   });
 }

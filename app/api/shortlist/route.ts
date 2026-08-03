@@ -29,6 +29,8 @@ interface ExpiryRow {
   is_push_item: boolean;
   push_item_marked_at: string | null;
   push_item_marked_by: number | null;
+  is_locked: boolean;
+  locked_at: string | null;
 }
 
 interface RawRow extends ExpiryRow {
@@ -53,6 +55,8 @@ export interface ShortListEntry extends ExpiryRow {
   total_offered: number;
   offered_qty: number;
   has_active_offer: boolean;
+  is_locked: boolean;
+  locked_at: string | null;
 }
 
 function formatReviewedAt(iso: string | null): string | null {
@@ -111,6 +115,7 @@ export async function GET(req: NextRequest) {
   const statusFilter = searchParams.get("status")?.trim() ?? "";
   const search = searchParams.get("search")?.trim() ?? "";
   const pushOnly = searchParams.get("push_only") === "true";
+  const lockedOnly = searchParams.get("locked_only") === "true";
 
   let p = 1;
   const conditions: string[] = [];
@@ -122,6 +127,9 @@ export async function GET(req: NextRequest) {
   if (pushOnly) {
     // Push Item tab is outlet-wide — no user scoping, filter by flag only
     conditions.push("el.is_push_item = TRUE");
+  } else if (lockedOnly) {
+    // Locked Items page is outlet-wide — no user scoping, filter by flag only
+    conditions.push("el.is_locked = TRUE");
   } else {
     if (user.role !== "manager") {
       conditions.push(`el.pic_id = $${p++}`);
@@ -188,11 +196,13 @@ export async function GET(req: NextRequest) {
     warning: 0,
     safe: 0,
     push: 0,
+    locked: 0,
     total: entries.length,
   };
   for (const e of entries) {
     counts[e.urgency]++;
     if (e.is_push_item) counts.push++;
+    if (e.is_locked) counts.locked++;
   }
 
   return NextResponse.json({ success: true, data: entries, counts });

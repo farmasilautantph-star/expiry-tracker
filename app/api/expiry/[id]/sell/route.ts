@@ -10,6 +10,7 @@ interface ExpiryRow {
   quantity: number;
   original_qty: number | null;
   notes: string | null;
+  is_locked: boolean;
 }
 
 export async function POST(
@@ -46,7 +47,7 @@ export async function POST(
     );
 
   const existing = (await pool.query(
-    "SELECT id, pic_id, pic_name, description, quantity, original_qty, notes FROM expiry_logs WHERE id = $1",
+    "SELECT id, pic_id, pic_name, description, quantity, original_qty, notes, is_locked FROM expiry_logs WHERE id = $1",
     [id],
   )).rows[0] as unknown as ExpiryRow | undefined;
 
@@ -55,6 +56,18 @@ export async function POST(
 
   if (user.role !== "manager" && existing.pic_id !== user.userId)
     return NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
+
+  // Locked items are near-expiry and pulled from the sellable shelf — selling to
+  // a customer is the specific risk this feature prevents. Enforce server-side
+  // regardless of the client state; a manager must unlock (with a reason) first.
+  if (existing.is_locked)
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Item is locked (near expiry) — sale is blocked. Remove it from the shelf, or ask a manager to unlock it.",
+      },
+      { status: 403 },
+    );
 
   if (unitsSold > existing.quantity)
     return NextResponse.json(
@@ -89,7 +102,9 @@ export async function POST(
            last_reviewed_at = $7,
            is_push_item        = FALSE,
            push_item_marked_at = NULL,
-           push_item_marked_by = NULL
+           push_item_marked_by = NULL,
+           is_locked           = FALSE,
+           locked_at           = NULL
        WHERE id = $8`,
       [
         capturedOriginalQty,

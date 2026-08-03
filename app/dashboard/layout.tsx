@@ -88,6 +88,11 @@ const NAV_SECTIONS: NavSection[] = [
         href: "/dashboard/push-items",
         icon: <ArrowUpTrayIcon style={{ width: 18, height: 18 }} />,
       },
+      {
+        label: "Locked Items",
+        href: "/dashboard/locked-items",
+        icon: <LockClosedIcon style={{ width: 18, height: 18 }} />,
+      },
     ],
   },
   {
@@ -125,6 +130,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/dashboard/returns": "Return Management",
   "/dashboard/offers": "Outlet Offers",
   "/dashboard/push-items": "Push Item",
+  "/dashboard/locked-items": "Locked Items",
   "/dashboard/history-log": "History Log",
   "/dashboard/staff-report": "Staff Report",
   "/dashboard/expiry": "Log New Expiry",

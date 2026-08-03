@@ -41,6 +41,8 @@ export interface ShortListEntry {
   is_push_item: boolean;
   push_item_marked_at: string | null;
   push_item_marked_by: number | null;
+  is_locked: boolean;
+  locked_at: string | null;
 }
 
 export interface ShortListFilters {
@@ -57,6 +59,7 @@ export interface ShortListCounts {
   warning: number;
   safe: number;
   push: number;
+  locked: number;
   total: number;
 }
 
@@ -74,12 +77,14 @@ const EMPTY_COUNTS: ShortListCounts = {
   warning: 0,
   safe: 0,
   push: 0,
+  locked: 0,
   total: 0,
 };
 
 interface UseShortListReturn {
   entries: ShortListEntry[];
   pushEntries: ShortListEntry[];
+  lockedEntries: ShortListEntry[];
   counts: ShortListCounts;
   isLoading: boolean;
   error: string | null;
@@ -98,6 +103,7 @@ interface UseShortListReturn {
 export function useShortList(): UseShortListReturn {
   const [entries, setEntries] = useState<ShortListEntry[]>([]);
   const [pushEntries, setPushEntries] = useState<ShortListEntry[]>([]);
+  const [lockedEntries, setLockedEntries] = useState<ShortListEntry[]>([]);
   const [counts, setCounts] = useState<ShortListCounts>(EMPTY_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +119,19 @@ export function useShortList(): UseShortListReturn {
       setPushEntries(data.slice().sort((a, b) => a.days_left - b.days_left));
     } catch {
       /* silent — push items are supplemental */
+    }
+  }, []);
+
+  const fetchLockedItems = useCallback(async () => {
+    try {
+      const res = await fetch("/api/shortlist?locked_only=true");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (!json.success) return;
+      const data: ShortListEntry[] = json.data;
+      setLockedEntries(data.slice().sort((a, b) => a.days_left - b.days_left));
+    } catch {
+      /* silent — locked items are supplemental */
     }
   }, []);
 
@@ -155,6 +174,7 @@ export function useShortList(): UseShortListReturn {
         warning: 0,
         safe: 0,
         push: 0, // overridden with pushEntries.length at return time
+        locked: 0, // overridden with lockedEntries.length at return time
         total: data.length,
       };
       for (const e of data) {
@@ -179,6 +199,10 @@ export function useShortList(): UseShortListReturn {
     fetchPushItems();
   }, [fetchPushItems]);
 
+  useEffect(() => {
+    fetchLockedItems();
+  }, [fetchLockedItems]);
+
   function setFilter<K extends keyof ShortListFilters>(
     key: K,
     value: ShortListFilters[K],
@@ -200,21 +224,34 @@ export function useShortList(): UseShortListReturn {
       return mergedEntry;
     }));
 
-    if (!("is_push_item" in patch)) {
+    if ("is_push_item" in patch) {
+      // is_push_item changed: pushEntries is a separately-fetched list, so a
+      // plain map won't add newly-marked items or drop newly-unmarked ones —
+      // keep it (and therefore counts.push, which is derived from it) in sync.
+      setPushEntries(prev => {
+        const withoutId = prev.filter(e => e.id !== id);
+        if (!patch.is_push_item) return withoutId;
+        const source = prev.find(e => e.id === id) ?? mergedEntry;
+        if (!source) return prev;
+        return [...withoutId, { ...source, ...patch }].sort((a, b) => a.days_left - b.days_left);
+      });
+    } else {
       setPushEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
-      return;
     }
 
-    // is_push_item changed: pushEntries is a separately-fetched list, so a
-    // plain map won't add newly-marked items or drop newly-unmarked ones —
-    // keep it (and therefore counts.push, which is derived from it) in sync.
-    setPushEntries(prev => {
-      const withoutId = prev.filter(e => e.id !== id);
-      if (!patch.is_push_item) return withoutId;
-      const source = prev.find(e => e.id === id) ?? mergedEntry;
-      if (!source) return prev;
-      return [...withoutId, { ...source, ...patch }].sort((a, b) => a.days_left - b.days_left);
-    });
+    if ("is_locked" in patch) {
+      // is_locked changed (e.g. manager unlock): keep the separately-fetched
+      // lockedEntries list — and counts.locked, derived from it — in sync.
+      setLockedEntries(prev => {
+        const withoutId = prev.filter(e => e.id !== id);
+        if (!patch.is_locked) return withoutId;
+        const source = prev.find(e => e.id === id) ?? mergedEntry;
+        if (!source) return prev;
+        return [...withoutId, { ...source, ...patch }].sort((a, b) => a.days_left - b.days_left);
+      });
+    } else {
+      setLockedEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    }
   }, []);
 
   const removeEntry = useCallback((id: number) => {
@@ -224,9 +261,10 @@ export function useShortList(): UseShortListReturn {
   return {
     entries,
     pushEntries,
-    // push count is derived from pushEntries so it can never drift out of
-    // sync with the list that actually drives the tab badge
-    counts: { ...counts, push: pushEntries.length },
+    lockedEntries,
+    // push/locked counts are derived from their lists so they can never drift
+    // out of sync with the lists that actually drive the badges
+    counts: { ...counts, push: pushEntries.length, locked: lockedEntries.length },
     isLoading,
     error,
     filters,
@@ -234,12 +272,13 @@ export function useShortList(): UseShortListReturn {
     clearFilters,
     activeFilterCount,
     refresh: async () => {
-      await Promise.all([fetchData(filters), fetchPushItems()]);
+      await Promise.all([fetchData(filters), fetchPushItems(), fetchLockedItems()]);
     },
     patchEntry,
     removeEntry: (id) => {
       removeEntry(id);
       setPushEntries(prev => prev.filter(e => e.id !== id));
+      setLockedEntries(prev => prev.filter(e => e.id !== id));
     },
   };
 }

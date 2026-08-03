@@ -10,10 +10,13 @@ import {
   PencilIcon,
   TrashIcon,
   ArrowRightCircleIcon,
+  LockClosedIcon,
+  LockOpenIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { fileToCompressedDataUrl } from "@/lib/compressImage";
 import OfferForm from "@/components/offers/OfferForm";
+import LockedBadge from "@/components/shortlist/LockedBadge";
 import type { OfferFormData } from "@/hooks/useOffers";
 import type { ShortListEntry } from "@/hooks/useShortList";
 
@@ -60,6 +63,10 @@ export interface FullItemDetail {
   push_product_image: string | null;
   push_active_ingredient: string | null;
   push_selling_points: string | null;
+  is_locked: boolean;
+  locked_at: string | null;
+  unlocked_reason: string | null;
+  unlocked_by: number | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -760,17 +767,30 @@ function SalesSection({
             Available: {maxQty} unit{maxQty !== 1 ? "s" : ""}
           </p>
           <div className="flex gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={() => { setUnitsInput("1"); setShowForm("sell"); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors"
-              style={{ background: "#2563eb" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1d4ed8"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#2563eb"; }}
-            >
-              <BanknotesIcon className="w-4 h-4" />
-              Mark as Sold
-            </button>
+            {item.is_locked ? (
+              <button
+                type="button"
+                disabled
+                title="Locked — near expiry, sale blocked. Remove from shelf."
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-not-allowed"
+                style={{ background: "#f1f5f9", color: "#94a3b8", border: "1px solid #e2e8f0" }}
+              >
+                <LockClosedIcon className="w-4 h-4" />
+                Locked — Sale Blocked
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setUnitsInput("1"); setShowForm("sell"); }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors"
+                style={{ background: "#2563eb" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1d4ed8"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#2563eb"; }}
+              >
+                <BanknotesIcon className="w-4 h-4" />
+                Mark as Sold
+              </button>
+            )}
             <button
               type="button"
               onClick={() => { setTransferQtyInput("1"); setOutletName(""); setTransferError(null); setShowForm("transfer"); }}
@@ -1232,6 +1252,137 @@ function PushItemSection({
   );
 }
 
+// ─── Section: Locked (unlock is manager only) ────────────────────────────────
+
+function fmtLockedSince(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-MY", {
+    timeZone: "Asia/Kuala_Lumpur",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function LockSection({
+  item,
+  isManager,
+  onItemUpdate,
+  onPatchEntry,
+  onToast,
+}: {
+  item: FullItemDetail;
+  isManager: boolean;
+  onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
+  onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
+  onToast?: (msg: string) => void;
+}) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submitUnlock() {
+    const r = reason.trim();
+    if (r.length < 10) {
+      setError("Reason must be at least 10 characters.");
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: r }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      onItemUpdate((prev) => ({ ...prev, is_locked: false, locked_at: null, unlocked_reason: r }));
+      onPatchEntry?.(item.id, { is_locked: false, locked_at: null });
+      setFormOpen(false);
+      setReason("");
+      onToast?.("Item unlocked — sale re-enabled");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to unlock item");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div>
+      <SectionHeader>Locked Item</SectionHeader>
+      <div
+        className="rounded-xl p-3"
+        style={{ background: "#fef2f2", border: "1px solid #fecaca" }}
+      >
+        <div className="flex items-start gap-2">
+          <LockClosedIcon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "#b91c1c" }} />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold" style={{ color: "#b91c1c" }}>
+              Locked — near expiry, sale blocked
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Remove this item from the shelf and place it in the designated locked-item area.
+              {item.locked_at && ` Locked since ${fmtLockedSince(item.locked_at)}.`}
+            </p>
+          </div>
+        </div>
+
+        {isManager && !formOpen && (
+          <button
+            type="button"
+            onClick={() => { setReason(""); setError(null); setFormOpen(true); }}
+            className="mt-3 h-9 px-3 rounded-lg text-xs font-semibold transition-colors inline-flex items-center gap-1.5"
+            style={{ background: "#7c3aed", color: "#ffffff" }}
+          >
+            <LockOpenIcon className="w-3.5 h-3.5" />
+            Unlock Item
+          </button>
+        )}
+
+        {isManager && formOpen && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-medium text-slate-600">
+              Provide a reason for unlocking this near-expiry item (min. 10 characters).
+            </p>
+            <textarea
+              className="w-full text-xs rounded-lg px-3 py-2 resize-none outline-none bg-white"
+              style={{
+                border: error ? "1px solid #dc2626" : "1px solid #ddd6fe",
+                minHeight: 70,
+              }}
+              placeholder="Reason for unlocking * (min. 10 characters)"
+              value={reason}
+              onChange={(e) => { setReason(e.target.value); setError(null); }}
+              autoFocus
+            />
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex gap-2">
+              <Btn variant="slate" onClick={() => { setFormOpen(false); setError(null); }} disabled={submitting}>
+                Cancel
+              </Btn>
+              <button
+                type="button"
+                onClick={submitUnlock}
+                disabled={submitting || reason.trim().length < 10}
+                className="h-8 px-3 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: "#7c3aed", color: "#ffffff" }}
+              >
+                {submitting ? "Unlocking…" : "Confirm Unlock"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 
 interface Props {
@@ -1382,16 +1533,19 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, 
                     <span className="font-mono">{item.barcode}</span>
                     {item.stock_id && ` · ${item.stock_id}`}
                   </p>
-                  <span
-                    className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold"
-                    style={{ background: u.bg, color: u.color }}
-                  >
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                     <span
-                      className="w-1.5 h-1.5 rounded-full inline-block"
-                      style={{ background: u.color }}
-                    />
-                    {u.label} · {item ? daysLabel(item.days_left) : ""}
-                  </span>
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold"
+                      style={{ background: u.bg, color: u.color }}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full inline-block"
+                        style={{ background: u.color }}
+                      />
+                      {u.label} · {item ? daysLabel(item.days_left) : ""}
+                    </span>
+                    {item.is_locked && <LockedBadge />}
+                  </div>
                 </>
               ) : isLoading ? (
                 <div className="space-y-1.5 mt-1">
@@ -1464,6 +1618,19 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, 
                   <Divider />
                   <PushItemSection
                     item={item}
+                    onItemUpdate={handleItemUpdate}
+                    onPatchEntry={onPatchEntry}
+                    onToast={onToast}
+                  />
+                </>
+              )}
+
+              {item.is_locked && (
+                <>
+                  <Divider />
+                  <LockSection
+                    item={item}
+                    isManager={isManager}
                     onItemUpdate={handleItemUpdate}
                     onPatchEntry={onPatchEntry}
                     onToast={onToast}

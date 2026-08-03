@@ -105,7 +105,9 @@ export async function PUT(
            last_updated_at = $5,
            is_push_item         = FALSE,
            push_item_marked_at  = NULL,
-           push_item_marked_by  = NULL
+           push_item_marked_by  = NULL,
+           is_locked            = FALSE,
+           locked_at            = NULL
        WHERE id = $6`,
       [return_notes ?? null, exceptionReason, now, now, now, id],
     );
@@ -139,7 +141,9 @@ export async function PUT(
            last_updated_at = $4,
            is_push_item         = FALSE,
            push_item_marked_at  = NULL,
-           push_item_marked_by  = NULL
+           push_item_marked_by  = NULL,
+           is_locked            = FALSE,
+           locked_at            = NULL
        WHERE id = $5`,
       [return_notes ?? null, now, now, now, id],
     );

@@ -18,6 +18,7 @@ import {
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 import ItemReviewModal from "@/components/shortlist/ItemReviewModal";
+import LockedBadge from "@/components/shortlist/LockedBadge";
 
 type Urgency = "expired" | "critical" | "warning" | "safe";
 
@@ -439,6 +440,7 @@ export default function ShortListTable({
                       {formatShortDate(entry.expiry_date)}
                     </span>
                     <DaysLeftBadge entry={entry} onClick={stop} />
+                    {entry.is_locked && <LockedBadge onClick={stop} />}
                     <ReturnBadge status={entry.return_status} onClick={stop} />
                   </div>
                   {/* Review sub-label, if any */}
@@ -616,7 +618,10 @@ export default function ShortListTable({
 
                       {/* DAYS LEFT */}
                       <td className="px-4 py-3 whitespace-nowrap" style={cellBg("days_left")}>
-                        <DaysLeftBadge entry={entry} onClick={stop} />
+                        <div className="flex flex-col items-start gap-1">
+                          <DaysLeftBadge entry={entry} onClick={stop} />
+                          {entry.is_locked && <LockedBadge onClick={stop} />}
+                        </div>
                       </td>
 
                       {/* RETURN */}

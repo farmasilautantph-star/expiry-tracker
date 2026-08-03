@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { fileToCompressedDataUrl } from "@/lib/compressImage";
 import OfferForm from "@/components/offers/OfferForm";
+import LockedBadge from "@/components/shortlist/LockedBadge";
 import type { OfferFormData } from "@/hooks/useOffers";
 import type {
   ActiveOffer,
@@ -56,7 +57,8 @@ type ActionPanel =
   | { type: "transfer" }
   | { type: "return" }
   | { type: "offer" }
-  | { type: "push" };
+  | { type: "push" }
+  | { type: "unlock" };
 
 export default function MobileItemReviewModal({
   isOpen,
@@ -403,6 +405,39 @@ export default function MobileItemReviewModal({
     }
   }
 
+  // ── Unlock (manager only) ──
+  const [unlockReason, setUnlockReason] = useState("");
+  const [unlockError, setUnlockError] = useState<string | null>(null);
+
+  async function submitUnlock() {
+    if (!item) return;
+    const reason = unlockReason.trim();
+    if (reason.length < 10) {
+      setUnlockError("Reason must be at least 10 characters.");
+      return;
+    }
+    setUnlockError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/expiry/${item.id}/unlock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error ?? "Failed");
+      updateItem((prev) => ({ ...prev, is_locked: false, locked_at: null, unlocked_reason: reason }));
+      onPatchEntry?.(item.id, { is_locked: false, locked_at: null });
+      setPanel({ type: "none" });
+      setUnlockReason("");
+      onToast?.("Item unlocked — sale re-enabled");
+    } catch (err) {
+      setUnlockError(err instanceof Error ? err.message : "Failed to unlock item");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   // ── Delete ──
   async function handleDelete() {
     if (!item) return;
@@ -556,6 +591,7 @@ export default function MobileItemReviewModal({
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: u.color, opacity: 0.85 }}>
                     · {daysLabel(item.days_left)}
                   </span>
+                  {item.is_locked && <LockedBadge />}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, position: "relative" }} ref={moreRef}>
                   <button
@@ -726,7 +762,16 @@ export default function MobileItemReviewModal({
                         onClick={handleMarkReviewed}
                       />
                     )}
-                    {canSell && (
+                    {canSell && item.is_locked && (
+                      <ActionButton
+                        variant="outline"
+                        icon={<IconLock />}
+                        label="Locked"
+                        disabled
+                        onClick={() => {}}
+                      />
+                    )}
+                    {canSell && !item.is_locked && (
                       <ActionButton
                         variant="outline"
                         icon={<IconBag />}
@@ -794,7 +839,95 @@ export default function MobileItemReviewModal({
                         : "Mark as Push Item"}
                     </button>
                   )}
+
+                  {item.is_locked && (
+                    <div
+                      style={{
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
+                        borderRadius: 14,
+                        padding: "12px 14px",
+                        marginBottom: 18,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                        <span style={{ color: "#b91c1c", display: "flex", flexShrink: 0, marginTop: 1 }}>
+                          <IconLock />
+                        </span>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 12.5, fontWeight: 800, color: "#b91c1c" }}>
+                            Locked — near expiry, sale blocked
+                          </p>
+                          <p style={{ fontSize: 11.5, color: "#64748b", marginTop: 3, lineHeight: 1.45 }}>
+                            Remove this item from the shelf and place it in the designated
+                            locked-item area.
+                          </p>
+                        </div>
+                      </div>
+                      {isManager && (
+                        <button
+                          type="button"
+                          onClick={() => { setUnlockReason(""); setUnlockError(null); setPanel({ type: "unlock" }); }}
+                          style={{
+                            marginTop: 12,
+                            width: "100%",
+                            height: 44,
+                            borderRadius: 12,
+                            background: "#7c3aed",
+                            color: "#fff",
+                            fontSize: 13.5,
+                            fontWeight: 700,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+                            border: "1.5px solid #7c3aed",
+                          }}
+                        >
+                          <IconUnlock />
+                          Unlock Item
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </>
+              )}
+
+              {/* UNLOCK panel */}
+              {panel.type === "unlock" && item && (
+                <ActionPanelCard
+                  title="Unlock Item"
+                  onCancel={() => { setPanel({ type: "none" }); setUnlockError(null); }}
+                >
+                  <p style={{ fontSize: 13, color: "#334155", fontWeight: 500, marginBottom: 10 }}>
+                    Provide a reason for unlocking this near-expiry item (min. 10 characters).
+                  </p>
+                  <FieldLabel>Reason *</FieldLabel>
+                  <textarea
+                    value={unlockReason}
+                    onChange={(e) => { setUnlockReason(e.target.value); setUnlockError(null); }}
+                    rows={3}
+                    placeholder="Reason for unlocking…"
+                    style={{
+                      ...inputStyle,
+                      minHeight: 70,
+                      resize: "none",
+                      border: unlockError ? "1.5px solid #dc2626" : inputStyle.border,
+                    }}
+                  />
+                  {unlockError && (
+                    <p style={{ fontSize: 11.5, color: "#dc2626", marginTop: 8 }}>{unlockError}</p>
+                  )}
+                  <div style={{ height: 10 }} />
+                  <PanelButtons
+                    onCancel={() => { setPanel({ type: "none" }); setUnlockError(null); }}
+                    onConfirm={submitUnlock}
+                    confirmLabel="Confirm Unlock"
+                    disabled={submitting || unlockReason.trim().length < 10}
+                    submitting={submitting}
+                    confirmColor="#7c3aed"
+                  />
+                </ActionPanelCard>
               )}
 
               {/* SELL panel */}
@@ -1886,6 +2019,22 @@ function IconDoc() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
+    </svg>
+  );
+}
+function IconLock() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  );
+}
+function IconUnlock() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
     </svg>
   );
 }

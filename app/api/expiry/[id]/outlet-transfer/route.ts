@@ -86,7 +86,9 @@ export async function POST(
            last_reviewed_at = $4,
            is_push_item         = FALSE,
            push_item_marked_at  = NULL,
-           push_item_marked_by  = NULL
+           push_item_marked_by  = NULL,
+           is_locked            = FALSE,
+           locked_at            = NULL
        WHERE id = $5`,
       [capturedOriginalQty, now, now, now, id],
     );
