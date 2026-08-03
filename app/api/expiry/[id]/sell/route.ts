@@ -59,12 +59,13 @@ export async function POST(
 
   // Locked items are near-expiry and pulled from the sellable shelf — selling to
   // a customer is the specific risk this feature prevents. Enforce server-side
-  // regardless of the client state; a manager must unlock (with a reason) first.
-  if (existing.is_locked)
+  // regardless of the client state. Managers may override and sell directly;
+  // staff must ask a manager to unlock or sell it.
+  if (existing.is_locked && user.role !== "manager")
     return NextResponse.json(
       {
         success: false,
-        error: "Item is locked (near expiry) — sale is blocked. Remove it from the shelf, or ask a manager to unlock it.",
+        error: "Item is locked (near expiry) — sale is blocked. Remove it from the shelf, or ask a manager to sell it.",
       },
       { status: 403 },
     );

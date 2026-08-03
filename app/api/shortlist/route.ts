@@ -128,8 +128,13 @@ export async function GET(req: NextRequest) {
     // Push Item tab is outlet-wide — no user scoping, filter by flag only
     conditions.push("el.is_push_item = TRUE");
   } else if (lockedOnly) {
-    // Locked Items page is outlet-wide — no user scoping, filter by flag only
+    // Locked Items page: managers see all locked items outlet-wide (for
+    // oversight), staff only see items they're the PIC for.
     conditions.push("el.is_locked = TRUE");
+    if (user.role !== "manager") {
+      conditions.push(`el.pic_id = $${p++}`);
+      bindings.push(user.userId);
+    }
   } else {
     if (user.role !== "manager") {
       conditions.push(`el.pic_id = $${p++}`);

@@ -664,12 +664,14 @@ function OffersSection({
 
 function SalesSection({
   item,
+  isManager,
   onItemUpdate,
   onPatchEntry,
   onClose,
   onToast,
 }: {
   item: FullItemDetail;
+  isManager: boolean;
   onItemUpdate: (fn: (prev: FullItemDetail) => FullItemDetail) => void;
   onPatchEntry?: (id: number, patch: Partial<ShortListEntry>) => void;
   onClose: () => void;
@@ -766,8 +768,13 @@ function SalesSection({
           <p className="text-sm font-semibold text-slate-700">
             Available: {maxQty} unit{maxQty !== 1 ? "s" : ""}
           </p>
+          {item.is_locked && isManager && (
+            <p className="text-[11px] font-medium" style={{ color: "#b45309" }}>
+              This item is locked (near expiry). As manager, you can still sell it directly.
+            </p>
+          )}
           <div className="flex gap-2 flex-wrap">
-            {item.is_locked ? (
+            {item.is_locked && !isManager ? (
               <button
                 type="button"
                 disabled
@@ -783,12 +790,12 @@ function SalesSection({
                 type="button"
                 onClick={() => { setUnitsInput("1"); setShowForm("sell"); }}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white shadow-sm transition-colors"
-                style={{ background: "#2563eb" }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#1d4ed8"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#2563eb"; }}
+                style={{ background: item.is_locked ? "#b45309" : "#2563eb" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = item.is_locked ? "#92400e" : "#1d4ed8"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = item.is_locked ? "#b45309" : "#2563eb"; }}
               >
-                <BanknotesIcon className="w-4 h-4" />
-                Mark as Sold
+                {item.is_locked ? <LockOpenIcon className="w-4 h-4" /> : <BanknotesIcon className="w-4 h-4" />}
+                {item.is_locked ? "Mark as Sold (Override)" : "Mark as Sold"}
               </button>
             )}
             <button
@@ -1643,6 +1650,7 @@ export default function ItemReviewModal({ isOpen, onClose, entryId, onReviewed, 
                   <Divider />
                   <SalesSection
                     item={item}
+                    isManager={isManager}
                     onItemUpdate={handleItemUpdate}
                     onPatchEntry={onPatchEntry}
                     onClose={onClose}

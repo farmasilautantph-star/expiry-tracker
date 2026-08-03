@@ -762,7 +762,7 @@ export default function MobileItemReviewModal({
                         onClick={handleMarkReviewed}
                       />
                     )}
-                    {canSell && item.is_locked && (
+                    {canSell && item.is_locked && !isManager && (
                       <ActionButton
                         variant="outline"
                         icon={<IconLock />}
@@ -771,11 +771,11 @@ export default function MobileItemReviewModal({
                         onClick={() => {}}
                       />
                     )}
-                    {canSell && !item.is_locked && (
+                    {canSell && (!item.is_locked || isManager) && (
                       <ActionButton
-                        variant="outline"
-                        icon={<IconBag />}
-                        label="Mark Sold"
+                        variant={item.is_locked ? "danger" : "outline"}
+                        icon={item.is_locked ? <IconLock /> : <IconBag />}
+                        label={item.is_locked ? "Sell (Override)" : "Mark Sold"}
                         onClick={() => { setSellUnitsInput("1"); setPanel({ type: "sell" }); }}
                       />
                     )}
@@ -933,9 +933,14 @@ export default function MobileItemReviewModal({
               {/* SELL panel */}
               {panel.type === "sell" && item && (
                 <ActionPanelCard
-                  title="Mark Units Sold"
+                  title={item.is_locked ? "Sell Locked Item (Override)" : "Mark Units Sold"}
                   onCancel={() => setPanel({ type: "none" })}
                 >
+                  {item.is_locked && (
+                    <p style={{ fontSize: 11.5, color: "#b45309", fontWeight: 600, margin: "0 2px 10px" }}>
+                      This item is locked (near expiry). As manager, you are selling it directly.
+                    </p>
+                  )}
                   <NumberField
                     label="Units sold"
                     value={sellUnitsInput}
@@ -955,6 +960,7 @@ export default function MobileItemReviewModal({
                       return submitting || isNaN(v) || v < 1 || v > item.qty;
                     })()}
                     submitting={submitting}
+                    confirmColor={item.is_locked ? "#b45309" : undefined}
                   />
                 </ActionPanelCard>
               )}
