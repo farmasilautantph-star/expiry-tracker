@@ -20,6 +20,7 @@ interface SalesRow {
   item_status: string;
   sold_at: string | null;
   completed_notes: string | null;
+  unit_price: string | null;
 }
 
 function currentMonth(): string {
@@ -53,34 +54,37 @@ export async function GET(req: NextRequest) {
   const bindings: (string | number)[] = [];
 
   conditions.push(
-    "(original_qty IS NOT NULL OR notes LIKE '%unit(s) sold%' OR item_status = 'sold')",
+    "(el.original_qty IS NOT NULL OR el.notes LIKE '%unit(s) sold%' OR el.item_status = 'sold')",
   );
 
   if (user.role !== "manager") {
-    conditions.push(`pic_id = $${p++}`);
+    conditions.push(`el.pic_id = $${p++}`);
     bindings.push(user.userId);
   } else if (pic) {
-    conditions.push(`pic_name = $${p++}`);
+    conditions.push(`el.pic_name = $${p++}`);
     bindings.push(pic);
   }
 
   if (search) {
     const like = `%${search}%`;
     conditions.push(
-      `(LOWER(description) LIKE LOWER($${p++}) OR LOWER(barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(stock_id,'')) LIKE LOWER($${p++}))`,
+      `(LOWER(el.description) LIKE LOWER($${p++}) OR LOWER(el.barcode) LIKE LOWER($${p++}) OR LOWER(COALESCE(el.stock_id,'')) LIKE LOWER($${p++}))`,
     );
     bindings.push(like, like, like);
   }
 
   const sqlOrder =
     sortBy === "description"
-      ? `ORDER BY description ${sortOrder.toUpperCase()}`
-      : "ORDER BY COALESCE(sold_at, logged_at) DESC";
+      ? `ORDER BY el.description ${sortOrder.toUpperCase()}`
+      : "ORDER BY COALESCE(el.sold_at, el.logged_at) DESC";
 
   const where = `WHERE ${conditions.join(" AND ")}`;
   const rows = (
     await pool.query(
-      `SELECT * FROM expiry_logs ${where} ${sqlOrder}`,
+      `SELECT el.*, ip.price AS unit_price
+       FROM expiry_logs el
+       LEFT JOIN item_prices ip ON ip.barcode = el.barcode
+       ${where} ${sqlOrder}`,
       bindings,
     )
   ).rows as unknown as SalesRow[];
@@ -90,6 +94,10 @@ export async function GET(req: NextRequest) {
     const unitsSold   = computeUnitsSold(row);
     const lastSoldAt  = parseLastSoldDate(row.sold_at, row.notes);
     const saleStatus  = row.quantity > 0 ? "partial" : "fully_sold";
+    const unitPrice   = row.unit_price != null ? Number(row.unit_price) : null;
+    const amount      = unitsSold != null && unitPrice != null
+      ? +(unitPrice * unitsSold).toFixed(2)
+      : null;
     return {
       id:           row.id,
       description:  row.description,
@@ -106,6 +114,8 @@ export async function GET(req: NextRequest) {
       sale_status:  saleStatus as "partial" | "fully_sold",
       last_sold_at: lastSoldAt,
       notes:        row.notes,
+      unit_price:   unitPrice,
+      amount,
     };
   });
 
@@ -140,6 +150,7 @@ export async function GET(req: NextRequest) {
     total_units_sold:   data.reduce((s, r) => s + (r.units_sold ?? 0), 0),
     partial_count:      data.filter((r) => r.sale_status === "partial").length,
     fully_sold_count:   data.filter((r) => r.sale_status === "fully_sold").length,
+    total_sales_rm:     +data.reduce((s, r) => s + (r.amount ?? 0), 0).toFixed(2),
   };
 
   return NextResponse.json({ success: true, data, summary });

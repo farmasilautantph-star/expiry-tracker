@@ -20,6 +20,8 @@ export interface SalesEntry {
   sale_status: "partial" | "fully_sold";
   last_sold_at: string | null;
   notes: string | null;
+  unit_price: number | null;
+  amount: number | null;
 }
 
 export interface SalesSummary {
@@ -27,6 +29,7 @@ export interface SalesSummary {
   total_units_sold: number;
   partial_count: number;
   fully_sold_count: number;
+  total_sales_rm: number;
 }
 
 export interface SalesFilters {
@@ -59,6 +62,7 @@ const EMPTY_SUMMARY: SalesSummary = {
   total_units_sold: 0,
   partial_count: 0,
   fully_sold_count: 0,
+  total_sales_rm: 0,
 };
 
 export function useSalesRecord(onCountChange?: (count: number) => void) {

@@ -120,6 +120,19 @@ const STATEMENTS: { name: string; sql: string }[] = [
     `,
   },
   {
+    name: "item_prices",
+    sql: `
+      CREATE TABLE IF NOT EXISTS item_prices (
+        id          SERIAL PRIMARY KEY,
+        barcode     TEXT NOT NULL UNIQUE,
+        stock_id    TEXT,
+        description TEXT,
+        price       NUMERIC(12,2) NOT NULL DEFAULT 0,
+        updated_at  TEXT NOT NULL DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      )
+    `,
+  },
+  {
     name: "history_log",
     sql: `
       CREATE TABLE IF NOT EXISTS history_log (

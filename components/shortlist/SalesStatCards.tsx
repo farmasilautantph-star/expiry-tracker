@@ -5,8 +5,10 @@ import {
   ArchiveBoxIcon,
   ArrowPathIcon,
   CheckCircleIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import type { SalesSummary } from "@/hooks/useSalesRecord";
+import { formatRM } from "@/lib/formatCurrency";
 
 interface Props {
   summary: SalesSummary;
@@ -19,11 +21,13 @@ const CARDS: {
   icon: typeof LinkIcon;
   color: string;
   bg: string;
+  format?: (v: number) => string;
 }[] = [
   { key: "total_transactions", label: "Transactions", icon: LinkIcon, color: "#7c3aed", bg: "#f5f3ff" },
   { key: "total_units_sold", label: "Units Sold", icon: ArchiveBoxIcon, color: "#16a34a", bg: "#f0fdf4" },
   { key: "partial_count", label: "Partial Sold", icon: ArrowPathIcon, color: "#ea580c", bg: "#fff7ed" },
   { key: "fully_sold_count", label: "Fully Sold", icon: CheckCircleIcon, color: "#2563eb", bg: "#eff6ff" },
+  { key: "total_sales_rm", label: "Total Sales", icon: BanknotesIcon, color: "#0d9488", bg: "#f0fdfa", format: formatRM },
 ];
 
 // Desktop-only compact stat cards — replaces the bulky SalesSummaryBar card
@@ -32,9 +36,10 @@ const CARDS: {
 // manager-only and are rendered separately below this.
 export default function SalesStatCards({ summary, isLoading }: Props) {
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-5 gap-3">
       {CARDS.map((c) => {
         const Icon = c.icon;
+        const value = summary[c.key];
         return (
           <div
             key={c.key}
@@ -48,7 +53,7 @@ export default function SalesStatCards({ summary, isLoading }: Props) {
               <p
                 className={`text-2xl font-bold text-[#0f172a] mt-1 ${isLoading ? "animate-pulse" : ""}`}
               >
-                {isLoading ? "…" : summary[c.key]}
+                {isLoading ? "…" : c.format ? c.format(value) : value}
               </p>
             </div>
             <div

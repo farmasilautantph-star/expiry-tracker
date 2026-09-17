@@ -1,6 +1,7 @@
 "use client";
 
 import type { SalesSummary } from "@/hooks/useSalesRecord";
+import { formatRM } from "@/lib/formatCurrency";
 
 interface Props {
   summary: SalesSummary;
@@ -13,6 +14,7 @@ export default function SalesSummaryBar({ summary, isLoading }: Props) {
     { label: "Units Sold",   value: isLoading ? "…" : String(summary.total_units_sold) },
     { label: "Partial",      value: isLoading ? "…" : String(summary.partial_count) },
     { label: "Fully Sold",   value: isLoading ? "…" : String(summary.fully_sold_count) },
+    { label: "Total Sales",  value: isLoading ? "…" : formatRM(summary.total_sales_rm) },
   ];
 
   return (

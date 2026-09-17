@@ -5,8 +5,10 @@ import {
   DocumentTextIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import type { SalesEntry } from "@/hooks/useSalesRecord";
+import { formatRM } from "@/lib/formatCurrency";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -123,6 +125,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
             <th className={TH}>Expiry Date</th>
             <th className={TH}>Original Qty</th>
             <th className={TH}>Units Sold</th>
+            <th className={TH}>Amount (RM)</th>
             <th className={TH}>Remaining</th>
             <th className={TH}>Status</th>
           </tr>
@@ -182,6 +185,23 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
                   {entry.units_sold != null ? (
                     <span className="text-sm font-bold text-[#0f172a]">
                       {entry.units_sold} unit{entry.units_sold !== 1 ? "s" : ""}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[#cbd5e1]">—</span>
+                  )}
+                </td>
+                <td className={`${TD} whitespace-nowrap`}>
+                  {entry.amount != null ? (
+                    <span className="text-sm font-bold text-[#0f172a]">
+                      {formatRM(entry.amount)}
+                    </span>
+                  ) : entry.units_sold != null ? (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs font-medium text-[#d97706]"
+                      title="No price found for this barcode"
+                    >
+                      <ExclamationTriangleIcon className="w-3.5 h-3.5" />
+                      No price
                     </span>
                   ) : (
                     <span className="text-xs text-[#cbd5e1]">—</span>
