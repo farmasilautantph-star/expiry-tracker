@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import type { SalesFilters as SalesFiltersType, SaleStatus } from "@/hooks/useSalesRecord";
 import { DEFAULT_SALES_FILTERS } from "@/hooks/useSalesRecord";
@@ -45,6 +45,17 @@ interface Props {
 
 export default function SalesFilters({ filters, setFilter, clearFilters, isManager }: Props) {
   const monthOptions = useMemo(() => getMonthOptions(), []);
+  const [picOptions, setPicOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isManager) return;
+    fetch("/api/users/pics")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) setPicOptions(json.data);
+      })
+      .catch(() => {});
+  }, [isManager]);
 
   const sortValue = `${filters.sort_by}|${filters.sort_order}`;
 
@@ -126,13 +137,18 @@ export default function SalesFilters({ filters, setFilter, clearFilters, isManag
 
         {/* PIC filter — manager only */}
         {isManager && (
-          <input
-            type="text"
-            placeholder="Filter by PIC..."
+          <select
             value={filters.pic}
             onChange={(e) => setFilter("pic", e.target.value)}
-            className="px-3 py-2 md:px-2.5 md:py-1.5 text-sm rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none w-40"
-          />
+            className="px-3 py-2 md:px-2.5 md:py-1.5 text-sm rounded-xl border border-[#e2e8f0] bg-white text-[#334155] focus:outline-none appearance-none w-40"
+          >
+            <option value="">All PIC</option>
+            {picOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
         )}
 
         {/* Clear */}
