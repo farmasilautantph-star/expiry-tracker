@@ -88,6 +88,8 @@ export default function SalesRecord({ isManager, onCountChange }: Props) {
         isLoading={isLoading}
         isManager={isManager}
         onViewAllTime={toggleShowAll}
+        sortBy={filters.sort_by}
+        sortOrder={filters.sort_order}
       />
     </div>
   );

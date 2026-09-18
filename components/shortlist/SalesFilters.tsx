@@ -12,10 +12,12 @@ const STATUS_PILLS: { value: SaleStatus; label: string }[] = [
 ];
 
 const SORT_OPTIONS = [
-  { value: "last_sold_at|desc", label: "Date (Newest)" },
-  { value: "last_sold_at|asc",  label: "Date (Oldest)" },
-  { value: "units_sold|desc",   label: "Units Sold (High→Low)" },
-  { value: "units_sold|asc",    label: "Units Sold (Low→High)" },
+  { value: "units_sold|desc",   label: "Total Units Sold (High→Low)" },
+  { value: "units_sold|asc",    label: "Total Units Sold (Low→High)" },
+  { value: "expiry_date|asc",   label: "Expiry Date (Soonest)" },
+  { value: "expiry_date|desc",  label: "Expiry Date (Latest)" },
+  { value: "last_sold_at|desc", label: "Most Recent Sale" },
+  { value: "last_sold_at|asc",  label: "Oldest Sale" },
   { value: "description|asc",   label: "Description (A-Z)" },
 ];
 

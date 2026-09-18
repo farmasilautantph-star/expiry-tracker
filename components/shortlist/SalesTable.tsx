@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   DocumentTextIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  ChevronDownIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import type { SalesEntry } from "@/hooks/useSalesRecord";
@@ -50,16 +51,129 @@ function formatDate(iso: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
+// One summary row per (item, seller) — aggregates every transaction so the
+// same barcode sold by the same person on different dates/receipts collapses
+// into a single row, expandable to see each underlying transaction.
+interface SalesGroup {
+  key: string;
+  pic_name: string;
+  stock_id: string | null;
+  barcode: string;
+  description: string;
+  category: string;
+  expiry_date: string;
+  original_qty: number | null;
+  current_qty: number;
+  total_units_sold: number;
+  total_amount: number;
+  missingPriceCount: number;
+  soldCount: number;
+  sale_status: "partial" | "fully_sold";
+  last_sold_at: string | null;
+  transactions: SalesEntry[];
+}
+
+function buildGroups(entries: SalesEntry[]): SalesGroup[] {
+  const map = new Map<string, SalesGroup>();
+
+  for (const entry of entries) {
+    const key = `${entry.barcode}||${entry.pic_name}`;
+    let g = map.get(key);
+    if (!g) {
+      g = {
+        key,
+        pic_name: entry.pic_name,
+        stock_id: entry.stock_id,
+        barcode: entry.barcode,
+        description: entry.description,
+        category: entry.category,
+        expiry_date: entry.expiry_date,
+        original_qty: entry.original_qty,
+        current_qty: 0,
+        total_units_sold: 0,
+        total_amount: 0,
+        missingPriceCount: 0,
+        soldCount: 0,
+        sale_status: "fully_sold",
+        last_sold_at: null,
+        transactions: [],
+      };
+      map.set(key, g);
+    }
+
+    // A barcode can match multiple logged batches — represent the group by
+    // whichever member has the soonest expiry date (most actionable one).
+    if (entry.expiry_date && (!g.expiry_date || entry.expiry_date < g.expiry_date)) {
+      g.expiry_date = entry.expiry_date;
+      g.original_qty = entry.original_qty;
+    }
+
+    g.current_qty += entry.current_qty;
+    g.total_units_sold += entry.units_sold ?? 0;
+    if (entry.units_sold != null) {
+      g.soldCount++;
+      if (entry.amount != null) g.total_amount += entry.amount;
+      else g.missingPriceCount++;
+    }
+    if (entry.sale_status === "partial") g.sale_status = "partial";
+    if (!g.last_sold_at || (entry.last_sold_at && entry.last_sold_at > g.last_sold_at)) {
+      g.last_sold_at = entry.last_sold_at;
+    }
+    g.transactions.push(entry);
+  }
+
+  const groups = Array.from(map.values());
+  for (const g of groups) {
+    g.transactions.sort((a, b) => (b.last_sold_at ?? "").localeCompare(a.last_sold_at ?? ""));
+  }
+
+  return groups;
+}
+
+function sortGroups(groups: SalesGroup[], sortBy: string, sortOrder: "asc" | "desc"): SalesGroup[] {
+  const dir = sortOrder === "asc" ? 1 : -1;
+  const sorted = [...groups];
+
+  if (sortBy === "expiry_date") {
+    sorted.sort((a, b) => {
+      const av = a.expiry_date || "9999-99-99";
+      const bv = b.expiry_date || "9999-99-99";
+      return av === bv ? 0 : (av < bv ? -1 : 1) * dir;
+    });
+  } else if (sortBy === "description") {
+    sorted.sort((a, b) => a.description.localeCompare(b.description) * dir);
+  } else if (sortBy === "last_sold_at") {
+    sorted.sort((a, b) => {
+      const av = a.last_sold_at ?? "";
+      const bv = b.last_sold_at ?? "";
+      return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+    });
+  } else {
+    // Default / "units_sold": total units sold per group.
+    sorted.sort((a, b) => (a.total_units_sold - b.total_units_sold) * dir);
+  }
+
+  return sorted;
+}
+
 interface Props {
   entries: SalesEntry[];
   isLoading: boolean;
   isManager: boolean;
   onViewAllTime: () => void;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
 }
 
-export default function SalesTable({ entries, isLoading, isManager, onViewAllTime }: Props) {
+export default function SalesTable({ entries, isLoading, isManager, onViewAllTime, sortBy, sortOrder }: Props) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const groups = useMemo(
+    () => sortGroups(buildGroups(entries), sortBy, sortOrder),
+    [entries, sortBy, sortOrder],
+  );
 
   // Reset to page 1 whenever the underlying (filtered) dataset or page size
   // changes, so we never land on an out-of-range empty page.
@@ -67,11 +181,20 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
     setPage(1);
   }, [entries, pageSize]);
 
-  const total = entries.length;
+  function toggle(key: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  const total = groups.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const clampedPage = Math.min(page, totalPages);
   const startIdx = (clampedPage - 1) * pageSize;
-  const pageEntries = entries.slice(startIdx, startIdx + pageSize);
+  const pageGroups = groups.slice(startIdx, startIdx + pageSize);
   const rangeStart = total === 0 ? 0 : startIdx + 1;
   const rangeEnd = Math.min(startIdx + pageSize, total);
 
@@ -116,7 +239,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
       <table className="w-full text-sm">
         <thead>
           <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
-            <th className={TH}>Date Sold</th>
+            <th className={TH}></th>
             {isManager && <th className={TH}>PIC</th>}
             <th className={TH}>Stock ID</th>
             <th className={TH}>Barcode</th>
@@ -124,112 +247,154 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
             <th className={TH}>Category</th>
             <th className={TH}>Expiry Date</th>
             <th className={TH}>Original Qty</th>
-            <th className={TH}>Units Sold</th>
-            <th className={TH}>Amount (RM)</th>
-            <th className={TH}>Document No.</th>
+            <th className={TH}>Total Units Sold</th>
+            <th className={TH}>Total Amount (RM)</th>
             <th className={TH}>Remaining</th>
             <th className={TH}>Status</th>
           </tr>
         </thead>
         <tbody>
-          {pageEntries.map((entry) => {
-            const statusStyle = SALE_STATUS_STYLE[entry.sale_status];
+          {pageGroups.map((g) => {
+            const statusStyle = SALE_STATUS_STYLE[g.sale_status];
+            const isOpen = expanded.has(g.key);
+            const colCount = 11 + (isManager ? 1 : 0);
             return (
-              <tr
-                key={entry.id}
-                className="transition-colors duration-150"
-                style={{ borderBottom: "1px solid #f1f5f9" }}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "#f8fafc")
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget as HTMLElement).style.background = "")
-                }
-              >
-                <td className={`${TD} text-[#334155] whitespace-nowrap font-medium`}>
-                  {formatDate(entry.last_sold_at)}
-                </td>
-                {isManager && (
-                  <td className={`${TD} whitespace-nowrap`}>
+              <Fragment key={g.key}>
+                <tr
+                  className="transition-colors duration-150 cursor-pointer"
+                  style={{ borderBottom: isOpen ? "none" : "1px solid #f1f5f9" }}
+                  onClick={() => toggle(g.key)}
+                  onMouseEnter={(e) =>
+                    ((e.currentTarget as HTMLElement).style.background = "#f8fafc")
+                  }
+                  onMouseLeave={(e) =>
+                    ((e.currentTarget as HTMLElement).style.background = "")
+                  }
+                >
+                  <td className={`${TD} w-8`}>
+                    {isOpen ? (
+                      <ChevronDownIcon className="w-4 h-4 text-[#94a3b8]" />
+                    ) : (
+                      <ChevronRightIcon className="w-4 h-4 text-[#94a3b8]" />
+                    )}
+                  </td>
+                  {isManager && (
+                    <td className={`${TD} whitespace-nowrap`}>
+                      <span
+                        className="badge"
+                        style={{ background: "#dbeafe", color: "#2563eb" }}
+                      >
+                        {g.pic_name}
+                      </span>
+                    </td>
+                  )}
+                  <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
+                    {g.stock_id ?? "—"}
+                  </td>
+                  <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
+                    {g.barcode}
+                  </td>
+                  <td className={`${TD} max-w-[200px]`}>
                     <span
-                      className="badge"
-                      style={{ background: "#dbeafe", color: "#2563eb" }}
+                      className="block truncate text-[#334155] font-medium"
+                      title={g.description}
                     >
-                      {entry.pic_name}
+                      {g.description}
                     </span>
                   </td>
-                )}
-                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
-                  {entry.stock_id ?? "—"}
-                </td>
-                <td className={`${TD} text-[#334155] font-mono text-xs whitespace-nowrap`}>
-                  {entry.barcode}
-                </td>
-                <td className={`${TD} max-w-[200px]`}>
-                  <span
-                    className="block truncate text-[#334155] font-medium"
-                    title={entry.description}
-                  >
-                    {entry.description}
-                  </span>
-                </td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>{entry.category}</td>
-                <td className={`${TD} text-[#334155] whitespace-nowrap`}>
-                  {formatDate(entry.expiry_date)}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <span className="text-sm text-[#64748b]">
-                    {entry.original_qty ?? "—"}
-                  </span>
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  {entry.units_sold != null ? (
-                    <span className="text-sm font-bold text-[#0f172a]">
-                      {entry.units_sold} unit{entry.units_sold !== 1 ? "s" : ""}
+                  <td className={`${TD} text-[#334155] whitespace-nowrap`}>{g.category}</td>
+                  <td className={`${TD} text-[#334155] whitespace-nowrap`}>
+                    {formatDate(g.expiry_date)}
+                  </td>
+                  <td className={`${TD} whitespace-nowrap`}>
+                    <span className="text-sm text-[#64748b]">
+                      {g.original_qty ?? "—"}
                     </span>
-                  ) : (
-                    <span className="text-xs text-[#cbd5e1]">—</span>
-                  )}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  {entry.amount != null ? (
-                    <span className="text-sm font-bold text-[#0f172a]">
-                      {formatRM(entry.amount)}
-                    </span>
-                  ) : entry.units_sold != null ? (
+                  </td>
+                  <td className={`${TD} whitespace-nowrap`}>
+                    {g.total_units_sold > 0 ? (
+                      <span className="text-sm font-bold text-[#0f172a]">
+                        {g.total_units_sold} unit{g.total_units_sold !== 1 ? "s" : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[#cbd5e1]">—</span>
+                    )}
+                  </td>
+                  <td className={`${TD} whitespace-nowrap`}>
+                    {g.soldCount === 0 ? (
+                      <span className="text-xs text-[#cbd5e1]">—</span>
+                    ) : g.missingPriceCount === g.soldCount ? (
+                      <span
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#d97706]"
+                        title="No price found for this barcode"
+                      >
+                        <ExclamationTriangleIcon className="w-3.5 h-3.5" />
+                        No price
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-[#0f172a]">
+                          {formatRM(g.total_amount)}
+                        </span>
+                        {g.missingPriceCount > 0 && (
+                          <ExclamationTriangleIcon
+                            className="w-3.5 h-3.5 text-[#d97706]"
+                            title={`${g.missingPriceCount} transaction(s) missing price data`}
+                          />
+                        )}
+                      </span>
+                    )}
+                  </td>
+                  <td className={`${TD} whitespace-nowrap`}>
+                    {g.current_qty > 0 ? (
+                      <span className="text-xs font-medium" style={{ color: "#2563eb" }}>
+                        {g.current_qty} left
+                      </span>
+                    ) : (
+                      <span className="text-xs text-[#cbd5e1]">—</span>
+                    )}
+                  </td>
+                  <td className={`${TD} whitespace-nowrap`}>
                     <span
-                      className="inline-flex items-center gap-1 text-xs font-medium text-[#d97706]"
-                      title="No price found for this barcode"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                      style={{ background: statusStyle.bg, color: statusStyle.color }}
                     >
-                      <ExclamationTriangleIcon className="w-3.5 h-3.5" />
-                      No price
+                      <Dot color={statusStyle.dot} />
+                      {SALE_STATUS_LABEL[g.sale_status]}
                     </span>
-                  ) : (
-                    <span className="text-xs text-[#cbd5e1]">—</span>
-                  )}
-                </td>
-                <td className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}>
-                  {entry.document_number ?? "—"}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  {entry.current_qty > 0 ? (
-                    <span className="text-xs font-medium" style={{ color: "#2563eb" }}>
-                      {entry.current_qty} left
-                    </span>
-                  ) : (
-                    <span className="text-xs text-[#cbd5e1]">—</span>
-                  )}
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  <span
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
-                    style={{ background: statusStyle.bg, color: statusStyle.color }}
-                  >
-                    <Dot color={statusStyle.dot} />
-                    {SALE_STATUS_LABEL[entry.sale_status]}
-                  </span>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+                {isOpen && (
+                  <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
+                    <td colSpan={colCount} className="bg-[#f8fafc] px-5 py-3">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="text-[#94a3b8] uppercase tracking-wider">
+                            <th className="text-left font-semibold pb-2 pr-4">Date Sold</th>
+                            <th className="text-left font-semibold pb-2 pr-4">Qty</th>
+                            <th className="text-left font-semibold pb-2 pr-4">Amount (RM)</th>
+                            <th className="text-left font-semibold pb-2">Document No.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {g.transactions.map((t) => (
+                            <tr key={t.id} className="text-[#334155]">
+                              <td className="py-1 pr-4 whitespace-nowrap">{formatDate(t.last_sold_at)}</td>
+                              <td className="py-1 pr-4 whitespace-nowrap">
+                                {t.units_sold != null ? `${t.units_sold} unit${t.units_sold !== 1 ? "s" : ""}` : "—"}
+                              </td>
+                              <td className="py-1 pr-4 whitespace-nowrap">
+                                {t.amount != null ? formatRM(t.amount) : "—"}
+                              </td>
+                              <td className="py-1 font-mono whitespace-nowrap">{t.document_number ?? "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
@@ -239,7 +404,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
       {/* Pagination */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <p className="text-xs text-[#64748b]">
-          Showing {rangeStart} to {rangeEnd} of {total} records
+          Showing {rangeStart} to {rangeEnd} of {total} items
         </p>
 
         <div className="flex items-center gap-3">

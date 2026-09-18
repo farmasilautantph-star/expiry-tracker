@@ -54,7 +54,7 @@ export const DEFAULT_SALES_FILTERS: SalesFilters = {
   showAll: false,
   search: "",
   pic: "",
-  sort_by: "last_sold_at",
+  sort_by: "units_sold",
   sort_order: "desc",
 };
 
