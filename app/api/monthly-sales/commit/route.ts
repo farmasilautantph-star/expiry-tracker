@@ -13,6 +13,14 @@ interface RawRow {
   "UOM ID"?: string;
   "Document Number"?: string;
   "Salesman ID"?: string | number;
+  "Item Total Price"?: number | string;
+}
+
+function parseAmount(v: unknown): number | null {
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  if (v === null || v === undefined || v === "") return null;
+  const n = parseFloat(String(v).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
 }
 
 type MappingAction = { action: "map"; userId: number } | { action: "skip" };
@@ -166,8 +174,16 @@ export async function POST(req: NextRequest) {
 
       const saleMonth = dateIso.slice(0, 7);
       monthsTouched.add(saleMonth);
-      const price = priceByBarcode.get(barcode) ?? null;
       const expiryInfo = expiryByBarcode.get(barcode);
+
+      // The POS report's own "Item Total Price" is the actual amount charged
+      // for that line (reflects any discount/promo) — prefer it over
+      // recomputing from the separately-uploaded price list. Only fall back
+      // to that lookup when a row is missing the column.
+      const reportAmount = parseAmount(raw["Item Total Price"]);
+      const listPrice = priceByBarcode.get(barcode) ?? null;
+      const amount = reportAmount ?? (listPrice != null ? +(listPrice * qty).toFixed(2) : null);
+      const unitPrice = amount != null ? +(amount / qty).toFixed(4) : null;
 
       valid.push({
         sale_date: dateIso,
@@ -181,8 +197,8 @@ export async function POST(req: NextRequest) {
         document_number: s(raw["Document Number"]) || null,
         ic_number: ic || null,
         pic_name: picName,
-        unit_price: price,
-        amount: price != null ? +(price * qty).toFixed(2) : null,
+        unit_price: unitPrice,
+        amount,
         expiry_date: expiryInfo?.expiry_date ?? null,
         original_qty: expiryInfo?.original_qty ?? null,
       });
