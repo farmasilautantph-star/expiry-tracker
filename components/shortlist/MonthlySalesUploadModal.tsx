@@ -242,7 +242,9 @@ export default function MonthlySalesUploadModal({ isOpen, onClose, onSuccess }: 
                   <div key={u.ic_number} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-[#0f172a] truncate">{u.pos_name}</p>
-                      <p className="text-xs text-[#94a3b8]">{u.row_count} sale(s)</p>
+                      <p className="text-xs text-[#94a3b8] font-mono truncate">
+                        ID: {u.ic_number} · {u.row_count} sale(s)
+                      </p>
                     </div>
                     <select
                       value={mappingChoices[u.ic_number] ?? "skip"}
