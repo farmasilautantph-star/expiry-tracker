@@ -145,9 +145,10 @@ export async function POST(
            notes           = $3,
            last_updated_at = $4,
            last_reviewed_at = $5,
-           review_status   = 'pending'
-       WHERE id = $6`,
-      [remaining, capturedOriginalQty, newNotes, now, now, id],
+           review_status   = 'pending',
+           sold_by         = $6
+       WHERE id = $7`,
+      [remaining, capturedOriginalQty, newNotes, now, now, user.picName, id],
     );
 
     await pool.query(

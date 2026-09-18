@@ -19,6 +19,7 @@ interface SalesRow {
   original_qty: number | null;
   item_status: string;
   sold_at: string | null;
+  sold_by: string | null;
   completed_notes: string | null;
   unit_price: string | null;
 }
@@ -61,7 +62,9 @@ export async function GET(req: NextRequest) {
     conditions.push(`el.pic_id = $${p++}`);
     bindings.push(user.userId);
   } else if (pic) {
-    conditions.push(`el.pic_name = $${p++}`);
+    // PIC here means the actual seller, not the original logger — fall back
+    // to pic_name only for legacy rows sold before sold_by was tracked.
+    conditions.push(`COALESCE(el.sold_by, el.pic_name) = $${p++}`);
     bindings.push(pic);
   }
 
@@ -105,7 +108,9 @@ export async function GET(req: NextRequest) {
       stock_id:     row.stock_id,
       category:     row.category,
       uom:          row.uom,
-      pic_name:     row.pic_name,
+      // Actual seller when known, falling back to the original logger for
+      // legacy rows sold before sold_by was tracked on partial sales.
+      pic_name:     row.sold_by ?? row.pic_name,
       expiry_date:  row.expiry_date,
       logged_at:    row.logged_at,
       original_qty: row.original_qty,
