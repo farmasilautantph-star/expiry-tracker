@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import type { SalesEntry } from "@/hooks/useSalesRecord";
 import { formatRM } from "@/lib/formatCurrency";
+import { computeBarcodeCaps, scaleByCap } from "@/lib/salesCap";
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
@@ -66,6 +67,14 @@ interface SalesGroup {
   current_qty: number;
   total_units_sold: number;
   total_amount: number;
+  // Barcode-wide Original Qty cap applied (see lib/salesCap.ts) — display_*
+  // is what the row shows; total_* stays the true sum for the cap ratio and
+  // for sorting. Individual transactions in the expanded detail are never
+  // scaled, so they always match the real receipts.
+  display_units_sold: number;
+  display_amount: number;
+  capped: boolean;
+  barcode_actual_units: number;
   missingPriceCount: number;
   soldCount: number;
   sale_status: "partial" | "fully_sold";
@@ -92,6 +101,10 @@ function buildGroups(entries: SalesEntry[]): SalesGroup[] {
         current_qty: 0,
         total_units_sold: 0,
         total_amount: 0,
+        display_units_sold: 0,
+        display_amount: 0,
+        capped: false,
+        barcode_actual_units: 0,
         missingPriceCount: 0,
         soldCount: 0,
         sale_status: "fully_sold",
@@ -123,8 +136,16 @@ function buildGroups(entries: SalesEntry[]): SalesGroup[] {
   }
 
   const groups = Array.from(map.values());
+  const barcodeCaps = computeBarcodeCaps(entries);
+
   for (const g of groups) {
     g.transactions.sort((a, b) => (b.last_sold_at ?? "").localeCompare(a.last_sold_at ?? ""));
+
+    const cap = barcodeCaps.get(g.barcode);
+    g.display_units_sold = Math.round(scaleByCap(g.total_units_sold, cap));
+    g.display_amount = +scaleByCap(g.total_amount, cap).toFixed(2);
+    g.capped = !!cap?.capped;
+    g.barcode_actual_units = cap?.actualUnits ?? g.total_units_sold;
   }
 
   return groups;
@@ -149,8 +170,8 @@ function sortGroups(groups: SalesGroup[], sortBy: string, sortOrder: "asc" | "de
       return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
     });
   } else {
-    // Default / "units_sold": total units sold per group.
-    sorted.sort((a, b) => (a.total_units_sold - b.total_units_sold) * dir);
+    // Default / "units_sold": displayed (capped) units sold per group.
+    sorted.sort((a, b) => (a.display_units_sold - b.display_units_sold) * dir);
   }
 
   return sorted;
@@ -312,9 +333,17 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
                     </span>
                   </td>
                   <td className={`${TD} whitespace-nowrap`}>
-                    {g.total_units_sold > 0 ? (
-                      <span className="text-sm font-bold text-[#0f172a]">
-                        {g.total_units_sold} unit{g.total_units_sold !== 1 ? "s" : ""}
+                    {g.display_units_sold > 0 ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="text-sm font-bold text-[#0f172a]">
+                          {g.display_units_sold} unit{g.display_units_sold !== 1 ? "s" : ""}
+                        </span>
+                        {g.capped && (
+                          <ExclamationTriangleIcon
+                            className="w-3.5 h-3.5 text-[#d97706]"
+                            title={`Capped at logged Original Qty (${g.original_qty}). Actual POS-reported sales for this barcode: ${g.barcode_actual_units} units — the rest likely reflects regular stock sold under the same barcode, not this flagged batch.`}
+                          />
+                        )}
                       </span>
                     ) : (
                       <span className="text-xs text-[#cbd5e1]">—</span>
@@ -334,7 +363,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
                     ) : (
                       <span className="inline-flex items-center gap-1.5">
                         <span className="text-sm font-bold text-[#0f172a]">
-                          {formatRM(g.total_amount)}
+                          {formatRM(g.display_amount)}
                         </span>
                         {g.missingPriceCount > 0 && (
                           <ExclamationTriangleIcon
@@ -367,6 +396,14 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
                 {isOpen && (
                   <tr style={{ borderBottom: "1px solid #f1f5f9" }}>
                     <td colSpan={colCount} className="bg-[#f8fafc] px-5 py-3">
+                      {g.capped && (
+                        <p className="flex items-center gap-1.5 text-xs text-[#d97706] mb-2">
+                          <ExclamationTriangleIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                          Transactions below show the real POS records ({g.barcode_actual_units} units total).
+                          The row above is capped at this barcode&apos;s logged Original Qty ({g.original_qty}) —
+                          the rest likely reflects regular stock sold under the same barcode, not this flagged batch.
+                        </p>
+                      )}
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="text-[#94a3b8] uppercase tracking-wider">

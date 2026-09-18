@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import pool from "@/lib/db-postgres";
 import { verifyToken, getTokenFromRequest } from "@/lib/auth";
 import { parseLastSoldDate, computeUnitsSold } from "@/lib/salesCalc";
+import { computeBarcodeCaps, scaleByCap } from "@/lib/salesCap";
 
 interface SalesRow {
   id: number;
@@ -237,12 +238,17 @@ export async function GET(req: NextRequest) {
     data.sort((a, b) => ((a.units_sold ?? 0) - (b.units_sold ?? 0)) * dir);
   }
 
+  // Cap each barcode's counted total at its logged Original Qty (see
+  // lib/salesCap.ts) so page-level totals aren't inflated by ordinary stock
+  // sales that happen to share a barcode with a small flagged batch.
+  const barcodeCaps = computeBarcodeCaps(data);
+
   const summary = {
     total_transactions: data.length,
-    total_units_sold:   data.reduce((s, r) => s + (r.units_sold ?? 0), 0),
+    total_units_sold:   Math.round(data.reduce((s, r) => s + scaleByCap(r.units_sold ?? 0, barcodeCaps.get(r.barcode)), 0)),
     partial_count:      data.filter((r) => r.sale_status === "partial").length,
     fully_sold_count:   data.filter((r) => r.sale_status === "fully_sold").length,
-    total_sales_rm:     +data.reduce((s, r) => s + (r.amount ?? 0), 0).toFixed(2),
+    total_sales_rm:     +data.reduce((s, r) => s + scaleByCap(r.amount ?? 0, barcodeCaps.get(r.barcode)), 0).toFixed(2),
   };
 
   return NextResponse.json({ success: true, data, summary });
