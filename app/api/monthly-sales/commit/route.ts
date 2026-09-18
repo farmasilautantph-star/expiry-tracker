@@ -31,6 +31,8 @@ interface ValidRow {
   pic_name: string;
   unit_price: number | null;
   amount: number | null;
+  expiry_date: string | null;
+  original_qty: number | null;
 }
 
 function s(v: unknown): string {
@@ -120,6 +122,17 @@ export async function POST(req: NextRequest) {
       : [];
     const categoryByBarcode = new Map(categoryRows.map((r) => [r.barcode, r.category]));
 
+    // A barcode can match multiple logged batches — use the soonest-expiring
+    // one, since that's the most actionable for a short-expiry tracker.
+    const expiryRows = matchedBarcodes.length
+      ? ((await client.query(
+          `SELECT DISTINCT ON (barcode) barcode, expiry_date, COALESCE(original_qty, quantity) AS original_qty
+           FROM expiry_logs WHERE barcode = ANY($1) ORDER BY barcode, expiry_date ASC`,
+          [matchedBarcodes],
+        )).rows as { barcode: string; expiry_date: string; original_qty: number }[])
+      : [];
+    const expiryByBarcode = new Map(expiryRows.map((r) => [r.barcode, { expiry_date: r.expiry_date, original_qty: r.original_qty }]));
+
     const valid: ValidRow[] = [];
     const monthsTouched = new Set<string>();
     let skipped = 0;
@@ -154,6 +167,7 @@ export async function POST(req: NextRequest) {
       const saleMonth = dateIso.slice(0, 7);
       monthsTouched.add(saleMonth);
       const price = priceByBarcode.get(barcode) ?? null;
+      const expiryInfo = expiryByBarcode.get(barcode);
 
       valid.push({
         sale_date: dateIso,
@@ -169,6 +183,8 @@ export async function POST(req: NextRequest) {
         pic_name: picName,
         unit_price: price,
         amount: price != null ? +(price * qty).toFixed(2) : null,
+        expiry_date: expiryInfo?.expiry_date ?? null,
+        original_qty: expiryInfo?.original_qty ?? null,
       });
     }
 
@@ -190,17 +206,18 @@ export async function POST(req: NextRequest) {
       const values: unknown[] = [];
       const placeholders = chunk
         .map((r, idx) => {
-          const base = idx * 13;
+          const base = idx * 15;
           values.push(
             r.sale_date, r.sale_month, r.barcode, r.stock_id, r.description, r.category,
             r.quantity, r.uom, r.document_number, r.ic_number, r.pic_name, r.unit_price, r.amount,
+            r.expiry_date, r.original_qty,
           );
-          return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},$${base + 9},$${base + 10},$${base + 11},$${base + 12},$${base + 13})`;
+          return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8},$${base + 9},$${base + 10},$${base + 11},$${base + 12},$${base + 13},$${base + 14},$${base + 15})`;
         })
         .join(",");
       await client.query(
         `INSERT INTO monthly_sales
-           (sale_date, sale_month, barcode, stock_id, description, category, quantity, uom, document_number, ic_number, pic_name, unit_price, amount)
+           (sale_date, sale_month, barcode, stock_id, description, category, quantity, uom, document_number, ic_number, pic_name, unit_price, amount, expiry_date, original_qty)
          VALUES ${placeholders}`,
         values,
       );

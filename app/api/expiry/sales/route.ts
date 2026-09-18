@@ -38,6 +38,8 @@ interface MonthlySalesRow {
   pic_name: string;
   unit_price: string | null;
   amount: string | null;
+  expiry_date: string | null;
+  original_qty: number | null;
 }
 
 // POS-sourced ids are offset well clear of any real expiry_logs id so the two
@@ -193,9 +195,9 @@ export async function GET(req: NextRequest) {
       category:     row.category ?? "",
       uom:          row.uom,
       pic_name:     row.pic_name,
-      expiry_date:  "",
+      expiry_date:  row.expiry_date ?? "",
       logged_at:    row.sale_date,
-      original_qty: null,
+      original_qty: row.original_qty,
       current_qty:  0,
       units_sold:   row.quantity,
       sale_status:  "fully_sold" as const,

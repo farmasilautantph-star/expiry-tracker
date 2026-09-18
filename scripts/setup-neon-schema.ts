@@ -165,6 +165,8 @@ const STATEMENTS: { name: string; sql: string }[] = [
         pic_name        TEXT NOT NULL,
         unit_price      NUMERIC(12,2),
         amount          NUMERIC(12,2),
+        expiry_date     TEXT,
+        original_qty    INTEGER,
         uploaded_at     TEXT NOT NULL DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')
       )
     `,
@@ -181,6 +183,14 @@ const ALTERATIONS: { name: string; sql: string }[] = [
   {
     name: "monthly_sales(sale_month) index",
     sql: `CREATE INDEX IF NOT EXISTS idx_monthly_sales_sale_month ON monthly_sales(sale_month)`,
+  },
+  {
+    name: "monthly_sales.expiry_date",
+    sql: `ALTER TABLE monthly_sales ADD COLUMN IF NOT EXISTS expiry_date TEXT`,
+  },
+  {
+    name: "monthly_sales.original_qty",
+    sql: `ALTER TABLE monthly_sales ADD COLUMN IF NOT EXISTS original_qty INTEGER`,
   },
 ];
 
