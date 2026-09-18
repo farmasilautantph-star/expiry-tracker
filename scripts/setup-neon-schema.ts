@@ -147,6 +147,41 @@ const STATEMENTS: { name: string; sql: string }[] = [
       )
     `,
   },
+  {
+    name: "monthly_sales",
+    sql: `
+      CREATE TABLE IF NOT EXISTS monthly_sales (
+        id              SERIAL PRIMARY KEY,
+        sale_date       TEXT NOT NULL,
+        sale_month      TEXT NOT NULL,
+        barcode         TEXT NOT NULL,
+        stock_id        TEXT,
+        description     TEXT,
+        category        TEXT,
+        quantity        INTEGER NOT NULL,
+        uom             TEXT,
+        document_number TEXT,
+        ic_number       TEXT,
+        pic_name        TEXT NOT NULL,
+        unit_price      NUMERIC(12,2),
+        amount          NUMERIC(12,2),
+        uploaded_at     TEXT NOT NULL DEFAULT to_char(NOW(), 'YYYY-MM-DD HH24:MI:SS')
+      )
+    `,
+  },
+];
+
+// Idempotent follow-up alterations to existing tables (can't express these
+// as CREATE TABLE IF NOT EXISTS above since the tables already exist).
+const ALTERATIONS: { name: string; sql: string }[] = [
+  {
+    name: "users.ic_number",
+    sql: `ALTER TABLE users ADD COLUMN IF NOT EXISTS ic_number TEXT UNIQUE`,
+  },
+  {
+    name: "monthly_sales(sale_month) index",
+    sql: `CREATE INDEX IF NOT EXISTS idx_monthly_sales_sale_month ON monthly_sales(sale_month)`,
+  },
 ];
 
 async function main() {
@@ -160,8 +195,13 @@ async function main() {
       await client.query(stmt.sql);
       console.log("✅");
     }
+    for (const alt of ALTERATIONS) {
+      process.stdout.write(`  ${alt.name.padEnd(32)} `);
+      await client.query(alt.sql);
+      console.log("✅");
+    }
     console.log("\n──────────────────────────────────────────────────────");
-    console.log(`\n✅ ${STATEMENTS.length} tables created (or already existed).\n`);
+    console.log(`\n✅ ${STATEMENTS.length} tables created (or already existed), ${ALTERATIONS.length} alterations applied.\n`);
   } catch (err) {
     console.error("\n❌ Schema setup failed:", err);
     process.exit(1);

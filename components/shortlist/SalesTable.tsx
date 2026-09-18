@@ -126,6 +126,7 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
             <th className={TH}>Original Qty</th>
             <th className={TH}>Units Sold</th>
             <th className={TH}>Amount (RM)</th>
+            <th className={TH}>Document No.</th>
             <th className={TH}>Remaining</th>
             <th className={TH}>Status</th>
           </tr>
@@ -206,6 +207,9 @@ export default function SalesTable({ entries, isLoading, isManager, onViewAllTim
                   ) : (
                     <span className="text-xs text-[#cbd5e1]">—</span>
                   )}
+                </td>
+                <td className={`${TD} text-[#64748b] font-mono text-xs whitespace-nowrap`}>
+                  {entry.document_number ?? "—"}
                 </td>
                 <td className={`${TD} whitespace-nowrap`}>
                   {entry.current_qty > 0 ? (

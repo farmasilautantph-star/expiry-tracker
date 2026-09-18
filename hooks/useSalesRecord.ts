@@ -22,6 +22,7 @@ export interface SalesEntry {
   notes: string | null;
   unit_price: number | null;
   amount: number | null;
+  document_number: string | null;
 }
 
 export interface SalesSummary {
