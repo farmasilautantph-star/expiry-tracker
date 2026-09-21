@@ -21,6 +21,7 @@ interface ProductRow {
   barcode: string | null;
   description: string | null;
   uom: string | null;
+  category_id: string | null;
 }
 
 async function main() {
@@ -47,6 +48,7 @@ async function main() {
     const barcode = s(raw["Barcode"]);
     const description = s(raw["Description 1"] ?? raw["Description"]);
     const uom = s(raw["UOM ID"] ?? raw["UOM"]);
+    const categoryId = s(raw["Category ID"] ?? raw["Category"]);
 
     if (!description && !barcode && !stockId) {
       skipped++;
@@ -58,7 +60,7 @@ async function main() {
     }
     if (barcode) seenBarcodes.add(barcode);
 
-    valid.push({ stock_id: stockId, barcode, description, uom });
+    valid.push({ stock_id: stockId, barcode, description, uom, category_id: categoryId });
   }
 
   console.log(`Valid: ${valid.length}, skipped: ${skipped} (empty row or duplicate barcode)`);
@@ -85,13 +87,13 @@ async function main() {
       const values: unknown[] = [];
       const placeholders = chunk
         .map((r, idx) => {
-          const base = idx * 4;
-          values.push(r.stock_id, r.barcode, r.description, r.uom);
-          return `($${base + 1},$${base + 2},$${base + 3},$${base + 4})`;
+          const base = idx * 5;
+          values.push(r.stock_id, r.barcode, r.description, r.uom, r.category_id);
+          return `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5})`;
         })
         .join(",");
       await client.query(
-        `INSERT INTO products (stock_id, barcode, description, uom) VALUES ${placeholders}`,
+        `INSERT INTO products (stock_id, barcode, description, uom, category_id) VALUES ${placeholders}`,
         values,
       );
       process.stdout.write(`\r  Inserted ${Math.min(i + CHUNK, valid.length)}/${valid.length}`);
