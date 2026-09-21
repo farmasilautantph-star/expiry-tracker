@@ -148,6 +148,28 @@ const STATEMENTS: { name: string; sql: string }[] = [
     `,
   },
   {
+    name: "return_policies",
+    sql: `
+      CREATE TABLE IF NOT EXISTS return_policies (
+        id                    SERIAL PRIMARY KEY,
+        supplier_id           TEXT NOT NULL,
+        supplier_name         TEXT NOT NULL,
+        brand                 TEXT NOT NULL,
+        scope                 TEXT DEFAULT 'BRAND',
+        address               TEXT,
+        contact_person        TEXT,
+        item_description      TEXT,
+        return_type           TEXT NOT NULL,
+        months_before_expiry  INTEGER,
+        special_conditions    TEXT,
+        strict_supplier       BOOLEAN DEFAULT false,
+        last_updated          DATE,
+        updated_by            TEXT,
+        created_at            TIMESTAMPTZ DEFAULT NOW()
+      )
+    `,
+  },
+  {
     name: "monthly_sales",
     sql: `
       CREATE TABLE IF NOT EXISTS monthly_sales (
@@ -191,6 +213,18 @@ const ALTERATIONS: { name: string; sql: string }[] = [
   {
     name: "monthly_sales.original_qty",
     sql: `ALTER TABLE monthly_sales ADD COLUMN IF NOT EXISTS original_qty INTEGER`,
+  },
+  {
+    name: "return_policies(supplier_id) index",
+    sql: `CREATE INDEX IF NOT EXISTS idx_return_policies_supplier_id ON return_policies (supplier_id)`,
+  },
+  {
+    name: "return_policies(brand) index",
+    sql: `CREATE INDEX IF NOT EXISTS idx_return_policies_brand ON return_policies (brand)`,
+  },
+  {
+    name: "return_policies(return_type) index",
+    sql: `CREATE INDEX IF NOT EXISTS idx_return_policies_return_type ON return_policies (return_type)`,
   },
 ];
 
