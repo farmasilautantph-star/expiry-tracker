@@ -226,6 +226,57 @@ const ALTERATIONS: { name: string; sql: string }[] = [
     name: "return_policies(return_type) index",
     sql: `CREATE INDEX IF NOT EXISTS idx_return_policies_return_type ON return_policies (return_type)`,
   },
+  // Locked Items feature (scripts/add-locked-item-columns.ts, never folded in here)
+  {
+    name: "expiry_logs.is_locked",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT FALSE`,
+  },
+  {
+    name: "expiry_logs.locked_at",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ`,
+  },
+  {
+    name: "expiry_logs.unlocked_reason",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS unlocked_reason TEXT`,
+  },
+  {
+    name: "expiry_logs.unlocked_by",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS unlocked_by INTEGER REFERENCES users(id)`,
+  },
+  // Push Item feature (scripts/add-push-item-column.ts + add-push-item-details.ts)
+  {
+    name: "expiry_logs.is_push_item",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS is_push_item BOOLEAN DEFAULT FALSE`,
+  },
+  {
+    name: "expiry_logs.push_item_marked_at",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS push_item_marked_at TIMESTAMPTZ`,
+  },
+  {
+    name: "expiry_logs.push_item_marked_by",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS push_item_marked_by INTEGER REFERENCES users(id)`,
+  },
+  {
+    name: "expiry_logs.push_product_image",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS push_product_image TEXT`,
+  },
+  {
+    name: "expiry_logs.push_active_ingredient",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS push_active_ingredient TEXT`,
+  },
+  {
+    name: "expiry_logs.push_selling_points",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS push_selling_points TEXT`,
+  },
+  // Returns (scripts/add-return-exception-reason.ts) and remarks (app/api/expiry/[id]/remarks)
+  {
+    name: "expiry_logs.return_exception_reason",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS return_exception_reason TEXT`,
+  },
+  {
+    name: "expiry_logs.remarks",
+    sql: `ALTER TABLE expiry_logs ADD COLUMN IF NOT EXISTS remarks TEXT`,
+  },
 ];
 
 async function main() {
