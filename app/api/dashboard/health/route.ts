@@ -90,6 +90,18 @@ export async function GET(req: NextRequest) {
     )
   ).rows as unknown as ExpiryRow[];
 
+  // expiry_logs.pic_name is a snapshot copied in at log time — if a staff
+  // member was later renamed (e.g. "AINA" -> "TPOH AINA"), old rows still
+  // carry the old name. Resolve display names from the stable pic_id FK
+  // instead, so renames never split one person into two compliance rows.
+  const userNameRows = (
+    await pool.query("SELECT id, pic_name FROM users")
+  ).rows as { id: number; pic_name: string }[];
+  const userNameMap = new Map(userNameRows.map((u) => [u.id, u.pic_name]));
+  function resolveName(picId: number, fallback: string): string {
+    return userNameMap.get(picId) ?? fallback;
+  }
+
   // ── Urgency-based health score ─────────────────────────────────────────────
   let expiredCount  = 0;
   let criticalCount = 0;
@@ -141,7 +153,13 @@ export async function GET(req: NextRequest) {
       status === "critical_stale" ? prevSundayStr :
       status === "needs_review"   ? lastSundayStr :
       nextSundayStr; // early_alert, last_chance → show upcoming deadline
-    return { ...row, computed_status: status, days_since_review, sunday_label };
+    return {
+      ...row,
+      pic_name: resolveName(row.pic_id, row.pic_name),
+      computed_status: status,
+      days_since_review,
+      sunday_label,
+    };
   });
 
   const staleItems = annotated
@@ -173,7 +191,7 @@ export async function GET(req: NextRequest) {
           description: row.description,
           barcode: row.barcode,
           category: row.category,
-          pic_name: row.pic_name,
+          pic_name: resolveName(row.pic_id, row.pic_name),
           expiry_date: row.expiry_date,
           days_left: daysLeft,
           urgency: (daysLeft < 0 ? "expired" : "critical") as "expired" | "critical",
