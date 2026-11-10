@@ -1,15 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { OfferEntry } from "@/hooks/useOffers";
+import type { OfferEntry, OfferFormData } from "@/hooks/useOffers";
 import type { MonthValue } from "@/components/ui/MonthPicker";
-import { ChevronDownIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon, DocumentTextIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
+import EditOfferModal from "./EditOfferModal";
+import DeleteOfferModal from "./DeleteOfferModal";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 interface Props {
   entries: OfferEntry[];
   isLoading: boolean;
   historyMonth: MonthValue | null;
   search: string;
+  isManager?: boolean;
+  onUpdateOffer?: (id: number, data: Partial<OfferFormData>) => Promise<void>;
+  onDeleteOffer?: (id: number) => Promise<void>;
+  onRefresh?: () => Promise<void>;
 }
 
 const TH = "sticky top-0 z-10 bg-[#f8fafc] px-4 py-3 text-left text-[11px] uppercase font-semibold text-[#64748b] tracking-[0.08em] whitespace-nowrap";
@@ -28,8 +36,44 @@ const STATUS_STYLE = {
   rejected: { bg: "#fee2e2", color: "#dc2626", label: "Rejected" },
 };
 
-export default function OfferHistoryTab({ entries, isLoading, historyMonth, search }: Props) {
+export default function OfferHistoryTab({
+  entries,
+  isLoading,
+  historyMonth,
+  search,
+  isManager,
+  onUpdateOffer,
+  onDeleteOffer,
+  onRefresh,
+}: Props) {
   const [typeFilter, setTypeFilter] = useState<"" | "accepted" | "rejected">("");
+  const [editingOffer, setEditingOffer] = useState<OfferEntry | null>(null);
+  const [deletingOffer, setDeletingOffer] = useState<OfferEntry | null>(null);
+  const { toasts, showSuccess, showError, dismiss } = useToast();
+
+  async function handleSaveEdit(id: number, data: Partial<OfferFormData>) {
+    if (!onUpdateOffer) return;
+    try {
+      await onUpdateOffer(id, data);
+      showSuccess("Offer updated");
+      await onRefresh?.();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Failed to update offer");
+      throw err;
+    }
+  }
+
+  async function handleConfirmDelete(id: number) {
+    if (!onDeleteOffer) return;
+    try {
+      await onDeleteOffer(id);
+      showSuccess("Offer deleted");
+      await onRefresh?.();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Failed to delete offer");
+      throw err;
+    }
+  }
 
   const filtered = useMemo(() => {
     let data = entries.filter(
@@ -77,7 +121,9 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
   }
 
   return (
-    <div className="space-y-4">
+    <>
+      <Toast toasts={toasts} onDismiss={dismiss} />
+      <div className="space-y-4">
       {/* Type filter */}
       <div className="flex items-center gap-3">
         <div className="relative">
@@ -192,6 +238,30 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
                       Note: {entry.rejection_notes}
                     </p>
                   )}
+                  {isManager && (onUpdateOffer || onDeleteOffer) && (
+                    <div className="flex gap-2 mt-3">
+                      {onUpdateOffer && (
+                        <button
+                          onClick={() => setEditingOffer(entry)}
+                          className="flex-1 h-9 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+                          style={{ background: "#f1f5f9", color: "#334155" }}
+                        >
+                          <PencilSquareIcon className="w-3.5 h-3.5" />
+                          Edit
+                        </button>
+                      )}
+                      {onDeleteOffer && (
+                        <button
+                          onClick={() => setDeletingOffer(entry)}
+                          className="flex-1 h-9 rounded-lg text-xs font-semibold inline-flex items-center justify-center gap-1.5"
+                          style={{ background: "#fef2f2", color: "#b91c1c" }}
+                        >
+                          <TrashIcon className="w-3.5 h-3.5" />
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -213,6 +283,9 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
                 <th className={TH}>Status</th>
                 <th className={TH}>Completed</th>
                 <th className={TH}>Notes</th>
+                {isManager && (onUpdateOffer || onDeleteOffer) && (
+                  <th className={`${TH} text-right`}>Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -257,6 +330,36 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
                         </span>
                       ) : "—"}
                     </td>
+                    {isManager && (onUpdateOffer || onDeleteOffer) && (
+                      <td className={`${TD} whitespace-nowrap text-right`}>
+                        <div className="flex items-center justify-end gap-2">
+                          {onUpdateOffer && (
+                            <button
+                              onClick={() => setEditingOffer(entry)}
+                              title="Edit offer"
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+                              style={{ background: "#f1f5f9", color: "#334155" }}
+                              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#e2e8f0")}
+                              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#f1f5f9")}
+                            >
+                              <PencilSquareIcon className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {onDeleteOffer && (
+                            <button
+                              onClick={() => setDeletingOffer(entry)}
+                              title="Delete offer"
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-lg transition-colors"
+                              style={{ background: "#fef2f2", color: "#dc2626" }}
+                              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#fecaca")}
+                              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#fef2f2")}
+                            >
+                              <TrashIcon className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -265,6 +368,23 @@ export default function OfferHistoryTab({ entries, isLoading, historyMonth, sear
           </div>
         </>
       )}
-    </div>
+      </div>
+
+      {editingOffer && (
+        <EditOfferModal
+          offer={editingOffer}
+          onClose={() => setEditingOffer(null)}
+          onSave={(data) => handleSaveEdit(editingOffer.id, data)}
+        />
+      )}
+
+      {deletingOffer && (
+        <DeleteOfferModal
+          offer={deletingOffer}
+          onClose={() => setDeletingOffer(null)}
+          onConfirm={() => handleConfirmDelete(deletingOffer.id)}
+        />
+      )}
+    </>
   );
 }

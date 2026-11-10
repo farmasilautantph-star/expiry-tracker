@@ -22,6 +22,8 @@ export default function OffersPage() {
     entries,
     isLoading,
     error,
+    updateOffer,
+    deleteOffer,
     updateOfferStatus,
     refresh,
   } = useOffers();
@@ -155,7 +157,10 @@ export default function OffersPage() {
               isLoading={isLoading}
               activeMonth={month}
               search={search}
+              isManager={isManager}
               onUpdateOfferStatus={updateOfferStatus}
+              onUpdateOffer={updateOffer}
+              onDeleteOffer={deleteOffer}
               onRefresh={refresh}
             />
           ) : (
@@ -164,6 +169,10 @@ export default function OffersPage() {
               isLoading={isLoading}
               historyMonth={month}
               search={search}
+              isManager={isManager}
+              onUpdateOffer={updateOffer}
+              onDeleteOffer={deleteOffer}
+              onRefresh={refresh}
             />
           )}
         </div>
